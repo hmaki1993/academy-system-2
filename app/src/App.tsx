@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { lazy, Suspense, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -93,7 +93,7 @@ function AppContent() {
 
   return (
     <CallProvider currentUserId={userProfile?.id}>
-      <BrowserRouter>
+      <Router>
         <GlobalCallOverlay />
         <NotificationSoundHandler />
         <BackButtonHandler />
@@ -163,7 +163,7 @@ function AppContent() {
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </Suspense>
-      </BrowserRouter>
+      </Router>
     </CallProvider>
   );
 }

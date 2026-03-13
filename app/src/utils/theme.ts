@@ -109,7 +109,7 @@ export const getResponsiveLoginSettings = (settings: any, isMobile: boolean) => 
         login_logo_opacity: settings.login_mobile_logo_opacity ?? settings.login_logo_opacity,
         login_logo_scale: settings.login_mobile_logo_scale ?? settings.login_logo_scale,
         login_logo_x_offset: settings.login_mobile_logo_x_offset ?? settings.login_logo_x_offset ?? 0,
-        login_logo_y_offset: settings.login_mobile_logo_y_offset ?? settings.login_logo_y_offset ?? -220,
+        login_logo_y_offset: settings.login_mobile_logo_y_offset ?? settings.login_logo_y_offset ?? -160,
         login_bg_blur: settings.login_mobile_bg_blur ?? settings.login_bg_blur,
         login_bg_brightness: settings.login_mobile_bg_brightness ?? settings.login_bg_brightness,
         login_bg_zoom: settings.login_mobile_bg_zoom ?? settings.login_bg_zoom,

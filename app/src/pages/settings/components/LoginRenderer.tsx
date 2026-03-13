@@ -17,6 +17,7 @@ interface LoginRendererProps {
     i18n: any;
     isPreview?: boolean;
     isFullScreen?: boolean;
+    disableInteraction?: boolean;
 }
 
 export const LoginRenderer: React.FC<LoginRendererProps> = ({
@@ -33,7 +34,8 @@ export const LoginRenderer: React.FC<LoginRendererProps> = ({
     t,
     i18n,
     isPreview = false,
-    isFullScreen = false
+    isFullScreen = false,
+    disableInteraction = false
 }) => {
     const containerRef = useRef<HTMLDivElement>(null);
     const [bounds, setBounds] = useState({ width: 0, height: 0 });
@@ -67,7 +69,7 @@ export const LoginRenderer: React.FC<LoginRendererProps> = ({
     const focusWidth = isMiniPreview ? (designMode === 'mobile' ? 390 : 800) : targetWidth;
 
     // Calculate scale factor for CONTENT (Card, Logo, etc.)
-    const scaleFactor = isPreview
+    const scaleFactor = (isPreview || designMode === 'mobile')
         ? (bounds.width > 0 && bounds.height > 0 ? Math.min(bounds.width / (isFullScreen ? targetWidth : focusWidth), bounds.height / (isFullScreen ? targetHeight : focusHeight)) : 1)
         : 1;
 
@@ -84,7 +86,7 @@ export const LoginRenderer: React.FC<LoginRendererProps> = ({
     return (
         <div
             ref={containerRef}
-            className={`w-full h-full relative font-cairo flex items-center justify-center select-none overflow-hidden ${isPreview ? 'bg-black' : 'bg-transparent'}`}
+            className={`w-full h-full relative font-cairo flex items-center justify-center select-none overflow-hidden ${(isPreview || designMode === 'mobile') ? 'bg-black' : 'bg-transparent'}`}
         >
             {/* Background Layer - Fluid and full-bleed to eliminate cropping */}
             <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
@@ -234,7 +236,7 @@ export const LoginRenderer: React.FC<LoginRendererProps> = ({
 
                             <button
                                 type="submit"
-                                disabled={loading || isPreview}
+                                disabled={loading || disableInteraction}
                                 className="w-full relative h-[52px] py-4 mt-8 rounded-2xl font-black uppercase tracking-[0.5em] bg-black/60 backdrop-blur-md border border-white/10 shadow-[0_4px_20px_rgba(0,0,0,0.5)] transition-all duration-500 hover:shadow-[0_0_30px_rgba(255,255,255,0.15)] hover:bg-black/80 hover:border-white/30 active:scale-[0.98] group/btn overflow-hidden"
                                 style={{
                                     color: (activeSettings.login_accent_color as string) || '#D4AF37',

@@ -66,6 +66,7 @@ export const FullScreenPreview: React.FC<FullScreenPreviewProps> = ({
                     i18n={i18n}
                     isPreview={true}
                     isFullScreen={true}
+                    disableInteraction={true}
                 />
             </div>
         </div>,

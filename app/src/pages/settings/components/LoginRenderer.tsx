@@ -111,15 +111,23 @@ export const LoginRenderer: React.FC<LoginRendererProps> = ({
 
             {/* Content Stage - Preserving 1080p parity (or fluid if FullScreen) */}
             <div
-                className="absolute inset-0 flex flex-col items-center justify-center transition-all duration-500 ease-out pointer-events-none z-10"
-                style={isFullScreen ? undefined : {
+                className="absolute inset-0 flex flex-col items-center justify-center transition-all duration-500 ease-out z-10"
+                style={(isFullScreen && !isPreview) ? {
+                    width: '100%',
+                    height: '100%',
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    pointerEvents: 'none'
+                } : {
                     width: `${targetWidth}px`,
                     height: `${targetHeight}px`,
                     transform: `translate(-50%, -50%) scale(${scaleFactor})`,
                     top: '50%',
                     left: '50%',
                     position: 'absolute',
-                    transformOrigin: 'center center'
+                    transformOrigin: 'center center',
+                    pointerEvents: 'none'
                 }}
             >
                 {/* Logo Layer - Relative to flex container for robust stacking */}

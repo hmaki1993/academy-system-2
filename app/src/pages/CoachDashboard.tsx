@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Clock, Calendar, CheckCircle, XCircle, Globe, User, Users, ChevronRight, ChevronLeft, TrendingUp, Wallet, RotateCcw, Trash2, AlertCircle, Activity, ExternalLink, X, History, ClipboardCheck } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useOutletContext } from 'react-router-dom';
@@ -443,7 +443,12 @@ export default function CoachDashboard() {
             toast.success(t('coach.checkInSuccess'));
         } catch (error: any) {
             console.error('Check-in error detailed:', error);
-            toast.error(error.message || t('common.error'));
+            const errorMsg = error.message || error.details || t('common.error');
+            toast.error(`${t('common.error')}: ${errorMsg}`);
+            
+            if (error.code === '42P10' || error.message?.includes('on conflict')) {
+                console.warn('⚠️ Missing unique constraint on coach_attendance table. Please run ULTIMATE_ATTENDANCE_FIX.sql');
+            }
         }
     };
 

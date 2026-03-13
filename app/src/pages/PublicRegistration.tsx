@@ -9,6 +9,7 @@ import { sendToN8n } from '../services/n8nService';
 
 import { COUNTRIES } from '../constants/countries';
 import { formatDynamicPhone } from '../utils/phoneUtils';
+import { getDominantColor } from '../utils/imageUtils';
 
 // Premium Select Component for a high-end feel
 function PremiumSelect({
@@ -117,6 +118,7 @@ export default function PublicRegistration() {
 
     const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
     const { settings } = useTheme();
+    const [extractedColor, setExtractedColor] = useState<string | null>(null);
 
     // Detect viewport on mount and resize
     useEffect(() => {
@@ -138,13 +140,26 @@ export default function PublicRegistration() {
     }, [isMobile, settings]);
 
     // Theme Helpers for dynamic UI - Synced with Login Design
-    const primaryColor = (getSetting('login_accent_color') as string) || settings.primary_color || '#D4AF37';
+    const baseAccent = (getSetting('login_accent_color') as string) || settings.primary_color || '#D4AF37';
+    const primaryColor = extractedColor || baseAccent;
     const secondaryColor = (getSetting('login_card_color') as string) || settings.secondary_color || '#000000';
-    const accentColor = (getSetting('login_accent_color') as string) || settings.primary_color || '#D4AF37';
+    const accentColor = primaryColor;
     const surfaceColor = 'rgba(255, 255, 255, 0.05)';
     const textColor = (getSetting('login_text_color') as string) || '#ffffff';
     const textColorMuted = 'rgba(255, 255, 255, 0.6)';
     const logoUrl = settings.logo_url || (getSetting('login_logo_url') as string) || '/logo.png';
+
+    // Dynamic AI Theming: Extract color from logo
+    useEffect(() => {
+        if (logoUrl) {
+            getDominantColor(logoUrl).then(color => {
+                if (color) {
+                    console.log('🎨 AI Theme: Extracted dominant color from logo:', color);
+                    setExtractedColor(color);
+                }
+            });
+        }
+    }, [logoUrl]);
 
     // Form State
     const [formData, setFormData] = useState({

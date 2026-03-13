@@ -413,7 +413,7 @@ export default function PublicRegistration() {
     }
 
     return (
-        <div className="min-h-screen flex flex-col items-center justify-center p-4 md:p-8 relative overflow-hidden font-cairo" style={{ backgroundColor: secondaryColor }}>
+        <div className="h-screen w-screen flex flex-col items-center justify-start py-12 md:py-24 px-4 md:px-8 relative overflow-y-auto custom-scrollbar font-cairo" style={{ backgroundColor: secondaryColor }}>
 
             {/* Background Effects - Premium Atmosphere */}
             <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">

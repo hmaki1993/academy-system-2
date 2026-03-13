@@ -88,7 +88,7 @@ export default function Login() {
                 toggleLanguage={toggleLanguage}
                 t={t}
                 i18n={i18n}
-                isPreview={false}
+                isPreview={isMobileView}
                 isFullScreen={true}
             />
         </div>

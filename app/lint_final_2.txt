@@ -1,0 +1,53 @@
+
+> epic-gym-academy@0.1.0 lint
+> eslint .
+
+
+F:\epic gymnastic\app\src\components\AddCoachForm.tsx
+  2:10  error  'useTranslation' is defined but never used  @typescript-eslint/no-unused-vars
+
+F:\epic gymnastic\app\src\components\AddPaymentForm.tsx
+  53:25  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+F:\epic gymnastic\app\src\components\AddSessionForm.tsx
+   96:25  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  112:25  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+F:\epic gymnastic\app\src\components\AddStudentForm.tsx
+  10:19  error  Unexpected any. Specify a different type   @typescript-eslint/no-explicit-any
+  14:16  error  'i18n' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+F:\epic gymnastic\app\src\components\AdminAssistant.tsx
+  52:71  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  54:86  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  78:29  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  85:25  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+F:\epic gymnastic\app\src\components\Payroll.tsx
+  25:8  warning  React Hook useEffect has a missing dependency: 'fetchPayroll'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+F:\epic gymnastic\app\src\hooks\useData.ts
+  1:20  error  'useMutation' is defined but never used     @typescript-eslint/no-unused-vars
+  1:33  error  'useQueryClient' is defined but never used  @typescript-eslint/no-unused-vars
+
+F:\epic gymnastic\app\src\layouts\DashboardLayout.tsx
+  41:9  warning  Unused eslint-disable directive (no problems were reported from 'react-hooks/exhaustive-deps')
+
+F:\epic gymnastic\app\src\pages\Coaches.tsx
+  38:35  error    Unexpected any. Specify a different type                                                        @typescript-eslint/no-explicit-any
+  40:35  error    Unexpected any. Specify a different type                                                        @typescript-eslint/no-explicit-any
+  53:9   warning  Unused eslint-disable directive (no problems were reported from 'react-hooks/exhaustive-deps')
+
+F:\epic gymnastic\app\src\pages\Dashboard.tsx
+  92:71  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+F:\epic gymnastic\app\src\pages\Schedule.tsx
+   34:60  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  308:39  error  '_dayIdx' is defined but never used       @typescript-eslint/no-unused-vars
+
+F:\epic gymnastic\app\src\pages\Settings.tsx
+  80:8  warning  React Hook useEffect has a missing dependency: 'currentTheme'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+✖ 21 problems (17 errors, 4 warnings)
+  0 errors and 2 warnings potentially fixable with the `--fix` option.
+

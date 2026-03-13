@@ -1,0 +1,128 @@
+
+> epic-gym-academy@0.1.0 lint
+> eslint .
+
+
+F:\epic gymnastic\app\src\App.tsx
+  22:6  warning  React Hook useEffect has a missing dependency: 'i18n'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+F:\epic gymnastic\app\src\components\AddCoachForm.tsx
+  22:13  error  't' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+F:\epic gymnastic\app\src\components\AddPaymentForm.tsx
+  53:25  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+F:\epic gymnastic\app\src\components\AddSessionForm.tsx
+   96:25  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  112:25  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+F:\epic gymnastic\app\src\components\AddStudentForm.tsx
+  10:19  error  Unexpected any. Specify a different type    @typescript-eslint/no-explicit-any
+  15:11  error  'isRtl' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+F:\epic gymnastic\app\src\components\AdminAssistant.tsx
+   2:10  error  'MessageSquare' is defined but never used  @typescript-eslint/no-unused-vars
+  51:71  error  Unexpected any. Specify a different type   @typescript-eslint/no-explicit-any
+  53:86  error  Unexpected any. Specify a different type   @typescript-eslint/no-explicit-any
+  77:29  error  Unexpected any. Specify a different type   @typescript-eslint/no-explicit-any
+  84:25  error  Unexpected any. Specify a different type   @typescript-eslint/no-explicit-any
+
+F:\epic gymnastic\app\src\components\Payroll.tsx
+  25:8  warning  React Hook useEffect has a missing dependency: 'fetchPayroll'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+F:\epic gymnastic\app\src\hooks\useData.ts
+  1:20  error  'useMutation' is defined but never used     @typescript-eslint/no-unused-vars
+  1:33  error  'useQueryClient' is defined but never used  @typescript-eslint/no-unused-vars
+
+F:\epic gymnastic\app\src\layouts\DashboardLayout.tsx
+  40:9  error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+F:\epic gymnastic\app\src\layouts\DashboardLayout.tsx:40:9
+  38 |
+  39 |     useEffect(() => {
+> 40 |         fetchRole();
+     |         ^^^^^^^^^ Avoid calling setState() directly within an effect
+  41 |     }, []);
+  42 |
+  43 |     const toggleLanguage = () => {  react-hooks/set-state-in-effect
+
+F:\epic gymnastic\app\src\pages\Coaches.tsx
+  27:71  error  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             @typescript-eslint/no-explicit-any
+  37:35  error  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             @typescript-eslint/no-explicit-any
+  39:35  error  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             @typescript-eslint/no-explicit-any
+  47:9   error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+F:\epic gymnastic\app\src\pages\Coaches.tsx:47:9
+  45 |
+  46 |     useEffect(() => {
+> 47 |         fetchAttendance();
+     |         ^^^^^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  48 |
+  49 |         // Update timer every second
+  50 |         const interval = setInterval(() => setCurrentTime(new Date()), 1000);  react-hooks/set-state-in-effect
+
+F:\epic gymnastic\app\src\pages\Dashboard.tsx
+  92:71  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+F:\epic gymnastic\app\src\pages\Finance.tsx
+   7:11  error  'Payment' is defined but never used       @typescript-eslint/no-unused-vars
+  21:48  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  21:56  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+F:\epic gymnastic\app\src\pages\Login.tsx
+  115:28  error  `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`  react/no-unescaped-entities
+
+F:\epic gymnastic\app\src\pages\Schedule.tsx
+   26:12  error    'loading' is assigned a value but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          @typescript-eslint/no-unused-vars
+   33:60  error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              @typescript-eslint/no-explicit-any
+  105:9   error    Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+F:\epic gymnastic\app\src\pages\Schedule.tsx:105:9
+  103 |
+  104 |     useEffect(() => {
+> 105 |         fetchSessions();
+      |         ^^^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  106 |         if (role === 'coach') {
+  107 |             fetchAttendanceStatus();
+  108 |         }  react-hooks/set-state-in-effect
+  109:8   warning  React Hook useEffect has a missing dependency: 'fetchSessions'. Either include it or remove the dependency array                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      react-hooks/exhaustive-deps
+  306:39  error    '_dayIdx' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   @typescript-eslint/no-unused-vars
+
+F:\epic gymnastic\app\src\pages\Settings.tsx
+  77:9  error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+F:\epic gymnastic\app\src\pages\Settings.tsx:77:9
+  75 |     useEffect(() => {
+  76 |         const savedTheme = localStorage.getItem('theme') || 'default';
+> 77 |         setCurrentTheme(savedTheme);
+     |         ^^^^^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  78 |         // Apply theme on mount (in case it wasn't applied by a previous visit in this session)
+  79 |         applyThemeStyles(savedTheme);
+  80 |     }, []);  react-hooks/set-state-in-effect
+
+✖ 31 problems (28 errors, 3 warnings)
+

@@ -1,0 +1,51 @@
+
+> epic-gym-academy@0.1.0 lint
+> eslint .
+
+
+F:\epic gymnastic\app\src\components\AddStudentForm.tsx
+  14:16  warning  'i18n' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+F:\epic gymnastic\app\src\components\Payroll.tsx
+  25:8  warning  React Hook useEffect has a missing dependency: 'fetchPayroll'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+F:\epic gymnastic\app\src\layouts\DashboardLayout.tsx
+  40:9  error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+F:\epic gymnastic\app\src\layouts\DashboardLayout.tsx:40:9
+  38 |
+  39 |     useEffect(() => {
+> 40 |         fetchRole();
+     |         ^^^^^^^^^ Avoid calling setState() directly within an effect
+  41 |     }, []);
+  42 |
+  43 |     const toggleLanguage = () => {  react-hooks/set-state-in-effect
+
+F:\epic gymnastic\app\src\pages\Coaches.tsx
+  27:5  warning  Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-explicit-any')
+  48:9  error    Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+F:\epic gymnastic\app\src\pages\Coaches.tsx:48:9
+  46 |
+  47 |     useEffect(() => {
+> 48 |         fetchAttendance();
+     |         ^^^^^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  49 |
+  50 |         // Update timer every second
+  51 |         const interval = setInterval(() => setCurrentTime(new Date()), 1000);  react-hooks/set-state-in-effect
+
+✖ 5 problems (2 errors, 3 warnings)
+  0 errors and 1 warning potentially fixable with the `--fix` option.
+

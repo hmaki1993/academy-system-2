@@ -1,0 +1,629 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #10b981;
+  /* Emerald 500 */
+  --color-primary-foreground: #ffffff;
+  --color-gold: #D4AF37;
+  /* Premium Gold */
+  --color-gold-muted: rgba(212, 175, 55, 0.5);
+  --color-secondary: #000000;
+  /* Absolute Black */
+  --color-secondary-foreground: #ffffff;
+  --color-accent: #34d399;
+  /* Emerald 400 */
+  --color-accent-foreground: #ffffff;
+  --color-background: #000000;
+  /* Pure Deep Black */
+  --color-surface: #0a0a0a;
+  /* Elevated Surface */
+  --color-hover: rgba(255, 255, 255, 0.05);
+  --color-hover-border: rgba(255, 255, 255, 0.1);
+  --color-input-bg: #0a0a0a;
+
+  /* Precise Pastel Accent Tokens from Reference - Dynamic */
+  --color-pastel-mint: color-mix(in srgb, var(--color-primary, #10b981) 12%, #fff);
+  --color-pastel-yellow: color-mix(in srgb, var(--color-accent, #34d399) 12%, #fff);
+  --color-pastel-coral: color-mix(in srgb, var(--color-primary, #10b981) 15%, var(--color-accent) 5%, #fff);
+  --color-pastel-blue: color-mix(in srgb, var(--color-accent, #34d399) 15%, var(--color-primary) 5%, #fff);
+
+  --shadow-premium: 0 40px 80px -20px rgba(0, 0, 0, 0.8);
+  --shadow-glass: 0 8px 32px 0 rgba(0, 0, 0, 0.8);
+
+  --radius: 0.75rem;
+  /* Original compact rounding */
+  --glass-opacity: 0.1;
+
+  /* Theme Aware Variables */
+  --color-text-base: #f8fafc;
+  --color-text-muted: rgba(255, 255, 255, 0.5);
+  --color-surface-border: rgba(255, 255, 255, 0.1);
+}
+
+:root {
+  font-family: 'Cairo', Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+
+  color-scheme: light dark;
+  color: var(--color-text-base);
+  background-color: var(--color-background);
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  min-width: 320px;
+  background-color: var(--color-background);
+  background-image:
+    radial-gradient(circle at 85% 30%, color-mix(in srgb, var(--color-surface), transparent 50%), transparent 25%);
+  color: var(--color-text-base);
+}
+
+#root {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* 
+  PREMIUM UTILITIES 
+*/
+.glass-card {
+  background: var(--color-surface) !important;
+  backdrop-filter: blur(20px) !important;
+  -webkit-backdrop-filter: blur(20px) !important;
+  border: 1px solid var(--color-hover-border) !important;
+  border-radius: var(--radius) !important;
+  box-shadow: var(--shadow-premium) !important;
+  transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.no-border-card {
+  background: var(--color-surface) !important;
+  backdrop-filter: blur(20px) !important;
+  -webkit-backdrop-filter: blur(20px) !important;
+  border: none !important;
+  border-radius: var(--radius) !important;
+  box-shadow: var(--shadow-premium) !important;
+  transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+/* Light mode specific shadow refinement */
+:root[style*="--is-light-mode: 1"] .glass-card {
+  background: white !important;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.05) !important;
+  border-color: rgba(0, 0, 0, 0.05) !important;
+}
+
+.glass-card:hover {
+  filter: brightness(1.1);
+  transform: translateY(-2px);
+  background-color: var(--color-hover) !important;
+  box-shadow: 0 0 30px 10px color-mix(in srgb, var(--color-hover), transparent 70%) !important;
+}
+
+.pastel-card {
+  border-radius: 2.5rem !important;
+  /* Harmonized with var(--radius) */
+  padding: 2rem !important;
+  transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  color: #000000 !important;
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.05);
+}
+
+.pastel-card:hover {
+  transform: translateY(-6px) rotate(0.5deg);
+  filter: brightness(1.02);
+  box-shadow: 0 0 30px 10px color-mix(in srgb, var(--color-hover), transparent 70%) !important;
+}
+
+/* 
+  DYNAMIC THEME OVERRIDES 
+  Ensures that hardcoded Tailwind glass classes respond to Palette Editor
+*/
+.bg-white\/3,
+.bg-white\/5,
+.bg-white\/10,
+.bg-white\/20,
+.bg-white\/\[0\.03\],
+.bg-white\/\[0\.05\],
+.bg-secondary-color,
+.hover\:bg-white\/5:hover,
+.hover\:bg-white\/10:hover,
+.hover\:bg-white\/20:hover {
+  background-color: var(--color-surface) !important;
+}
+
+/* For actual hover states, use var(--color-hover) */
+.hover\:bg-white\/5:hover,
+.hover\:bg-white\/10:hover,
+.hover\:bg-white\/20:hover,
+.hover\:bg-primary\/10:hover,
+.hover\:bg-white\/\[0\.02\]:hover,
+.hover\:bg-white\/\[0\.03\]:hover,
+.hover\:bg-white\/\[0\.05\]:hover,
+.group:hover .group-hover\:bg-white\/10,
+.group:hover .group-hover\:bg-white\/\[0\.05\] {
+  background-color: var(--color-hover) !important;
+}
+
+.border-white\/3,
+.border-white\/5,
+.border-white\/10,
+.border-white\/20,
+.border-white\/\[0\.05\],
+.border-white\/\[0\.08\],
+.hover\:border-white\/10:hover,
+.hover\:border-white\/20:hover {
+  border-color: var(--color-hover-border) !important;
+}
+
+/* 
+  PREMIUM HOVER EFFECTS 
+*/
+.hover-glow {
+  transition: all 0.3s ease;
+}
+
+.hover-glow:hover {
+  background-color: var(--color-hover) !important;
+  box-shadow: 0 0 20px color-mix(in srgb, var(--color-hover), transparent 50%) !important;
+}
+
+.hover-border:hover {
+  border-color: var(--color-hover-border) !important;
+}
+
+.pastel-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.3), transparent);
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+
+.pastel-card:hover::before {
+  opacity: 1;
+}
+
+.pastel-mint {
+  background-color: var(--color-pastel-mint) !important;
+}
+
+.pastel-yellow {
+  background-color: var(--color-pastel-yellow) !important;
+}
+
+.pastel-coral {
+  background-color: var(--color-pastel-coral) !important;
+}
+
+.pastel-blue {
+  background-color: var(--color-pastel-blue) !important;
+}
+
+.pastel-purple {
+  background-color: var(--color-pastel-purple) !important;
+}
+
+.premium-gradient-text {
+  background: linear-gradient(to right, var(--color-primary), var(--color-accent));
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* 
+  FORCE HIGH CONTRAST FOR ALL TEXT 
+  Modified for premium dark theme integration
+*/
+/* High contrast text overrides */
+.text-gray-400,
+.text-white\/80,
+.text-white\/70,
+.text-white\/60,
+.text-white\/50,
+.text-white\/40,
+.text-white\/30,
+.text-white\/20,
+.text-white\/10 {
+  color: var(--color-text-muted) !important;
+}
+
+.text-gray-500,
+.text-gray-600 {
+  color: var(--color-text-muted) !important;
+}
+
+.text-secondary,
+.text-white {
+  color: var(--color-text-base) !important;
+}
+
+.opacity-80,
+.opacity-70,
+.opacity-60,
+.opacity-50 {
+  opacity: 1 !important;
+  color: var(--color-text-muted) !important;
+}
+
+/* Force headings to be clear and premium */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  color: var(--color-text-base) !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.025em !important;
+}
+
+/* 
+  GLOBAL INPUT VISIBILITY OVERRIDES
+  Ensuring inputs match the premium dark theme
+*/
+input,
+select,
+textarea {
+  background-color: var(--color-input-bg, #0f172a);
+  color: var(--color-text-base);
+  border: 1px solid var(--color-surface-border, rgba(255, 255, 255, 0.1));
+  border-radius: var(--radius);
+  padding: 0.5rem 1rem;
+  opacity: 1;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  -webkit-text-fill-color: var(--color-text-base);
+  font-size: 0.875rem;
+}
+
+/* Light mode input adjustment */
+:root[style*="--is-light-mode: 1"] input,
+:root[style*="--is-light-mode: 1"] select,
+:root[style*="--is-light-mode: 1"] textarea {
+  background-color: rgba(0, 0, 0, 0.03);
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 4px var(--color-primary, rgba(255, 255, 255, 0.1));
+  outline: none;
+}
+
+/* Force kill red validation rings injected by browsers */
+input:invalid,
+input:-moz-ui-invalid,
+input:-webkit-autofill:invalid,
+input:not(:placeholder-shown):invalid {
+  box-shadow: none !important;
+  outline: none !important;
+  border-color: transparent !important;
+}
+
+select {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  padding-right: 2.5rem !important;
+  cursor: pointer;
+}
+
+select option {
+  background-color: var(--color-input-bg, #0f172a);
+  color: var(--color-text-base);
+  padding: 0.5rem;
+}
+
+::placeholder {
+  color: #64748b;
+  opacity: 1;
+}
+
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 30px transparent inset !important;
+  -webkit-text-fill-color: #ffffff !important;
+  background-color: transparent !important;
+  transition: background-color 5000s ease-in-out 0s !important;
+  caret-color: #ffffff !important;
+}
+
+@keyframes pulse-indigo {
+
+  0%,
+  100% {
+    opacity: 0.3;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 0.6;
+    transform: scale(1.05);
+  }
+}
+
+.animate-pulse-indigo {
+  animation: pulse-indigo 3s ease-in-out infinite;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: color-mix(in srgb, var(--color-background), transparent 50%);
+}
+
+::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--color-text-muted), transparent 70%);
+  border-radius: 4px;
+}
+
+
+::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, var(--color-primary), white 20%);
+}
+
+/* Hide spin buttons for number inputs */
+input::-webkit-outer-spin-button,
+input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  appearance: none;
+  margin: 0;
+}
+
+input[type=number] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+/* Premium Component Utilities */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* 
+  PREMIUM ANIMATIONS & TRANSITIONS 
+*/
+@keyframes premium-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes premium-slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes shimmer {
+  from {
+    transform: translateX(-100%) skewX(-12deg);
+  }
+
+  to {
+    transform: translateX(200%) skewX(-12deg);
+  }
+}
+
+.animate-premium-in {
+  animation: premium-fade-in 0.3s cubic-bezier(0.23, 1, 0.32, 1) forwards;
+}
+
+.animate-premium-up {
+  animation: premium-slide-up 0.4s cubic-bezier(0.23, 1, 0.32, 1) forwards;
+}
+
+
+.nav-icon-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.nav-icon-container.active {
+  background: transparent;
+  color: var(--color-primary);
+  /* Removed drop-shadow and scale to ensure absolute centering */
+}
+
+.nav-icon-container svg {
+  color: inherit;
+  fill: none;
+}
+
+/* Removed hover override to allow Tailwind classes to take effect */
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 0px; /* Hidden on desktop to prevent width shift */
+  height: 0px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: var(--color-surface-border);
+  border-radius: 12px;
+}
+
+.custom-scrollbar:hover::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.mask-fade-right {
+  mask-image: linear-gradient(to right, black 80%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to right, black 80%, transparent 100%);
+}
+
+/* Mobile Performance & Chic Optimizations */
+@media (max-width: 768px) {
+  .glass-card {
+    backdrop-filter: blur(12px) !important;
+    -webkit-backdrop-filter: blur(12px) !important;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4) !important;
+    transition-duration: 0.15s !important;
+  }
+
+  .glass-card:hover {
+    transform: none !important;
+    /* Prevent layout shift on touch */
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2) !important;
+  }
+
+  /* Stabilize 3D effects on mobile */
+  .sidebar-3d-item:hover {
+    transform: none !important;
+    filter: none !important;
+  }
+
+  .sidebar-3d-item-active {
+    transform: none !important;
+    box-shadow: none !important;
+  }
+
+  :root {
+    --shadow-premium: 0 4px 12px rgba(0, 0, 0, 0.2);
+    --radius: 1rem;
+    /* Slightly smaller radius for mobile for a tighter look */
+  }
+
+  * {
+    transition-duration: 0.15s !important;
+    /* Ultra-snappy response */
+  }
+
+  .animate-pulse,
+  .animate-pulse-indigo {
+    animation-duration: 4s !important;
+    /* Slow down pulses to save CPU */
+  }
+}
+
+/* 
+  SAFE AREA UTILITIES 
+  Ensures content is visible below device notches/status bars on mobile
+  while remaining compact on desktop.
+*/
+.safe-area-pt-large {
+  padding-top: calc(env(safe-area-inset-top, 0px) + 3.5rem) !important;
+}
+
+.safe-area-h-header {
+  min-height: calc(env(safe-area-inset-top, 0px) + 5.5rem) !important;
+  padding-top: calc(env(safe-area-inset-top, 0px) + 1.5rem) !important;
+}
+
+@media (min-width: 1024px) {
+  .safe-area-pt-large {
+    padding-top: 1.25rem !important;
+    /* Original p-5 spacing */
+  }
+
+  .safe-area-h-header {
+    min-height: 4rem !important;
+    padding-top: 0 !important;
+  }
+}
+
+/* Premium Vibrant Toast Styling */
+.premium-toast-vibrant {
+  background: rgba(14, 29, 33, 0.7) !important;
+  backdrop-filter: blur(20px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-radius: 9999px !important;
+  box-shadow:
+    0 25px 50px -12px rgba(0, 0, 0, 0.5),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.05),
+    0 0 20px rgba(16, 185, 129, 0.1) !important;
+  padding: 12px 24px !important;
+  color: #fff !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.02em !important;
+  animation: toast-in 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes toast-in {
+  from {
+    transform: translateY(-20px) scale(0.95);
+    opacity: 0;
+  }
+
+  to {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+
+/* Global Login Glass Effect */
+.glass-effect {
+  background-color: color-mix(in srgb, var(--card-bg, #000000), transparent calc(100% - var(--card-opacity, 0.6) * 100%)) !important;
+  backdrop-filter: blur(40px) !important;
+  -webkit-backdrop-filter: blur(40px) !important;
+  border: 1px solid var(--card-accent, rgba(255, 255, 255, 0.1)) !important;
+  box-shadow: 0 0 100px -20px color-mix(in srgb, var(--card-accent, #ffffff), transparent 60%) !important;
+  transition: all 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.glass-effect-hoverable {
+  background-color: color-mix(in srgb, var(--card-bg, #000000), transparent 95%) !important;
+  backdrop-filter: blur(5px) !important;
+  border-color: rgba(255, 255, 255, 0.05) !important;
+  box-shadow: 0 0 40px -20px rgba(0, 0, 0, 0.5) !important;
+  transition: all 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.glass-effect-hoverable:hover,
+.glass-effect-hoverable:focus-within {
+  background-color: color-mix(in srgb, var(--card-bg, #000000), transparent calc(100% - var(--card-opacity, 0.6) * 100%)) !important;
+  backdrop-filter: blur(40px) !important;
+  border-color: var(--card-accent, rgba(255, 255, 255, 0.1)) !important;
+  box-shadow: 0 0 100px -20px color-mix(in srgb, var(--card-accent, #ffffff), transparent 60%) !important;
+}

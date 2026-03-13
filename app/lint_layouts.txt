@@ -1,0 +1,39 @@
+﻿
+F:\epic gymnastic\app\src\layouts\DashboardLayout.tsx
+  28:8  warning  React Hook useEffect has a missing dependency: 'i18n'. Either include it or remove the dependency array                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      react-hooks/exhaustive-deps
+  31:9  error    Error: Cannot access variable before it is declared
+
+`fetchRole` is accessed before it is declared, which prevents the earlier access from updating when this value changes over time.
+
+F:\epic gymnastic\app\src\layouts\DashboardLayout.tsx:31:9
+  29 |
+  30 |     useEffect(() => {
+> 31 |         fetchRole();
+     |         ^^^^^^^^^ `fetchRole` accessed before it is declared
+  32 |     }, []);
+  33 |
+  34 |     const fetchRole = async () => {
+
+F:\epic gymnastic\app\src\layouts\DashboardLayout.tsx:34:5
+  32 |     }, []);
+  33 |
+> 34 |     const fetchRole = async () => {
+     |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 35 |         const { data: { user } } = await supabase.auth.getUser();
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 36 |         if (user) {
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 37 |             const { data } = await supabase.from('profiles').select('role').eq('id', user.id).single();
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 38 |             setRole(data?.role || 'coach');
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 39 |         }
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 40 |     };
+     | ^^^^^^^ `fetchRole` is declared here
+  41 |
+  42 |     const toggleLanguage = () => {
+  43 |         const newLang = i18n.language === 'en' ? 'ar' : 'en';  react-hooks/immutability
+
+Γ£û 2 problems (1 error, 1 warning)
+

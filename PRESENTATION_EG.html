@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Epic Gymnastic - Elite Management Ecosystem</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #ffffff;
+            --accent: #00d2ff;
+            --bg-dark: #10262B;
+            --surface: rgba(255, 255, 255, 0.05);
+            --border: rgba(255, 255, 255, 0.1);
+            --text-main: #ffffff;
+            --text-dim: rgba(255, 255, 255, 0.6);
+            --glass: rgba(16, 38, 43, 0.85);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            line-height: 1.6;
+            overflow-x: hidden;
+            background-image:
+                radial-gradient(circle at 10% 20%, rgba(255, 255, 255, 0.03) 0%, transparent 40%),
+                radial-gradient(circle at 90% 80%, rgba(0, 210, 255, 0.03) 0%, transparent 40%);
+            position: relative;
+        }
+
+        /* Logo Watermark */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 70vw;
+            height: 70vh;
+            background-image: url('app/public/logo.png');
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+            opacity: 0.1;
+            z-index: -10;
+            pointer-events: none;
+            filter: drop-shadow(0 0 40px rgba(255, 255, 255, 0.08));
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 60px 20px;
+            position: relative;
+        }
+
+        /* Hero */
+        header {
+            text-align: center;
+            padding: 60px 0;
+            position: relative;
+        }
+
+        .flag-box {
+            font-size: 3rem;
+            margin-bottom: 20px;
+            filter: drop-shadow(0 10px 20px rgba(0, 0, 0, 0.3));
+        }
+
+        .premium-label {
+            display: inline-block;
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-main);
+            padding: 6px 20px;
+            border-radius: 100px;
+            font-size: 0.75rem;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 4px;
+            margin-bottom: 24px;
+            border: 1px solid var(--border);
+        }
+
+        .logo-main {
+            font-size: 3.5rem;
+            font-weight: 900;
+            line-height: 1;
+            margin-bottom: 12px;
+            background: linear-gradient(to bottom, #fff, #999);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -3px;
+        }
+
+        .sub-main {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text-dim);
+            margin-bottom: 30px;
+            letter-spacing: 1px;
+        }
+
+        .intro-text {
+            font-size: 1.1rem;
+            max-width: 700px;
+            margin: 0 auto;
+            color: var(--text-dim);
+            font-weight: 400;
+            line-height: 1.8;
+        }
+
+        /* Grid */
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 30px;
+            margin-top: 80px;
+        }
+
+        .feature-card {
+            background: var(--glass);
+            border: 1px solid var(--border);
+            padding: 40px;
+            border-radius: 40px;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.5s cubic-bezier(0.2, 1, 0.3, 1);
+        }
+
+        .feature-card:hover {
+            transform: translateY(-10px);
+            border-color: rgba(255, 255, 255, 0.3);
+            background: rgba(255, 255, 255, 0.08);
+            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.4);
+        }
+
+        .icon-box {
+            font-size: 2rem;
+            margin-bottom: 24px;
+            opacity: 0.9;
+        }
+
+        .feature-title {
+            font-size: 1.6rem;
+            font-weight: 700;
+            margin-bottom: 16px;
+            color: #fff;
+        }
+
+        .feature-desc {
+            font-size: 1rem;
+            color: var(--text-dim);
+            line-height: 1.6;
+        }
+
+        /* Highlight Section */
+        .banner-section {
+            margin-top: 100px;
+            background: #ffffff;
+            color: #10262B;
+            padding: 60px;
+            border-radius: 50px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .banner-title {
+            font-size: 2.5rem;
+            font-weight: 900;
+            margin-bottom: 20px;
+            line-height: 1.1;
+        }
+
+        .banner-text {
+            font-size: 1.2rem;
+            font-weight: 500;
+            opacity: 0.9;
+        }
+
+        /* Stats */
+        .metrics-row {
+            display: flex;
+            gap: 20px;
+            margin-top: 80px;
+            justify-content: center;
+        }
+
+        .metric-item {
+            background: var(--surface);
+            padding: 24px 40px;
+            border-radius: 30px;
+            border: 1px solid var(--border);
+            text-align: center;
+            flex: 1;
+        }
+
+        .metric-value {
+            font-size: 2.2rem;
+            font-weight: 900;
+            color: #fff;
+            display: block;
+        }
+
+        .metric-label {
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: var(--text-dim);
+        }
+
+        /* Footer */
+        footer {
+            margin-top: 120px;
+            padding-bottom: 60px;
+            text-align: center;
+            border-top: 1px solid var(--border);
+            padding-top: 60px;
+        }
+
+        .footer-brand {
+            font-size: 1.5rem;
+            font-weight: 900;
+            margin-bottom: 10px;
+            opacity: 0.5;
+            letter-spacing: 2px;
+        }
+
+        .maker-tag {
+            margin-top: 24px;
+            font-size: 1rem;
+            color: #fff;
+            font-weight: 900;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+        }
+
+        .bottom-line {
+            margin-top: 12px;
+            font-size: 0.7rem;
+            color: var(--text-dim);
+            letter-spacing: 1px;
+        }
+
+        /* Print Override */
+        @media print {
+            * {
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+
+            body {
+                background-color: #10262B !important;
+                color: #ffffff !important;
+            }
+
+            .feature-card {
+                background: rgba(255, 255, 255, 0.05) !important;
+                border: 1px solid rgba(255, 255, 255, 0.1) !important;
+                break-inside: avoid;
+            }
+
+            .banner-section {
+                background: #ffffff !important;
+                color: #10262B !important;
+            }
+
+            body::before {
+                opacity: 0.08 !important;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .features-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .logo-main {
+                font-size: 2.5rem;
+            }
+
+            .metrics-row {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <header>
+            <div class="flag-box">🇰🇼</div>
+            <div class="premium-label">Elite Edition</div>
+            <h1 class="logo-main">EPIC GYMNASTIC</h1>
+            <h2 class="sub-main">The Ultimate Academy Management Ecosystem</h2>
+            <p class="intro-text">
+                Designed for visionaries who demand precision, efficiency, and scale. Epic Gymnastic is more than a
+                platform—it's the operational intelligence driving the next generation of athletic excellence.
+            </p>
+        </header>
+
+        <div class="features-grid">
+            <!-- Card 1 -->
+            <div class="feature-card">
+                <div class="icon-box">�</div>
+                <h3 class="feature-title">Operations Hub</h3>
+                <p class="feature-desc">
+                    A centralized intelligence dashboard providing real-time visibility into every KPI. Track
+                    registrations, revenue growth, and operational health with unparalleled clarity.
+                </p>
+            </div>
+
+            <!-- Card 2 -->
+            <div class="feature-card">
+                <div class="icon-box">🥋</div>
+                <h3 class="feature-name" style="font-size: 1.6rem; font-weight: 700; margin-bottom: 16px; color: #fff;">
+                    Athlete Management</h3>
+                <p class="feature-desc">
+                    Comprehensive profiles with automated subscription tracking. Manage attendance, skill progression,
+                    and renewals through a seamless, premium interface.
+                </p>
+            </div>
+
+            <!-- Card 3 -->
+            <div class="feature-card">
+                <div class="icon-box">�</div>
+                <h3 class="feature-title">Financial Intelligence</h3>
+                <p class="feature-desc">
+                    Advanced accounting modules for revenue tracking, payroll processing, and expense management.
+                    Generate professional financial audits with a single click.
+                </p>
+            </div>
+
+            <!-- Card 4 -->
+            <div class="feature-card">
+                <div class="icon-box">⚡</div>
+                <h3 class="feature-title">Private Training</h3>
+                <p class="feature-desc">
+                    Elite logistics for Personal Training sessions. Automated balance tracking, coach assignments, and
+                    session history designed for high-performance results.
+                </p>
+            </div>
+
+            <!-- Card 5 -->
+            <div class="feature-card">
+                <div class="icon-box">🔒</div>
+                <h3 class="feature-title">Security & Protocol</h3>
+                <p class="feature-desc">
+                    Integrated CCTV surveillance and staff attendance protocols. Maintain absolute security and
+                    administrative control over your academy's facilities.
+                </p>
+            </div>
+
+            <!-- Card 6 -->
+            <div class="feature-card">
+                <div class="icon-box">�</div>
+                <h3 class="feature-title">Digital Ecosystem</h3>
+                <p class="feature-desc">
+                    Fully responsive web and mobile integration powered by Capacitor. Your academy, your data, and your
+                    control—accessible from anywhere in the world.
+                </p>
+            </div>
+        </div>
+
+        <div class="banner-section">
+            <h2 class="banner-title">Elevate Your Strategy</h2>
+            <p class="banner-text">Epic Gymnastic is engineered to eliminate administrative noise, allowing you to focus
+                on what truly matters: Building Champions.</p>
+        </div>
+
+        <div class="metrics-row">
+            <div class="metric-item">
+                <span class="metric-value">100%</span>
+                <span class="metric-label">Operational Control</span>
+            </div>
+            <div class="metric-item">
+                <span class="metric-value">0</span>
+                <span class="metric-label">Administrative Friction</span>
+            </div>
+            <div class="metric-item">
+                <span class="metric-value">Global</span>
+                <span class="metric-label">Scaling Readiness</span>
+            </div>
+        </div>
+
+        <footer>
+            <div class="footer-brand">EPIC GYMNASTIC</div>
+            <p style="color: var(--text-dim); font-weight: 500;">Driving Excellence Across the Gulf</p>
+            <div class="maker-tag">MAKER BY AHMED HMAKI</div>
+            <p class="bottom-line">ENGINEERED FOR CHAMPIONS | 2026</p>
+        </footer>
+    </div>
+
+</body>
+
+</html>

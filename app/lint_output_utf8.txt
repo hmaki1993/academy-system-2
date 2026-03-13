@@ -1,0 +1,18 @@
+﻿
+f:\epic gymnastic\app\src\pages\ReceptionDashboard.tsx
+    20:5   warning  'Search' is defined but never used. Allowed unused vars must match /^_/u                                                                                            @typescript-eslint/no-unused-vars
+    28:16  warning  'i18n' is assigned a value but never used. Allowed unused vars must match /^_/u                                                                                     @typescript-eslint/no-unused-vars
+    43:12  warning  'recentCheckIns' is assigned a value but never used. Allowed unused vars must match /^_/u                                                                           @typescript-eslint/no-unused-vars
+    47:12  warning  'loadingCoaches' is assigned a value but never used. Allowed unused vars must match /^_/u                                                                           @typescript-eslint/no-unused-vars
+    52:12  warning  'loadingPt' is assigned a value but never used. Allowed unused vars must match /^_/u                                                                                @typescript-eslint/no-unused-vars
+    62:12  warning  'checkInTime' is assigned a value but never used. Allowed unused vars must match /^_/u                                                                              @typescript-eslint/no-unused-vars
+    78:12  warning  'debugError' is assigned a value but never used. Allowed unused vars must match /^_/u                                                                               @typescript-eslint/no-unused-vars
+    78:24  warning  'setDebugError' is assigned a value but never used. Allowed unused vars must match /^_/u                                                                            @typescript-eslint/no-unused-vars
+    79:12  warning  'debugAuth' is assigned a value but never used. Allowed unused vars must match /^_/u                                                                                @typescript-eslint/no-unused-vars
+   166:8   warning  React Hook useEffect has missing dependencies: 'fetchCoachesStatus', 'fetchPtStatus', and 'fetchTodaysClasses'. Either include them or remove the dependency array  react-hooks/exhaustive-deps
+   240:8   warning  React Hook useEffect has a missing dependency: 'fetchTodaysClasses'. Either include it or remove the dependency array                                               react-hooks/exhaustive-deps
+   880:46  error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`                                                                                                     react/no-unescaped-entities
+  1301:8   warning  React Hook useEffect has missing dependencies: 'fetchEntityName' and 'fetchHistory'. Either include them or remove the dependency array                             react-hooks/exhaustive-deps
+
+Γ£û 13 problems (1 error, 12 warnings)
+

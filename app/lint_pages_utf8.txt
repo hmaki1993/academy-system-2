@@ -1,0 +1,166 @@
+﻿
+F:\epic gymnastic\app\src\pages\Coaches.tsx
+  27:71  error  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             @typescript-eslint/no-explicit-any
+  31:9   error  Error: Cannot access variable before it is declared
+
+`fetchAttendance` is accessed before it is declared, which prevents the earlier access from updating when this value changes over time.
+
+F:\epic gymnastic\app\src\pages\Coaches.tsx:31:9
+  29 |
+  30 |     useEffect(() => {
+> 31 |         fetchAttendance();
+     |         ^^^^^^^^^^^^^^^ `fetchAttendance` accessed before it is declared
+  32 |
+  33 |         // Update timer every second
+  34 |         const interval = setInterval(() => setCurrentTime(new Date()), 1000);
+
+F:\epic gymnastic\app\src\pages\Coaches.tsx:38:5
+  36 |     }, [refreshTrigger]);
+  37 |
+> 38 |     const fetchAttendance = async () => {
+     |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 39 |         const today = new Date().toISOString().slice(0, 10);
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 40 |         const { data } = await supabase
+     ΓÇª
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 51 |         setAttendanceMap(map);
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 52 |     };
+     | ^^^^^^^ `fetchAttendance` is declared here
+  53 |
+  54 |     const getDuration = (checkInTime: string) => {
+  55 |         const start = new Date(checkInTime).getTime();  react-hooks/immutability
+  45:35  error  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             @typescript-eslint/no-explicit-any
+
+F:\epic gymnastic\app\src\pages\Dashboard.tsx
+   1:10  error  'useEffect' is defined but never used                                                                                                 @typescript-eslint/no-unused-vars
+   1:21  error  'useState' is defined but never used                                                                                                  @typescript-eslint/no-unused-vars
+   2:10  error  'supabase' is defined but never used                                                                                                  @typescript-eslint/no-unused-vars
+  17:49  error  React Hook "useDashboardStats" is called conditionally. React Hooks must be called in the exact same order in every component render  react-hooks/rules-of-hooks
+  56:81  error  `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`                                                                       react/no-unescaped-entities
+  56:88  error  `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`                                                                       react/no-unescaped-entities
+  94:71  error  Unexpected any. Specify a different type                                                                                              @typescript-eslint/no-explicit-any
+
+F:\epic gymnastic\app\src\pages\Finance.tsx
+   1:10  error  'useEffect' is defined but never used     @typescript-eslint/no-unused-vars
+   2:10  error  'supabase' is defined but never used      @typescript-eslint/no-unused-vars
+   3:38  error  'Search' is defined but never used        @typescript-eslint/no-unused-vars
+   8:11  error  'Payment' is defined but never used       @typescript-eslint/no-unused-vars
+  22:48  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  22:56  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+F:\epic gymnastic\app\src\pages\Login.tsx
+   13:19  error  't' is assigned a value but never used                           @typescript-eslint/no-unused-vars
+   28:23  error  Unexpected any. Specify a different type                         @typescript-eslint/no-explicit-any
+  111:28  error  `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`  react/no-unescaped-entities
+
+F:\epic gymnastic\app\src\pages\Register.tsx
+  23:21  error  'data' is assigned a value but never used  @typescript-eslint/no-unused-vars
+  40:23  error  Unexpected any. Specify a different type   @typescript-eslint/no-explicit-any
+
+F:\epic gymnastic\app\src\pages\Schedule.tsx
+   26:12  error    'loading' is assigned a value but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 @typescript-eslint/no-unused-vars
+   33:60  error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     @typescript-eslint/no-explicit-any
+   39:9   error    Error: Cannot access variable before it is declared
+
+`fetchSessions` is accessed before it is declared, which prevents the earlier access from updating when this value changes over time.
+
+F:\epic gymnastic\app\src\pages\Schedule.tsx:39:9
+  37 |
+  38 |     useEffect(() => {
+> 39 |         fetchSessions();
+     |         ^^^^^^^^^^^^^ `fetchSessions` accessed before it is declared
+  40 |         if (role === 'coach') {
+  41 |             fetchAttendanceStatus();
+  42 |         }
+
+F:\epic gymnastic\app\src\pages\Schedule.tsx:137:5
+  135 |     };
+  136 |
+> 137 |     const fetchSessions = async () => {
+      |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 138 |         setLoading(true);
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^
+> 139 |
+      ΓÇª
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^
+> 171 |         setLoading(false);
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^
+> 172 |     };
+      | ^^^^^^^ `fetchSessions` is declared here
+  173 |
+  174 |     const navigateDate = (direction: 'prev' | 'next') => {
+  175 |         if (viewMode === 'day') {                                                                                                                                                                 react-hooks/immutability
+   41:13  error    Error: Cannot access variable before it is declared
+
+`fetchAttendanceStatus` is accessed before it is declared, which prevents the earlier access from updating when this value changes over time.
+
+F:\epic gymnastic\app\src\pages\Schedule.tsx:41:13
+  39 |         fetchSessions();
+  40 |         if (role === 'coach') {
+> 41 |             fetchAttendanceStatus();
+     |             ^^^^^^^^^^^^^^^^^^^^^ `fetchAttendanceStatus` accessed before it is declared
+  42 |         }
+  43 |     }, [role]);
+  44 |
+
+F:\epic gymnastic\app\src\pages\Schedule.tsx:71:5
+   69 |     }, [attendanceToday]);
+   70 |
+>  71 |     const fetchAttendanceStatus = async () => {
+      |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+>  72 |         setAttendanceLoading(true);
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+>  73 |         const { data: { user } } = await supabase.auth.getUser();
+      ΓÇª
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+>  96 |         setAttendanceLoading(false);
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+>  97 |     };
+      | ^^^^^^^ `fetchAttendanceStatus` is declared here
+   98 |
+   99 |     const handleCheckIn = async () => {
+  100 |         if (!coachId) return;  react-hooks/immutability
+   43:8   warning  React Hook useEffect has a missing dependency: 'fetchSessions'. Either include it or remove the dependency array                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             react-hooks/exhaustive-deps
+  103:15  error    'nowTime' is assigned a value but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 @typescript-eslint/no-unused-vars
+  123:15  error    'nowTime' is assigned a value but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 @typescript-eslint/no-unused-vars
+  301:39  error    'dayIdx' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           @typescript-eslint/no-unused-vars
+
+F:\epic gymnastic\app\src\pages\Settings.tsx
+  29:9  error  Error: Cannot access variable before it is declared
+
+`applyThemeStyles` is accessed before it is declared, which prevents the earlier access from updating when this value changes over time.
+
+F:\epic gymnastic\app\src\pages\Settings.tsx:29:9
+  27 |         setCurrentTheme(savedTheme);
+  28 |         // Apply theme on mount (in case it wasn't applied by a previous visit in this session)
+> 29 |         applyThemeStyles(savedTheme);
+     |         ^^^^^^^^^^^^^^^^ `applyThemeStyles` accessed before it is declared
+  30 |     }, []);
+  31 |
+  32 |     const applyThemeStyles = (themeId: string) => {
+
+F:\epic gymnastic\app\src\pages\Settings.tsx:32:5
+  30 |     }, []);
+  31 |
+> 32 |     const applyThemeStyles = (themeId: string) => {
+     |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 33 |         const root = document.documentElement;
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 34 |
+     ΓÇª
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 79 |         }
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 80 |     };
+     | ^^^^^^^ `applyThemeStyles` is declared here
+  81 |
+  82 |     const applyTheme = (themeId: string) => {
+  83 |         setCurrentTheme(themeId);  react-hooks/immutability
+
+F:\epic gymnastic\app\src\pages\Students.tsx
+  1:10  error  'useEffect' is defined but never used  @typescript-eslint/no-unused-vars
+
+Γ£û 31 problems (30 errors, 1 warning)
+

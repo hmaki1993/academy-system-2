@@ -85,7 +85,7 @@ export default function Login({ isPreview = false, previewSettings, forcedDesign
     };
 
     return (
-        <div className="relative h-[100dvh] w-full overflow-hidden bg-black">
+        <div className={`relative ${isPreview ? 'h-full' : 'h-[100dvh]'} w-full overflow-hidden bg-black`}>
             <LoginRenderer
                 activeSettings={activeSettings}
                 designMode={isMobileView ? 'mobile' : 'desktop'}
@@ -99,7 +99,7 @@ export default function Login({ isPreview = false, previewSettings, forcedDesign
                 toggleLanguage={toggleLanguage}
                 t={t}
                 i18n={i18n}
-                isPreview={isPreview ? isMobileView : isMobileView}
+                isPreview={isPreview || isMobileView}
                 isFullScreen={!isPreview} // Full screen handles fluid 100dvh, preview restricts to device boundary
                 disableInteraction={isPreview}
             />

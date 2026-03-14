@@ -1450,7 +1450,15 @@ export default function Settings() {
                                             )}
 
                                             <div className="absolute inset-0 w-full h-full overflow-hidden pointer-events-none" ref={previewParentRef}>
-                                                <div className="w-full h-full relative">
+                                                <div 
+                                                    className="w-full h-full relative"
+                                                    style={{
+                                                        transform: `scale(${previewScale})`,
+                                                        transformOrigin: 'top left',
+                                                        width: designMode === 'mobile' ? '390px' : '1920px',
+                                                        height: designMode === 'mobile' ? '844px' : '1080px'
+                                                    }}
+                                                >
                                                     <LoginRenderer
                                                         activeSettings={previewSettings}
                                                         designMode={designMode}
@@ -1458,8 +1466,8 @@ export default function Settings() {
                                                         i18n={i18n}
                                                         isPreview={true}
                                                     />
-                                                    <div className="absolute top-4 right-4 px-3 py-1 rounded-full bg-amber-500 text-[10px] font-black text-black z-[70] shadow-xl">LIVE</div>
                                                 </div>
+                                                <div className="absolute top-4 right-4 px-3 py-1 rounded-full bg-amber-500 text-[10px] font-black text-black z-[70] shadow-xl">LIVE</div>
                                             </div>
                                         </div>
 

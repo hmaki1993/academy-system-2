@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { X, Layout, Monitor } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { LoginRenderer } from './LoginRenderer';
+import Login from '../../Login';
 
 interface FullScreenPreviewProps {
     show: boolean;
@@ -58,15 +58,11 @@ export const FullScreenPreview: React.FC<FullScreenPreviewProps> = ({
             </button>
 
             {/* Rendering Engine Stage */}
-            <div className="flex-1 w-full h-full relative p-0 overflow-hidden">
-                <LoginRenderer
-                    activeSettings={previewSettings}
-                    designMode={designMode}
-                    t={t}
-                    i18n={i18n}
+            <div className="flex-1 w-full h-full relative p-0 overflow-hidden pointer-events-none">
+                <Login
+                    previewSettings={previewSettings}
+                    forcedDesignMode={designMode}
                     isPreview={true}
-                    isFullScreen={true}
-                    disableInteraction={true}
                 />
             </div>
         </div>,

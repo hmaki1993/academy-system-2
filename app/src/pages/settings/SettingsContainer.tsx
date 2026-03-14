@@ -19,7 +19,7 @@ import { useOutletContext } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 
 // Modularized Components & Utils
-import { LoginRenderer } from './components/LoginRenderer';
+import Login from '../Login';
 import { stripAlpha, toSafeHex, hexToRgba, rgbaToHex8, getDominantColors, lum } from './utils';
 import { PremiumConfirmModal, PremiumSwitch, PremiumColorPicker } from './components/SharedUI';
 import { FullScreenPreview } from './components/FullScreenPreview';
@@ -1456,14 +1456,13 @@ export default function Settings() {
                                                         transform: `scale(${previewScale})`,
                                                         transformOrigin: 'top left',
                                                         width: designMode === 'mobile' ? '390px' : '1920px',
-                                                        height: designMode === 'mobile' ? '844px' : '1080px'
+                                                        height: designMode === 'mobile' ? '844px' : '1080px',
+                                                        pointerEvents: 'none'
                                                     }}
                                                 >
-                                                    <LoginRenderer
-                                                        activeSettings={previewSettings}
-                                                        designMode={designMode}
-                                                        t={t}
-                                                        i18n={i18n}
+                                                    <Login
+                                                        previewSettings={previewSettings}
+                                                        forcedDesignMode={designMode}
                                                         isPreview={true}
                                                     />
                                                 </div>

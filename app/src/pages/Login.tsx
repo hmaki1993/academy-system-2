@@ -6,7 +6,13 @@ import { useTheme } from '../context/ThemeContext';
 import { getResponsiveLoginSettings } from '../utils/theme';
 import { LoginRenderer } from './settings/components/LoginRenderer';
 
-export default function Login() {
+interface LoginProps {
+    isPreview?: boolean;
+    previewSettings?: any;
+    forcedDesignMode?: 'desktop' | 'mobile';
+}
+
+export default function Login({ isPreview = false, previewSettings, forcedDesignMode }: LoginProps) {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
@@ -15,25 +21,30 @@ export default function Login() {
     const { t, i18n } = useTranslation();
     const { settings } = useTheme();
 
-    // Responsive design mode detection - Using a more robust check for 100dvh/mobile feel
-    const [isMobileView, setIsMobileView] = useState(() => {
+    // Responsive design mode detection
+    const [autoIsMobileView, setAutoIsMobileView] = useState(() => {
         return window.innerWidth < 768 || /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
     });
 
     useEffect(() => {
         const handleResize = () => {
-            setIsMobileView(window.innerWidth < 768 || /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent));
+            setAutoIsMobileView(window.innerWidth < 768 || /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent));
         };
         window.addEventListener('resize', handleResize);
         return () => window.removeEventListener('resize', handleResize);
     }, []);
 
+    const isMobileView = forcedDesignMode ? forcedDesignMode === 'mobile' : autoIsMobileView;
+    const activeRawSettings = previewSettings || settings;
+
     // Resolve settings based on viewport (Desktop vs Mobile customization)
     const activeSettings = useMemo(() => {
-        return getResponsiveLoginSettings(settings, isMobileView);
-    }, [settings, isMobileView]);
+        return getResponsiveLoginSettings(activeRawSettings, isMobileView);
+    }, [activeRawSettings, isMobileView]);
 
     useEffect(() => {
+        if (isPreview) return; // Skip session redirect when rendering as a preview
+
         const checkSession = async () => {
             const { data: { session } } = await supabase.auth.getSession();
             if (session) {
@@ -41,7 +52,7 @@ export default function Login() {
             }
         };
         checkSession();
-    }, [navigate]);
+    }, [navigate, isPreview]);
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -88,8 +99,9 @@ export default function Login() {
                 toggleLanguage={toggleLanguage}
                 t={t}
                 i18n={i18n}
-                isPreview={isMobileView}
-                isFullScreen={true}
+                isPreview={isPreview ? isMobileView : isMobileView}
+                isFullScreen={!isPreview} // Full screen handles fluid 100dvh, preview restricts to device boundary
+                disableInteraction={isPreview}
             />
         </div>
     );

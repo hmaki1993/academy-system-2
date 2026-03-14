@@ -889,7 +889,7 @@ export default function DashboardLayout() {
                                     <div className={`flex items-center gap-1.5 sm:gap-2 transition-all duration-700 ease-out ${notificationsOpen ? 'opacity-100 translate-x-0 pointer-events-auto' : `opacity-100 md:opacity-0 ${isRtl ? 'translate-x-0 md:-translate-x-10' : 'translate-x-0 md:translate-x-10'} pointer-events-auto md:pointer-events-none group-hover/header:opacity-100 group-hover/header:translate-x-0 group-hover/header:pointer-events-auto translate-z-0`}`}>
                                         {role === 'admin' && (
                                             <a
-                                                href="/registration"
+                                                href="#/registration"
                                                 target="_blank"
                                                 rel="noopener noreferrer"
                                                 onMouseEnter={playHoverSound}

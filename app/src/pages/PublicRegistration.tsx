@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { User, Phone, MapPin, TrendingUp, ChevronDown, CheckCircle, Clock, ChevronRight, Globe, AlertCircle, Trash2, UserPlus, Users, ArrowLeft } from 'lucide-react';
+import { User, Phone, MapPin, TrendingUp, ChevronDown, CheckCircle, Clock, ChevronRight, Globe, AlertCircle, Trash2, UserPlus, Users, ArrowLeft, CreditCard, Smartphone } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useTheme, GymSettings } from '../context/ThemeContext';
 import toast from 'react-hot-toast';
@@ -179,6 +179,7 @@ export default function PublicRegistration() {
         subscription_type: '',
         training_days: [] as string[],
         training_schedule: [] as { day: string, start: string, end: string }[],
+        payment_method: 'card' as 'card' | 'wallet',
     });
 
     useEffect(() => {
@@ -281,21 +282,62 @@ export default function PublicRegistration() {
             if (studentError) throw studentError;
             const studentId = student.id;
 
-            // 4. Record Payment
-            if (selectedPlan && selectedPlan.price > 0) {
+            // 4. Paymob Handshake (Online Payment)
+            if (selectedPlan && selectedPlan.price > 0 && formData.payment_method !== 'cash') {
+                try {
+                    const { data: paymobData, error: paymobError } = await supabase.functions.invoke('paymob-process', {
+                        body: {
+                            amount_cents: Math.round(selectedPlan.price * 100),
+                            currency: "EGP",
+                            payment_method: formData.payment_method,
+                            billing_data: {
+                                first_name: formData.full_name.split(' ')[0] || "Student",
+                                last_name: formData.full_name.split(' ').slice(1).join(' ') || "Registration",
+                                email: formData.email || "guest@fame-academy.online",
+                                phone_number: `${formData.country_code_parent}${formData.parent_contact}`.replace('+', '')
+                            }
+                        }
+                    });
+
+                    if (paymobError) throw paymobError;
+
+                    // Create pending payment record with order_id
+                    await supabase.from('payments').insert({
+                        student_id: studentId,
+                        amount: Number(selectedPlan.price),
+                        payment_date: format(new Date(), 'yyyy-MM-dd'),
+                        payment_method: formData.payment_method,
+                        status: 'pending',
+                        gateway_order_id: paymobData.order_id?.toString(),
+                        notes: `Online Registration - ${selectedPlan.name}`
+                    });
+
+                    if (paymobData.redirect_url) {
+                        window.location.href = paymobData.redirect_url;
+                        return; // Stop here, redirect takes over
+                    } else if (paymobData.payment_key) {
+                        // For Card, we might use an iframe or redirect to Paymob's default iframe
+                        // Assuming we use iframe ID for Card (standard Paymob flow)
+                        const iframeId = "815668"; // This should ideally be a setting too
+                        window.location.href = `https://accept.paymob.com/api/acceptance/iframes/${iframeId}?payment_token=${paymobData.payment_key}`;
+                        return;
+                    }
+                } catch (payError) {
+                    console.error('Paymob initiation failed:', payError);
+                    toast.error('Payment gateway unavailable. Student registered, please pay at reception.');
+                }
+            } else if (selectedPlan && selectedPlan.price > 0) {
+                // Record Cash Payment (Manual)
                 const { error: paymentError } = await supabase.from('payments').insert({
                     student_id: studentId,
                     amount: Number(selectedPlan.price),
                     payment_date: format(new Date(), 'yyyy-MM-dd'),
                     payment_method: 'cash',
+                    status: 'paid',
                     notes: `New Registration - ${selectedPlan.name}`
                 });
 
-                if (paymentError) {
-                    console.error('Registration payment record failed:', paymentError);
-                } else {
-                    console.log('Public registration payment recorded successfully');
-                }
+                if (paymentError) console.error('Registration payment record failed:', paymentError);
             }
 
             // 5. Insert Training Schedule Rows & Sessions
@@ -377,6 +419,7 @@ export default function PublicRegistration() {
                     subscription_type: '',
                     training_days: [],
                     training_schedule: [],
+                    payment_method: 'card',
                 });
                 window.scrollTo(0, 0);
             }, 4000);
@@ -683,6 +726,33 @@ export default function PublicRegistration() {
                                             textColorMuted={textColorMuted}
                                             icon={Users}
                                         />
+                                    </div>
+                                </div>
+
+                                {/* Payment Method Selection */}
+                                <div className="space-y-6 pt-6">
+                                    <label className="text-[10px] font-black text-[#ABAFB5]/40 uppercase tracking-[0.2em] ml-6 block">Settlement Strategy</label>
+                                    <div className="flex flex-wrap gap-4">
+                                        {[
+                                            { id: 'card', label: 'Credit / Debit Card', icon: CreditCard },
+                                            { id: 'wallet', label: 'Mobile Wallet / InstaPay', icon: Smartphone }
+                                        ].map(method => (
+                                            <button 
+                                                key={method.id} 
+                                                type="button" 
+                                                onClick={() => setFormData({ ...formData, payment_method: method.id as any })}
+                                                className={`flex-1 min-w-[12rem] p-6 rounded-[2.5rem] border transition-all duration-500 flex flex-col items-center gap-3 active:scale-95 group/pay
+                                                    ${formData.payment_method === method.id 
+                                                        ? 'text-white shadow-2xl scale-[1.02]' 
+                                                        : 'border-white/5 text-[#677E8A]/40 hover:bg-white/5 hover:border-white/10'}`}
+                                                style={formData.payment_method === method.id 
+                                                    ? { backgroundColor: `${primaryColor}33`, borderColor: `${primaryColor}66` } 
+                                                    : { backgroundColor: `${secondaryColor}4d` }}
+                                            >
+                                                <method.icon className={`w-6 h-6 transition-transform duration-500 ${formData.payment_method === method.id ? 'scale-110' : 'group-hover/pay:scale-110'}`} style={{ color: formData.payment_method === method.id ? primaryColor : 'inherit' }} />
+                                                <span className="text-[10px] font-black uppercase tracking-widest">{method.label}</span>
+                                            </button>
+                                        ))}
                                     </div>
                                 </div>
                             </div>

@@ -58,12 +58,36 @@ export const FullScreenPreview: React.FC<FullScreenPreviewProps> = ({
             </button>
 
             {/* Rendering Engine Stage */}
-            <div className="flex-1 w-full h-full relative p-0 overflow-hidden pointer-events-none">
-                <Login
-                    previewSettings={previewSettings}
-                    forcedDesignMode={designMode}
-                    isPreview={true}
-                />
+            <div className={`flex-1 w-full h-full relative flex items-center justify-center p-4 overflow-hidden pointer-events-none`}>
+                <div 
+                   className={`relative border-zinc-900 shadow-2xl overflow-hidden overflow-y-auto pointer-events-auto transition-all duration-500 ${designMode === 'mobile' ? 'h-full aspect-[9/19.5] rounded-[2.5rem] border-[12px] ring-4 ring-white/5 bg-black' : 'w-full h-full'}`}
+                >
+                    {designMode === 'mobile' && (
+                        <>
+                            {/* Notch Simulation */}
+                            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-7 bg-zinc-900 rounded-b-[20px] z-[60] flex items-center justify-center gap-2">
+                                <div className="w-10 h-1.5 bg-white/10 rounded-full"></div>
+                                <div className="w-1.5 h-1.5 bg-white/10 rounded-full"></div>
+                            </div>
+                            {/* Status Bar */}
+                            <div className="absolute top-1.5 left-0 right-0 px-6 flex justify-between items-center z-50 pointer-events-none opacity-50">
+                                <span className="text-[10px] font-black text-white px-2">9:41</span>
+                                <div className="flex items-center gap-1.5 px-2">
+                                    <div className="w-3 h-2 bg-white rounded-[2px]"></div>
+                                    <div className="w-2.5 h-2.5 rounded-full border-[1.5px] border-white"></div>
+                                </div>
+                            </div>
+                        </>
+                    )}
+
+                    <div className="w-full h-full relative pointer-events-none">
+                        <Login
+                            previewSettings={previewSettings}
+                            forcedDesignMode={designMode}
+                            isPreview={true}
+                        />
+                    </div>
+                </div>
             </div>
         </div>,
         document.body

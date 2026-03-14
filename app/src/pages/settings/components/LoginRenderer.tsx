@@ -68,17 +68,14 @@ export const LoginRenderer: React.FC<LoginRendererProps> = ({
     const focusHeight = isMiniPreview ? 700 : targetHeight;
     const focusWidth = isMiniPreview ? (designMode === 'mobile' ? 390 : 800) : targetWidth;
 
-    // Calculate scale factor for CONTENT (Card, Logo, etc.)
-    // We apply scaling if bounds are smaller than our target Stage size.
-    const scaleFactor = (bounds.width > 0 && bounds.height > 0)
-        ? Math.min(bounds.width / (isFullScreen ? targetWidth : focusWidth), bounds.height / (isFullScreen ? targetHeight : focusHeight))
-        : 1;
+    const isProductionMobile = designMode === 'mobile' && !isPreview;
 
-    // Calculate scale factor for BACKGROUND (Ensure full BG visibility)
-    // We use the full targetHeight (1080) for the BG so it fits the container without heavy zooming.
-    // In mini-preview, we multiply by 0.9 to give some "breathing room" so the user can see it's all there.
-    const bgScaleFactor = isPreview
-        ? (bounds.width > 0 && bounds.height > 0 ? Math.min(bounds.width / targetWidth, bounds.height / targetHeight) * (isMiniPreview ? 0.9 : 1) : 1)
+    // Calculate unified scale factor for both Background + Content
+    const scaleFactor = (bounds.width > 0 && bounds.height > 0)
+        ? (isProductionMobile
+            ? Math.max(bounds.width / targetWidth, bounds.height / targetHeight) // Cover on real phones
+            : Math.min(bounds.width / (isFullScreen ? targetWidth : focusWidth), bounds.height / (isFullScreen ? targetHeight : focusHeight)) // Contain in Designer
+        )
         : 1;
 
     const logoPath = (activeSettings.login_logo_url as string) || "/logo.png";
@@ -89,30 +86,9 @@ export const LoginRenderer: React.FC<LoginRendererProps> = ({
             ref={containerRef}
             className={`w-full h-full relative font-cairo flex items-center justify-center select-none overflow-hidden ${(isPreview || designMode === 'mobile') ? 'bg-black' : 'bg-transparent'}`}
         >
-            {/* Background Layer - Fluid and full-bleed to eliminate cropping */}
-            <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
-                <div
-                    className="absolute inset-0 transition-all duration-500 ease-out"
-                    style={{
-                        filter: `blur(${activeSettings.login_bg_blur ?? 0}px) brightness(${activeSettings.login_bg_brightness ?? 1.0})`,
-                    }}
-                >
-                    <div
-                        className="w-full h-full bg-no-repeat bg-black transition-all duration-1000"
-                        style={{
-                            backgroundImage: `url('${bgPath}')`,
-                            backgroundSize: (activeSettings.login_bg_fit === 'fill') ? '100% 100%' : (activeSettings.login_bg_fit as string || 'cover'),
-                            backgroundPosition: 'center',
-                            transform: `scale(${activeSettings.login_bg_zoom ?? 1.0}) translate(${activeSettings.login_bg_x_offset ?? 0}%, ${activeSettings.login_bg_y_offset ?? 0}%)`,
-                            opacity: (activeSettings.login_bg_opacity as number) ?? 0.8
-                        }}
-                    ></div>
-                </div>
-            </div>
-
-            {/* Content Stage - Unified Coordinate System for 100% parity */}
+            {/* Unified Stage - Background and Content scale together to guarantee 1:1 Parity */}
             <div
-                className="absolute inset-0 flex flex-col items-center justify-center transition-all duration-500 ease-out z-10"
+                className="absolute transition-all duration-700 ease-out z-10"
                 style={{
                     width: `${targetWidth}px`,
                     height: `${targetHeight}px`,
@@ -124,8 +100,31 @@ export const LoginRenderer: React.FC<LoginRendererProps> = ({
                     pointerEvents: 'none'
                 }}
             >
-                {/* Logo Layer - Relative to flex container for robust stacking */}
-                {activeSettings.login_show_logo !== false && (
+                {/* Background Layer - Embedded within the Stage so it crops exactly like the designer predicts */}
+                <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
+                    <div
+                        className="absolute inset-0 transition-all duration-500 ease-out"
+                        style={{
+                            filter: `blur(${activeSettings.login_bg_blur ?? 0}px) brightness(${activeSettings.login_bg_brightness ?? 1.0})`,
+                        }}
+                    >
+                        <div
+                            className="w-full h-full bg-no-repeat bg-black transition-all duration-1000"
+                            style={{
+                                backgroundImage: `url('${bgPath}')`,
+                                backgroundSize: (activeSettings.login_bg_fit === 'fill') ? '100% 100%' : (activeSettings.login_bg_fit as string || 'cover'),
+                                backgroundPosition: 'center',
+                                transform: `scale(${activeSettings.login_bg_zoom ?? 1.0}) translate(${activeSettings.login_bg_x_offset ?? 0}%, ${activeSettings.login_bg_y_offset ?? 0}%)`,
+                                opacity: (activeSettings.login_bg_opacity as number) ?? 0.8
+                            }}
+                        ></div>
+                    </div>
+                </div>
+
+                {/* Content Container */}
+                <div className="relative w-full h-full flex flex-col items-center justify-center p-6">
+                    {/* Logo Layer */}
+                    {activeSettings.login_show_logo !== false && (
                     <div
                         className="z-20 flex items-center justify-center pointer-events-none mb-6 md:mb-8 transition-all duration-500"
                         style={{
@@ -284,5 +283,6 @@ export const LoginRenderer: React.FC<LoginRendererProps> = ({
                 </div>
             </div>
         </div>
-    );
+    </div>
+);
 };

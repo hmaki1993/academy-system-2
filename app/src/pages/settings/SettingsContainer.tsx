@@ -1453,10 +1453,6 @@ export default function Settings() {
                                                 <div 
                                                     className="w-full h-full relative"
                                                     style={{
-                                                        transform: `scale(${previewScale})`,
-                                                        transformOrigin: 'top left',
-                                                        width: designMode === 'mobile' ? '390px' : '1920px',
-                                                        height: designMode === 'mobile' ? '844px' : '1080px',
                                                         pointerEvents: 'none'
                                                     }}
                                                 >

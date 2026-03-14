@@ -69,11 +69,9 @@ export const LoginRenderer: React.FC<LoginRendererProps> = ({
     const focusWidth = isMiniPreview ? (designMode === 'mobile' ? 390 : 800) : targetWidth;
 
     // Calculate scale factor for CONTENT (Card, Logo, etc.)
-    // If we are embedded in a Preview (Settings/FullScreenPreview), the parent is ALREADY scaling 
-    // the wrapper using CSS transform. Measuring bounds here causes a double-shrink cascade.
-    const scaleFactor = isPreview 
-        ? 1 
-        : (designMode === 'mobile' ? (bounds.width > 0 && bounds.height > 0 ? Math.min(bounds.width / targetWidth, bounds.height / targetHeight) : 1) : 1);
+    const scaleFactor = (isPreview || designMode === 'mobile')
+        ? (bounds.width > 0 && bounds.height > 0 ? Math.min(bounds.width / (isFullScreen ? targetWidth : focusWidth), bounds.height / (isFullScreen ? targetHeight : focusHeight)) : 1)
+        : 1;
 
     // Calculate scale factor for BACKGROUND (Ensure full BG visibility)
     // We use the full targetHeight (1080) for the BG so it fits the container without heavy zooming.

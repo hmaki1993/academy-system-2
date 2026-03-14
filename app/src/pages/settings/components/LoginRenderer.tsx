@@ -69,8 +69,9 @@ export const LoginRenderer: React.FC<LoginRendererProps> = ({
     const focusWidth = isMiniPreview ? (designMode === 'mobile' ? 390 : 800) : targetWidth;
 
     // Calculate scale factor for CONTENT (Card, Logo, etc.)
-    const scaleFactor = (isPreview || designMode === 'mobile')
-        ? (bounds.width > 0 && bounds.height > 0 ? Math.min(bounds.width / (isFullScreen ? targetWidth : focusWidth), bounds.height / (isFullScreen ? targetHeight : focusHeight)) : 1)
+    // We apply scaling if bounds are smaller than our target Stage size.
+    const scaleFactor = (bounds.width > 0 && bounds.height > 0)
+        ? Math.min(bounds.width / (isFullScreen ? targetWidth : focusWidth), bounds.height / (isFullScreen ? targetHeight : focusHeight))
         : 1;
 
     // Calculate scale factor for BACKGROUND (Ensure full BG visibility)
@@ -109,17 +110,10 @@ export const LoginRenderer: React.FC<LoginRendererProps> = ({
                 </div>
             </div>
 
-            {/* Content Stage - Preserving 1080p parity (or fluid if FullScreen) */}
+            {/* Content Stage - Unified Coordinate System for 100% parity */}
             <div
                 className="absolute inset-0 flex flex-col items-center justify-center transition-all duration-500 ease-out z-10"
-                style={(isFullScreen && !isPreview) ? {
-                    width: '100%',
-                    height: '100%',
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    pointerEvents: 'none'
-                } : {
+                style={{
                     width: `${targetWidth}px`,
                     height: `${targetHeight}px`,
                     transform: `translate(-50%, -50%) scale(${scaleFactor})`,

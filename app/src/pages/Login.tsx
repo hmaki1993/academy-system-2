@@ -100,7 +100,7 @@ export default function Login({ isPreview = false, isFullScreen = false, preview
                 toggleLanguage={toggleLanguage}
                 t={t}
                 i18n={i18n}
-                isPreview={isPreview || isMobileView}
+                isPreview={isPreview}
                 isFullScreen={isFullScreen || !isPreview} // Propagated or True if live page
                 disableInteraction={isPreview}
             />

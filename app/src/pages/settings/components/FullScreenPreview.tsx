@@ -85,6 +85,7 @@ export const FullScreenPreview: React.FC<FullScreenPreviewProps> = ({
                             previewSettings={previewSettings}
                             forcedDesignMode={designMode}
                             isPreview={true}
+                            isFullScreen={true}
                         />
                     </div>
                 </div>

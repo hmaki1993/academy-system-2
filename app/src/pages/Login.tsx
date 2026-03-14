@@ -8,11 +8,12 @@ import { LoginRenderer } from './settings/components/LoginRenderer';
 
 interface LoginProps {
     isPreview?: boolean;
+    isFullScreen?: boolean;
     previewSettings?: any;
     forcedDesignMode?: 'desktop' | 'mobile';
 }
 
-export default function Login({ isPreview = false, previewSettings, forcedDesignMode }: LoginProps) {
+export default function Login({ isPreview = false, isFullScreen = false, previewSettings, forcedDesignMode }: LoginProps) {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
@@ -100,7 +101,7 @@ export default function Login({ isPreview = false, previewSettings, forcedDesign
                 t={t}
                 i18n={i18n}
                 isPreview={isPreview || isMobileView}
-                isFullScreen={!isPreview} // Full screen handles fluid 100dvh, preview restricts to device boundary
+                isFullScreen={isFullScreen || !isPreview} // Propagated or True if live page
                 disableInteraction={isPreview}
             />
         </div>

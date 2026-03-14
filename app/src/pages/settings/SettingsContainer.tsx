@@ -1453,6 +1453,10 @@ export default function Settings() {
                                                 <div 
                                                     className="w-full h-full relative"
                                                     style={{
+                                                        transform: `scale(${previewScale})`,
+                                                        transformOrigin: 'top left',
+                                                        width: designMode === 'mobile' ? '390px' : '1920px',
+                                                        height: designMode === 'mobile' ? '844px' : '1080px',
                                                         pointerEvents: 'none'
                                                     }}
                                                 >
@@ -1460,6 +1464,7 @@ export default function Settings() {
                                                         previewSettings={previewSettings}
                                                         forcedDesignMode={designMode}
                                                         isPreview={true}
+                                                        isFullScreen={false}
                                                     />
                                                 </div>
                                                 <div className="absolute top-4 right-4 px-3 py-1 rounded-full bg-amber-500 text-[10px] font-black text-black z-[70] shadow-xl">LIVE</div>

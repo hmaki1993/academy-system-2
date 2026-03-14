@@ -431,8 +431,8 @@ export default function PublicRegistration() {
         <div className="h-screen w-screen flex flex-col items-center justify-start py-12 md:py-24 px-4 md:px-8 relative overflow-y-auto custom-scrollbar font-cairo" style={{ backgroundColor: secondaryColor }}>
 
             {/* Background Effects - Premium Atmosphere */}
-            <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
-                <div className="absolute top-[-10%] left-[-10%] w-[120%] h-[120%]" style={{ backgroundColor: secondaryColor }}></div>
+            <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
+                <div className="absolute inset-0" style={{ backgroundColor: secondaryColor }}></div>
 
                 <div className="absolute top-[10%] right-[10%] w-[60%] h-[60%] rounded-full blur-[180px] animate-pulse" style={{ backgroundColor: `${primaryColor}26` }}></div>
                 <div className="absolute bottom-[20%] left-[5%] w-[50%] h-[50%] rounded-full blur-[150px] transition-all duration-1000" style={{ backgroundColor: `${accentColor}26` }}></div>

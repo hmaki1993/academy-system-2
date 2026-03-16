@@ -13,11 +13,12 @@ import { useCurrency } from '../context/CurrencyContext';
 import PremiumClock from '../components/PremiumClock';
 import { useTheme } from '../context/ThemeContext';
 import ConfirmModal from '../components/ConfirmModal';
-import { RotateCcw, Trash2, TrendingUp, ChevronRight, Globe, Activity, ArrowUpRight } from 'lucide-react';
+import { RotateCcw, Trash2, TrendingUp, ChevronRight, Globe, Activity, ArrowUpRight, BrainCircuit, X } from 'lucide-react';
 import FinancialProgressChart from '../components/FinancialProgressChart';
 import PerformanceAnalyticsCard from '../components/PerformanceAnalyticsCard';
 import { useFinancialTrends } from '../hooks/useData';
 import PageHeader from '../components/PageHeader';
+import AICoachAssistantModal from '../components/AICoachAssistantModal';
 
 export default function HeadCoachDashboard() {
     const { t, i18n } = useTranslation();
@@ -35,10 +36,14 @@ export default function HeadCoachDashboard() {
     const [coachId, setCoachId] = useState<string | null>(null);
     const [savedSessions, setSavedSessions] = useState<any[]>([]);
     const { data: financialTrends } = useFinancialTrends();
+    const [isAIAssistantOpen, setIsAIAssistantOpen] = useState(false);
 
     // Modals
     const [showGroupModal, setShowGroupModal] = useState(false);
     const [showStudentModal, setShowStudentModal] = useState(false);
+    const [showAttendanceHistory, setShowAttendanceHistory] = useState(false);
+    const [attendanceHistory, setAttendanceHistory] = useState<any[]>([]);
+    const [loadingAttendanceHistory, setLoadingAttendanceHistory] = useState(false);
 
 
     // setInterval removed as PremiumClock handles it.
@@ -231,114 +236,122 @@ export default function HeadCoachDashboard() {
             <PageHeader
                 title={t('dashboard.headCoachTitle', 'Head Coach Hub')}
                 subtitle={t('dashboard.headCoachSubtitle', 'Academy Management & Live Analytics')}
-            >
-                <button
-                    onClick={() => setShowStudentModal(true)}
-                    className="flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20 transition-all font-black uppercase tracking-widest text-[10px]"
-                >
-                    <Plus className="w-4 h-4" />
-                    {t('dashboard.addStudent', 'Add Student')}
-                </button>
-                <button
-                    onClick={() => navigate('/app/evaluations')}
-                    className="flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 hover:bg-indigo-500/20 transition-all font-black uppercase tracking-widest text-[10px]"
-                >
-                    <ClipboardCheck className="w-4 h-4" />
-                    {t('dashboard.evaluationHub', 'Evaluation Hub')}
-                </button>
-                <button
-                    onClick={() => setShowGroupModal(true)}
-                    className="flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-white/5 text-white/60 border border-white/10 hover:bg-white/10 transition-all font-black uppercase tracking-widest text-[10px]"
-                >
-                    <Users className="w-4 h-4" />
-                    {t('dashboard.createGroup', 'Create Group')}
-                </button>
-            </PageHeader>
-            {/* Business Intelligence Section */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                {/* Trend Chart Card */}
-                <div
-                    onClick={() => navigate('/app/finance')}
-                    className="glass-card p-6 sm:p-10 rounded-[3rem] border border-white/10 shadow-premium relative overflow-hidden bg-white/[0.01] cursor-pointer transition-colors group"
-                >
-                    <div className="flex items-center justify-between mb-8">
-                        <div className="flex items-center gap-4">
-                            <div className="p-3 bg-white/5 backdrop-blur-md rounded-2xl text-primary border border-white/10 shadow-lg group-hover:scale-110 transition-transform">
-                                <TrendingUp className="w-6 h-6" strokeWidth={1.5} />
+            />
+            {/* Business Intelligence Section (Admin Only) */}
+            {role === 'admin' && (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    {/* Trend Chart Card */}
+                    <div
+                        onClick={() => navigate('/app/finance')}
+                        className="glass-card p-5 rounded-3xl border border-white/10 shadow-premium relative overflow-hidden bg-white/[0.01] cursor-pointer transition-colors group"
+                    >
+                        <div className="flex items-center justify-between mb-8 relative z-10">
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/5 backdrop-blur-xl flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
+                                    <TrendingUp className="w-5 h-5" strokeWidth={1.5} />
+                                </div>
+                                <div>
+                                    <h2 className="text-sm font-black text-white uppercase tracking-tight leading-none">{t('dashboard.businessHealth', 'Mottaba3 El Tamaren')}</h2>
+                                    <p className="text-[8px] font-black text-white/20 uppercase tracking-[0.2em] mt-1">Monthly Analytics</p>
+                                </div>
                             </div>
-                            <div>
-                                <h2 className="text-xl font-black text-white uppercase tracking-tight">{t('dashboard.businessHealth', 'Mottaba3 El Tamaren')}</h2>
-                                <p className="text-[9px] font-black text-white/20 uppercase tracking-[0.4em] mt-1">Monthly Analytics</p>
+                            <div className="p-2 bg-white/5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
+                                <ArrowUpRight className="w-5 h-5 text-white/50" />
                             </div>
                         </div>
-                        <div className="p-2 bg-white/5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
-                            <ArrowUpRight className="w-5 h-5 text-white/50" />
-                        </div>
+                        <FinancialProgressChart
+                            data={financialTrends || []}
+                            currencyCode={currency.code}
+                        />
                     </div>
-                    <FinancialProgressChart
-                        data={financialTrends || []}
-                        currencyCode={currency.code}
-                    />
-                </div>
 
-                {/* Performance Analytics Card */}
-                <div
-                    onClick={() => navigate('/app/students')}
-                    className="cursor-pointer transition-transform hover:scale-[1.02] active:scale-95 duration-300 h-full"
-                >
-                    <PerformanceAnalyticsCard
-                        title="Top Groups by Participation"
-                        totalLabel="Total Active Students"
-                        totalValue={342}
-                        segments={[
-                            { label: 'Morning Warriors', value: 45, color: '#4a7c59' },
-                            { label: 'Elite Pro', value: 30, color: '#8a9a5b' },
-                            { label: 'Kids Academy', value: 15, color: '#dcd7c9' },
-                            { label: 'Evening PT', value: 10, color: '#f2f0e9' }
-                        ]}
-                        activeSegmentLabel="Peak Performance"
-                        activeSegmentValue="4.25%"
-                    />
+                    {/* Performance Analytics Card */}
+                    <div
+                        onClick={() => navigate('/app/students')}
+                        className="cursor-pointer transition-transform hover:scale-[1.02] active:scale-95 duration-300 h-full"
+                    >
+                        <PerformanceAnalyticsCard
+                            title="Top Groups by Participation"
+                            totalLabel="Total Active Students"
+                            totalValue={342}
+                            segments={[
+                                { label: 'Morning Warriors', value: 45, color: '#4a7c59' },
+                                { label: 'Elite Pro', value: 30, color: '#8a9a5b' },
+                                { label: 'Kids Academy', value: 15, color: '#dcd7c9' },
+                                { label: 'Evening PT', value: 10, color: '#f2f0e9' }
+                            ]}
+                            activeSegmentLabel="Peak Performance"
+                            activeSegmentValue="4.25%"
+                        />
+                    </div>
                 </div>
-            </div>
+            )}
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
                 {/* Attendance Card */}
-                <div className="glass-card bg-primary/[0.03] group col-span-1 md:col-span-2 flex flex-col justify-between p-6 rounded-[2.5rem] relative overflow-hidden">
-                    <div className="flex items-center justify-between mb-4 relative z-10">
-                        <div>
-                            <p className="text-[10px] font-black uppercase tracking-[0.2em] mt-1 flex items-center gap-2">
-                                <span className={`w-1.5 h-1.5 rounded-full transition-all duration-500 ${isCheckedIn ? 'bg-primary shadow-[0_0_10px_2px_rgba(var(--primary-rgb),0.4)] animate-pulse' : 'bg-rose-600'}`}></span>
-                                <span className={isCheckedIn ? 'text-primary' : 'text-rose-500'}>
-                                    {isCheckedIn ? t('coaches.workingNow') : t('coaches.away')}
-                                </span>
-                            </p>
-                            <h2 className="text-lg font-black text-white uppercase tracking-tight mt-1">{t('common.attendance')}</h2>
+                <div className="glass-card bg-primary/[0.03] group col-span-1 flex flex-col justify-between p-6 rounded-[2rem] relative overflow-hidden h-full">
+                    <div className="flex items-center justify-between mb-6 relative z-10">
+                        <div className="flex items-center gap-3">
+                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-1000 border border-white/5 bg-white/5 backdrop-blur-xl`}>
+                                <Clock className={`w-5 h-5 ${isCheckedIn ? 'text-primary animate-pulse' : 'text-rose-500'}`} />
+                            </div>
+                            <div>
+                                <h2 className="text-sm font-black text-white uppercase tracking-tight leading-none">{t('common.attendance')}</h2>
+                                <p className="text-[8px] font-black uppercase tracking-[0.2em] mt-1 flex items-center gap-1">
+                                    <span className={`w-1 h-1 rounded-full ${isCheckedIn ? 'bg-primary animate-ping' : 'bg-rose-500'}`}></span>
+                                    <span className={isCheckedIn ? 'text-primary' : 'text-rose-500'}>
+                                        {isCheckedIn ? t('coaches.workingNow') : t('coaches.away')}
+                                    </span>
+                                </p>
+                            </div>
                         </div>
-                        <div className="p-3 bg-white/5 rounded-2xl text-white/60 border border-white/5">
-                            <Clock className="w-5 h-5" />
-                        </div>
+                        <button
+                            onClick={async () => {
+                                setShowAttendanceHistory(true);
+                                if (!coachId) return;
+                                setLoadingAttendanceHistory(true);
+                                try {
+                                    const { data } = await supabase
+                                        .from('coach_attendance')
+                                        .select('*')
+                                        .eq('coach_id', coachId)
+                                        .order('date', { ascending: false })
+                                        .limit(30);
+                                    setAttendanceHistory(data || []);
+                                } catch (e) {
+                                    console.error(e);
+                                } finally {
+                                    setLoadingAttendanceHistory(false);
+                                }
+                            }}
+                            className="w-8 h-8 flex items-center justify-center bg-white/5 rounded-lg text-white/20 border border-white/5 hover:bg-white/10 hover:text-white transition-all group/hist"
+                            title="View Attendance History"
+                        >
+                            <RotateCcw className="w-3.5 h-3.5 group-hover/hist:rotate-[-30deg] transition-transform" />
+                        </button>
                     </div>
-                    <div className="flex flex-col items-center gap-6 relative z-10">
+                    <div className="flex-1 flex flex-col items-center justify-center py-4 relative z-10">
                         {isCheckedIn ? (
-                            <div className="text-4xl sm:text-5xl md:text-6xl font-black text-white tracking-widest font-mono whitespace-nowrap">
+                            <div className="text-4xl font-black text-white tracking-widest font-mono whitespace-nowrap">
                                 {formatTimer(elapsedTime)}
                             </div>
                         ) : dailyTotalSeconds > 0 ? (
                             <div className="flex flex-col items-center gap-1">
-                                <div className="text-4xl sm:text-5xl md:text-6xl font-black text-primary/80 tracking-widest font-mono whitespace-nowrap">
+                                <div className="text-4xl font-black text-primary/80 tracking-widest font-mono whitespace-nowrap">
                                     {formatTimer(dailyTotalSeconds)}
                                 </div>
-                                <div className="flex items-center gap-2 px-3 py-1 bg-white/5 rounded-full">
-                                    <span className="text-[9px] font-black text-white/40 uppercase tracking-[0.2em]">Shift Summary</span>
+                                <div className="px-2 py-0.5 bg-primary/10 border border-primary/20 rounded-full">
+                                    <span className="text-[7px] font-black text-primary/60 uppercase tracking-[0.3em]">Done</span>
                                 </div>
                             </div>
                         ) : (
-                            <div className="text-4xl sm:text-5xl md:text-6xl font-black text-white/10 tracking-widest font-mono whitespace-nowrap">00:00:00</div>
+                            <div className="text-4xl font-black text-white/10 tracking-widest font-mono whitespace-nowrap">00:00:00</div>
                         )}
+                    </div>
+                    <div className="pt-4 relative z-10">
                         <button
                             onClick={isCheckedIn ? handleCheckOut : handleCheckIn}
-                            className={`w-full py-4 rounded-3xl font-black uppercase tracking-[0.2em] text-[11px] flex items-center justify-center gap-3 transition-all duration-300 hover:scale-[1.03] active:scale-[0.98] shadow-xl ${isCheckedIn
+                            className={`w-full py-3.5 rounded-xl font-black uppercase tracking-[0.3em] text-[10px] flex items-center justify-center gap-3 transition-all duration-300 hover:scale-[1.03] active:scale-[0.98] shadow-xl ${isCheckedIn
                                 ? 'bg-white/10 text-white hover:bg-white/20'
                                 : 'bg-primary text-white hover:bg-primary/90 shadow-primary/20'}`}
                         >
@@ -349,40 +362,65 @@ export default function HeadCoachDashboard() {
                 </div>
 
                 {/* Quick Actions */}
-                <div className="glass-card p-8 sm:p-10 rounded-[2.5rem] border border-white/5 shadow-premium relative overflow-hidden group col-span-1 md:col-span-2 bg-white/[0.01]">
+                <div className="glass-card p-6 rounded-[2rem] border border-white/5 shadow-premium relative overflow-hidden group col-span-1 bg-white/[0.01] flex flex-col justify-between h-full">
                     <div className="flex items-center justify-between mb-8 relative z-10">
-                        <div>
-                            <h2 className="text-xl font-black text-white uppercase tracking-tight">Quick Actions</h2>
-                            <p className="text-[10px] font-black text-white/20 uppercase tracking-[0.4em] mt-2">Elite Management</p>
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/5 backdrop-blur-xl flex items-center justify-center text-white/40">
+                                <Users className="w-5 h-5" />
+                            </div>
+                            <div>
+                                <h2 className="text-sm font-black text-white uppercase tracking-tight leading-none">Quick Actions</h2>
+                                <p className="text-[8px] font-black text-white/20 uppercase tracking-[0.2em] mt-1">Elite Management</p>
+                            </div>
                         </div>
                     </div>
-                    <div className="grid grid-cols-2 gap-4 relative z-10">
+                    <div className="grid grid-cols-2 gap-3 relative z-10 flex-1">
+                        <button
+                            onClick={() => setIsAIAssistantOpen(true)}
+                            className="p-3 bg-white/5 hover:bg-white/10 border border-white/5 rounded-xl flex flex-col items-center justify-center gap-2 group transition-all"
+                        >
+                            <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-400 group-hover:scale-110 transition-transform">
+                                <BrainCircuit className="w-4 h-4" />
+                            </div>
+                            <span className="text-[8px] font-black text-white/20 uppercase tracking-widest group-hover:text-white transition-colors">AI Coach</span>
+                        </button>
                         <button
                             onClick={() => setShowStudentModal(true)}
-                            className="p-6 rounded-[2rem] bg-white/[0.02] hover:bg-white/[0.05] border border-white/5 hover:border-white/10 transition-all flex flex-col items-center justify-center gap-3 group/action"
+                            className="p-3 bg-white/5 hover:bg-white/10 border border-white/5 rounded-xl flex flex-col items-center justify-center gap-2 group transition-all"
                         >
-                            <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary group-hover/action:scale-110 transition-transform">
-                                <Plus className="w-6 h-6" />
+                            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
+                                <Plus className="w-4 h-4" />
                             </div>
-                            <span className="text-[10px] font-black text-white/40 group-hover/action:text-white uppercase tracking-widest text-center">Add Student</span>
+                            <span className="text-[8px] font-black text-white/20 uppercase tracking-widest group-hover:text-white transition-colors">Add Player</span>
                         </button>
                         <button
                             onClick={() => navigate('/app/evaluations')}
-                            className="p-6 rounded-[2rem] bg-white/[0.02] hover:bg-white/[0.05] border border-white/5 hover:border-white/10 transition-all flex flex-col items-center justify-center gap-3 group/action"
+                            className="p-3 bg-white/5 hover:bg-white/10 border border-white/5 rounded-xl flex flex-col items-center justify-center gap-2 group transition-all"
                         >
-                            <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 flex items-center justify-center text-indigo-400 group-hover/action:scale-110 transition-transform">
-                                <ClipboardCheck className="w-6 h-6" />
+                            <div className="w-8 h-8 rounded-lg bg-indigo-500/10 flex items-center justify-center text-indigo-400 group-hover:scale-110 transition-transform">
+                                <ClipboardCheck className="w-4 h-4" />
                             </div>
-                            <span className="text-[10px] font-black text-white/40 group-hover/action:text-white uppercase tracking-widest text-center">Evaluation Hub</span>
+                            <span className="text-[8px] font-black text-white/20 uppercase tracking-widest group-hover:text-white transition-colors">Evaluations</span>
+                        </button>
+                        <button
+                            onClick={() => setShowGroupModal(true)}
+                            className="p-3 bg-white/5 hover:bg-white/10 border border-white/5 rounded-xl flex flex-col items-center justify-center gap-2 group transition-all"
+                        >
+                            <div className="w-8 h-8 rounded-lg bg-rose-500/10 flex items-center justify-center text-rose-400 group-hover:scale-110 transition-transform">
+                                <Plus className="w-4 h-4" />
+                            </div>
+                            <span className="text-[8px] font-black text-white/20 uppercase tracking-widest group-hover:text-white transition-colors">New Group</span>
                         </button>
                     </div>
                 </div>
+
+                {/* Live Floor View integrated into the main grid */}
+                <div className="col-span-1 lg:col-span-2 h-full rounded-[2rem] overflow-hidden border border-white/5 shadow-premium">
+                    <LiveStudentsWidget />
+                </div>
             </div>
 
-            {/* Live Floor View (Admin Mode) */}
-            <div className="rounded-[3rem] overflow-hidden border border-white/5 shadow-premium">
-                <LiveStudentsWidget />
-            </div>
+
 
 
 
@@ -413,7 +451,58 @@ export default function HeadCoachDashboard() {
                     />
                 )
             }
-        </div >
+
+            {
+                isAIAssistantOpen && (
+                    <AICoachAssistantModal
+                        isOpen={isAIAssistantOpen}
+                        onClose={() => setIsAIAssistantOpen(false)}
+                    />
+                )
+            }
+
+            {/* Attendance History Modal */}
+            {showAttendanceHistory && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-xl animate-in fade-in duration-300" onClick={() => setShowAttendanceHistory(false)}>
+                    <div className="glass-card rounded-3xl w-full max-w-lg max-h-[70vh] flex flex-col shadow-2xl border border-white/20 overflow-hidden" onClick={e => e.stopPropagation()}>
+                        <div className="p-6 border-b border-white/5 flex justify-between items-center bg-white/5">
+                            <div>
+                                <h2 className="text-xl font-black text-white uppercase tracking-tight">{t('common.attendance')} History</h2>
+                                <p className="text-primary text-[10px] font-black uppercase tracking-[0.2em] mt-1">Last 30 Sessions</p>
+                            </div>
+                            <button onClick={() => setShowAttendanceHistory(false)} className="p-2 hover:bg-white/10 rounded-xl transition-all text-white/40 hover:text-white">
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+                        <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
+                            {loadingAttendanceHistory ? (
+                                <div className="text-center py-20 text-white/20 font-black uppercase tracking-widest animate-pulse">{t('common.loading')}</div>
+                            ) : attendanceHistory.length === 0 ? (
+                                <div className="text-center py-20 text-white/20 font-black uppercase tracking-widest italic">{t('common.noResults')}</div>
+                            ) : (
+                                <div className="space-y-3">
+                                    {attendanceHistory.map((log) => (
+                                        <div key={log.id} className="p-4 rounded-2xl bg-white/[0.03] border border-white/5 flex items-center justify-between group">
+                                            <div>
+                                                <p className="text-xs font-black text-white/80">{log.date}</p>
+                                                <p className="text-[10px] font-mono text-white/40 mt-1">
+                                                    {log.check_in_time ? format(new Date(log.check_in_time), 'HH:mm:ss') : '--:--'} - {log.check_out_time ? format(new Date(log.check_out_time), 'HH:mm:ss') : 'LIVE'}
+                                                </p>
+                                            </div>
+                                            <div className="text-right">
+                                                <div className={`px-2 py-1 rounded-lg text-[8px] font-black uppercase tracking-widest ${log.check_out_time ? 'bg-emerald-500/10 text-emerald-400' : 'bg-primary/20 text-primary'}`}>
+                                                    {log.status === 'absent' ? 'ABSENT' : log.check_out_time ? 'DONE' : 'WORKING'}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
+        </div>
     );
 }
 

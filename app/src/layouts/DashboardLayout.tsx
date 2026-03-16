@@ -573,7 +573,7 @@ export default function DashboardLayout() {
             <aside
                 onMouseEnter={() => setIsHoveringSidebar(true)}
                 onMouseLeave={() => setIsHoveringSidebar(false)}
-                className={`fixed z-[300] transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] flex flex-col
+                className={`fixed z-[300] transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] flex flex-col no-print
                     /* Mobile: Full Screen Setup */
                     bottom-0 left-0 right-0 w-full h-[100dvh]
                     bg-[#0d0d0f]/95 backdrop-blur-3xl border-none

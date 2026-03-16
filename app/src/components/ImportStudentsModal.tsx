@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { X, Upload, FileSpreadsheet, AlertCircle, CheckCircle, Edit2, Plus, Trash2, UserPlus, ChevronDown, ArrowLeft, Camera, ScanLine, Users } from 'lucide-react';
+import { X, Upload, FileSpreadsheet, AlertCircle, CheckCircle, Edit2, Plus, Trash2, UserPlus, ChevronDown, ArrowLeft, Camera, ScanLine, Users, Loader2 } from 'lucide-react';
 import Papa from 'papaparse';
 import { supabase } from '../lib/supabase';
 import toast from 'react-hot-toast';
 import { addMonths, format } from 'date-fns';
 import { formatDynamicPhone } from '../utils/phoneUtils';
 import { processImageWithGemini } from '../services/aiService';
+import { handleAIError } from '../utils/aiUtils';
 
 interface ImportStudentsModalProps {
     isOpen: boolean;
@@ -46,6 +47,7 @@ export default function ImportStudentsModal({ isOpen, onClose, onSuccess }: Impo
     const [preview, setPreview] = useState(false);
     const [importMode, setImportMode] = useState<'csv' | 'grid' | 'scan'>('csv');
     const [isScanning, setIsScanning] = useState(false);
+    const [retryTimer, setRetryTimer] = useState<number | null>(null);
 
     // Bulk Input State
     const [bulkText, setBulkText] = useState('');
@@ -165,6 +167,21 @@ export default function ImportStudentsModal({ isOpen, onClose, onSuccess }: Impo
         toast.success(`Added ${newRows.length} students!`);
     };
 
+    // Retry timer countdown
+    useEffect(() => {
+        if (retryTimer === null) return;
+        if (retryTimer <= 0) {
+            setRetryTimer(null);
+            return;
+        }
+
+        const timer = setInterval(() => {
+            setRetryTimer(prev => (prev && prev > 0) ? prev - 1 : null);
+        }, 1000);
+
+        return () => clearInterval(timer);
+    }, [retryTimer]);
+
     const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
@@ -269,7 +286,12 @@ export default function ImportStudentsModal({ isOpen, onClose, onSuccess }: Impo
                     toast.error('No student data found in the image.');
                 }
             } catch (error: any) {
-                toast.error(error.message || 'Failed to analyze image. Please check API Key or try again.');
+                const parsedError = handleAIError(error);
+                toast.error(parsedError.message);
+                
+                if (parsedError.retryAfterSeconds) {
+                    setRetryTimer(parsedError.retryAfterSeconds);
+                }
             } finally {
                 setIsScanning(false);
             }
@@ -729,11 +751,24 @@ export default function ImportStudentsModal({ isOpen, onClose, onSuccess }: Impo
                                         />
                                         <label
                                             htmlFor="image-upload"
-                                            className={`cursor-pointer block border-2 border-dashed rounded-[2rem] p-6 sm:p-10 text-center transition-all duration-700 relative overflow-hidden group/label w-full ${isScanning ? 'border-primary/50 bg-primary/[0.05] cursor-wait' : 'border-white/10 hover:border-primary/40 hover:bg-primary/[0.02]'}`}
+                                            className={`cursor-pointer block border-2 border-dashed rounded-[2rem] p-6 sm:p-10 text-center transition-all duration-700 relative overflow-hidden group/label w-full ${(isScanning || (retryTimer !== null && retryTimer > 0)) ? 'border-primary/50 bg-primary/[0.05] cursor-wait' : 'border-white/10 hover:border-primary/40 hover:bg-primary/[0.02]'}`}
                                         >
                                             <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(var(--primary-rgb),0.1),transparent)] opacity-0 group-hover/label:opacity-100 transition-opacity"></div>
 
-                                            {isScanning ? (
+                                            {retryTimer !== null && retryTimer > 0 ? (
+                                                <div className="flex flex-col items-center justify-center space-y-4">
+                                                    <div className="relative">
+                                                        <Loader2 className="w-12 h-12 text-primary animate-spin" />
+                                                        <div className="absolute inset-0 bg-primary/20 blur-xl rounded-full"></div>
+                                                    </div>
+                                                    <p className="text-lg font-black text-white/80 uppercase tracking-widest animate-pulse">
+                                                        Quota Reached ⏳
+                                                    </p>
+                                                    <p className="text-[9px] font-black uppercase tracking-[0.3em] text-primary/60">
+                                                        Please wait {retryTimer}s before scanning again
+                                                    </p>
+                                                </div>
+                                            ) : isScanning ? (
                                                 <div className="flex flex-col items-center justify-center space-y-4">
                                                     <div className="relative">
                                                         <ScanLine className="w-12 h-12 text-primary animate-pulse" />

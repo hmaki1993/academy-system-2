@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, X, Maximize2, Minimize2, Loader2, AlertCircle } from 'lucide-react';
+import { Send, X, Maximize2, Minimize2, Loader2, AlertCircle, Sparkles } from 'lucide-react';
+import { handleAIError, AIErrorResponse } from '../utils/aiUtils';
 
 interface Message {
     role: 'user' | 'assistant';
@@ -21,6 +22,7 @@ export default function AdminAssistant({ onClose }: AdminAssistantProps) {
     const [isLoading, setIsLoading] = useState(false);
     const [isMaximized, setIsMaximized] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [retryTimer, setRetryTimer] = useState<number | null>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
     const scrollToBottom = () => {
@@ -30,6 +32,21 @@ export default function AdminAssistant({ onClose }: AdminAssistantProps) {
     useEffect(() => {
         scrollToBottom();
     }, [messages]);
+
+    // Retry timer countdown
+    useEffect(() => {
+        if (retryTimer === null) return;
+        if (retryTimer <= 0) {
+            setRetryTimer(null);
+            return;
+        }
+
+        const timer = setInterval(() => {
+            setRetryTimer(prev => (prev && prev > 0) ? prev - 1 : null);
+        }, 1000);
+
+        return () => clearInterval(timer);
+    }, [retryTimer]);
 
     const handleSend = async () => {
         if (!input.trim() || isLoading) return;
@@ -45,7 +62,7 @@ export default function AdminAssistant({ onClose }: AdminAssistantProps) {
             if (!API_KEY) throw new Error('API Key missing in .env');
 
             const response = await fetch(
-                `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`,
+                `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${API_KEY}`,
                 {
                     method: 'POST',
                     headers: {
@@ -78,13 +95,18 @@ export default function AdminAssistant({ onClose }: AdminAssistantProps) {
             };
 
             setMessages(prev => [...prev, assistantMessage]);
-        } catch (err) {
-            console.error('Error:', err);
-            setError(err instanceof Error ? err.message : 'حصل خطأ في الاتصال بالمساعد الذكي');
+        } catch (err: any) {
+            console.error('AdminAssistant AI Error:', err);
+            const parsedError = handleAIError(err);
+            setError(parsedError.message);
+
+            if (parsedError.retryAfterSeconds) {
+                setRetryTimer(parsedError.retryAfterSeconds);
+            }
 
             setMessages(prev => [...prev, {
                 role: 'assistant',
-                content: 'عذراً، حصل خطأ في الاتصال. تأكد من وجود API Key صحيح.'
+                content: parsedError.message
             }]);
         } finally {
             setIsLoading(false);
@@ -184,17 +206,21 @@ export default function AdminAssistant({ onClose }: AdminAssistantProps) {
                         value={input}
                         onChange={(e) => setInput(e.target.value)}
                         onKeyPress={handleKeyPress}
-                        placeholder="اسأل عن الطلاب، الإيرادات..."
-                        disabled={isLoading}
+                        placeholder={retryTimer ? `Please wait ${retryTimer}s...` : "اسأل عن الطلاب، الإيرادات..."}
+                        disabled={isLoading || (retryTimer !== null && retryTimer > 0)}
                         className="flex-1 bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-white placeholder-purple-300 focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:opacity-50 text-right"
                         dir="rtl"
                     />
                     <button
                         onClick={handleSend}
-                        disabled={!input.trim() || isLoading}
-                        className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 disabled:opacity-50 disabled:cursor-not-allowed text-white p-3 rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl"
+                        disabled={!input.trim() || isLoading || (retryTimer !== null && retryTimer > 0)}
+                        className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 disabled:opacity-50 disabled:cursor-not-allowed text-white p-3 rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl relative overflow-hidden group"
                     >
-                        <Send className="w-5 h-5" />
+                        {retryTimer ? (
+                            <span className="text-[10px] font-black">{retryTimer}s</span>
+                        ) : (
+                            <Send className="w-5 h-5 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
+                        )}
                     </button>
                 </div>
                 <p className="text-xs text-purple-300 mt-2 text-center">

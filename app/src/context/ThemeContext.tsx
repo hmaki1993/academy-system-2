@@ -249,7 +249,7 @@ export const defaultSettings: GymSettings = {
     login_show_logo: true,
     login_logo_scale: 1,
     api_keys: {
-        gemini: ''
+        gemini: 'AIzaSyBilFTTvflCz5EoNv07xIbBCw7t7OYt5lY'
     },
     login_logo_x_offset: 0,
     login_logo_y_offset: 0,

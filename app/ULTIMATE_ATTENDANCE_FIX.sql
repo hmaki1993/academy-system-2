@@ -28,6 +28,9 @@ DROP POLICY IF EXISTS "Coaches can insert own attendance" ON public.coach_attend
 DROP POLICY IF EXISTS "Coaches can update own attendance" ON public.coach_attendance;
 DROP POLICY IF EXISTS "Admins manage coach attendance" ON public.coach_attendance;
 DROP POLICY IF EXISTS "Enable access for all authenticated users" ON public.coach_attendance;
+DROP POLICY IF EXISTS "Coaches manage own attendance" ON public.coach_attendance;
+DROP POLICY IF EXISTS "Staff view all attendance" ON public.coach_attendance;
+DROP POLICY IF EXISTS "Admins manage everything" ON public.coach_attendance;
 
 -- SECURE POLICY: Check if the coach_id belongs to the logged-in user via profile_id
 CREATE POLICY "Coaches manage own attendance" ON public.coach_attendance

@@ -2,9 +2,10 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { useTranslation } from 'react-i18next';
 import { X, Send, FileText, CheckCircle2, AlertCircle, Loader2, Calendar, Sparkles } from 'lucide-react';
-import { GoogleGenerativeAI } from "@google/generative-ai";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth } from 'date-fns';
 import { useTheme } from '../context/ThemeContext';
+import { handleAIError } from '../utils/aiUtils';
+import { generateMonthlyReportSummary } from '../services/aiService';
 import toast from 'react-hot-toast';
 
 interface MonthlyReportModalProps {
@@ -36,6 +37,8 @@ export default function MonthlyReportModal({ isOpen, onClose, student, currentUs
         notes: ''
     });
     const [generatingAI, setGeneratingAI] = useState(false);
+    const [retryTimer, setRetryTimer] = useState<number | null>(null);
+    const [reportLanguage, setReportLanguage] = useState<'Arabic' | 'English'>('Arabic');
 
     const generateAISummary = async () => {
         if (!settings.api_keys?.gemini) {
@@ -43,47 +46,65 @@ export default function MonthlyReportModal({ isOpen, onClose, student, currentUs
             return;
         }
 
+        if (retryTimer && retryTimer > 0) {
+            toast.error(`Please wait ${retryTimer}s before retrying.`);
+            return;
+        }
+
         setGeneratingAI(true);
         try {
-            const genAI = new GoogleGenerativeAI(settings.api_keys.gemini);
-            const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+            const data = await generateMonthlyReportSummary({
+                fullName: student.full_name,
+                month: format(new Date(selectedMonth), 'MMMM yyyy'),
+                present: stats.present,
+                total: stats.total,
+                assessments: monthlyAssessments,
+                apiKey: settings.api_keys.gemini,
+                language: reportLanguage
+            });
 
-            const prompt = `
-                You are a professional gymnastics coach. Generate a concise, positive, and professional monthly performance summary for a student's parent.
-                Student: ${student.full_name}
-                Month: ${format(new Date(selectedMonth), 'MMMM yyyy')}
-                
-                Data:
-                - Presence: ${stats.present}/${stats.total} sessions
-                - Recent Assessments: ${JSON.stringify(monthlyAssessments)}
-                
-                Output should have two parts:
-                1. Technical Evaluation (progress in gymnastics skills)
-                2. Behavior & Focus (attitude in class)
-                
-                Keep it in English, motivational, and professional. 
-                Respond in JSON format: {"technical": "...", "behavior": "..."}
-            `;
-
-            const result = await model.generateContent(prompt);
-            const response = await result.response;
-            const text = response.text();
-            const cleanText = text.replace(/```json|```/g, '').trim();
-            const data = JSON.parse(cleanText);
+            // Set labels based on language
+            const isAr = reportLanguage === 'Arabic';
+            const actionPlanLabel = isAr ? "🎯 خطة العمل (الـ 30 يوم القادمة):" : "🎯 Action Plan (Next 30 Days):";
+            const strengthsLabel = isAr ? "💪 نقاط القوة:" : "💪 Strengths:";
+            const focusAreasLabel = isAr ? "📈 نقاط التطوير:" : "📈 Focus Areas:";
 
             setEvaluations({
                 technical: data.technical,
                 behavior: data.behavior,
-                notes: ''
+                notes: `${actionPlanLabel}\n` + data.action_plan + `\n\n${strengthsLabel}\n- ` + data.strengths.join('\n- ') + `\n\n${focusAreasLabel}\n- ` + data.weaknesses.join('\n- ')
             });
-            toast.success("AI Summary Generated!");
-        } catch (error) {
-            console.error("AI Generation Error:", error);
-            toast.error("Failed to generate AI summary.");
+            toast.success("Premium AI Analytics Generated!");
+        } catch (error: any) {
+            console.error("MonthlyReport AI Error Full Object:", error);
+            const parsedError = handleAIError(error);
+            
+            if (parsedError.retryAfterSeconds) {
+                console.log(`[MonthlyReport] Quota Error Detected! Delay: ${parsedError.retryAfterSeconds}s`);
+                setRetryTimer(parsedError.retryAfterSeconds);
+                toast.error(parsedError.message, { duration: 5000 });
+            } else {
+                toast.error(parsedError.message);
+            }
         } finally {
             setGeneratingAI(false);
         }
     };
+
+    // Retry timer countdown
+    useEffect(() => {
+        if (retryTimer === null) return;
+        if (retryTimer <= 0) {
+            setRetryTimer(null);
+            return;
+        }
+
+        const timer = setInterval(() => {
+            setRetryTimer(prev => (prev && prev > 0) ? prev - 1 : null);
+        }, 1000);
+
+        return () => clearInterval(timer);
+    }, [retryTimer]);
 
     // Fetch attendance stats when month or student changes
     useEffect(() => {
@@ -190,8 +211,13 @@ ${monthlyAssessments.map(a => {
                 return `*${a.title.toUpperCase()}*\n${skillList}\n*Total: ${a.total_score}*`;
             }).join('\n\n')}
 ` : ''}
-📝 *Coach Notes:*
+📝 *Behavior & Focus:*
 ${evaluations.behavior || 'Great attitude and focus!'}
+
+${evaluations.notes ? `
+🤖 *AI Performance Analytics:*
+${evaluations.notes}
+` : ''}
 
 ----------------------------------
 *Best Regards,*
@@ -409,14 +435,54 @@ ${evaluations.behavior || 'Great attitude and focus!'}
                         <div className="space-y-4">
                             <div className="flex items-center justify-between ml-1">
                                 <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-emerald-500/30">Technical Evaluation</h3>
+                            <div className="flex items-center gap-3">
+                                {/* Language Switcher */}
+                                <div className="flex p-0.5 rounded-lg bg-black/40 border border-white/5 h-8">
+                                    <button
+                                        onClick={() => setReportLanguage('Arabic')}
+                                        className={`px-3 flex items-center justify-center rounded-md text-[9px] font-black uppercase tracking-wider transition-all ${
+                                            reportLanguage === 'Arabic' 
+                                            ? 'bg-emerald-500 text-white shadow-lg' 
+                                            : 'text-white/40 hover:text-white/60'
+                                        }`}
+                                    >
+                                        Ar
+                                    </button>
+                                    <button
+                                        onClick={() => setReportLanguage('English')}
+                                        className={`px-3 flex items-center justify-center rounded-md text-[9px] font-black uppercase tracking-wider transition-all ${
+                                            reportLanguage === 'English' 
+                                            ? 'bg-emerald-500 text-white shadow-lg' 
+                                            : 'text-white/40 hover:text-white/60'
+                                        }`}
+                                    >
+                                        En
+                                    </button>
+                                </div>
+
                                 <button
                                     onClick={generateAISummary}
-                                    disabled={generatingAI || calculating}
-                                    className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-primary/20 hover:bg-primary/30 text-primary border border-primary/20 text-[8px] font-black uppercase tracking-widest transition-all disabled:opacity-50"
+                                    disabled={generatingAI || calculating || (retryTimer !== null && retryTimer > 0)}
+                                    className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-primary/20 hover:bg-primary/30 text-primary border border-primary/20 text-[8px] font-black uppercase tracking-widest transition-all disabled:opacity-50 h-8"
                                 >
-                                    {generatingAI ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3 shadow-[0_0_8px_rgba(var(--color-primary-rgb),0.5)]" />}
-                                    AI Assist
+                                    {retryTimer !== null && retryTimer > 0 ? (
+                                        <>
+                                            <Loader2 className="w-3 h-3 animate-spin" />
+                                            Wait {retryTimer}s
+                                        </>
+                                    ) : generatingAI ? (
+                                        <>
+                                            <Loader2 className="w-3 h-3 animate-spin" />
+                                            Analyzing...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Sparkles className="w-3 h-3 shadow-[0_0_8px_rgba(var(--color-primary-rgb),0.5)]" />
+                                            AI Assist
+                                        </>
+                                    )}
                                 </button>
+                            </div>
                             </div>
                             <textarea
                                 value={evaluations.technical}
@@ -432,6 +498,20 @@ ${evaluations.behavior || 'Great attitude and focus!'}
                                 value={evaluations.behavior}
                                 onChange={(e) => setEvaluations({ ...evaluations, behavior: e.target.value })}
                                 className="w-full h-24 bg-white/[0.03] border border-white/5 rounded-3xl p-6 text-sm font-medium text-white/80 focus:border-blue-500/30 outline-none transition-all resize-none placeholder:text-white/5 hover:bg-white/[0.05]"
+                            />
+                        </div>
+
+                        {/* Premium AI Analytics (Action Plan, Strengths, Weaknesses) */}
+                        <div className="space-y-4">
+                            <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-purple-500/30 ml-1 flex items-center gap-2">
+                                <Sparkles className="w-3 h-3 text-purple-500/60" />
+                                Action Plan & Trajectory
+                            </h3>
+                            <textarea
+                                value={evaluations.notes}
+                                onChange={(e) => setEvaluations({ ...evaluations, notes: e.target.value })}
+                                className="w-full h-40 bg-purple-500/[0.02] border border-purple-500/10 rounded-3xl p-6 text-sm font-medium text-purple-100/90 focus:border-purple-500/40 outline-none transition-all resize-none placeholder:text-purple-500/20 hover:bg-purple-500/[0.04]"
+                                placeholder="Generate AI Report to see the Action Plan..."
                             />
                         </div>
                     </div>

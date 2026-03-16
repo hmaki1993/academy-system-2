@@ -35,10 +35,18 @@ export default function PerformanceAnalyticsCard({
     const totalSegmentsValue = segments.reduce((sum, s) => sum + s.value, 0);
 
     return (
-        <div className="glass-card p-6 h-full flex flex-col justify-between">
+        <div className="glass-card p-6 rounded-3xl h-full flex flex-col justify-between">
             {/* Header */}
-            <div className="flex items-start justify-between mb-4">
-                <h3 className="text-lg font-bold">{title}</h3>
+            <div className="flex items-center gap-3 mb-8">
+                <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/5 backdrop-blur-xl flex items-center justify-center text-primary">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M16 8v8m-4-5v5m-4-2v2m-2 4h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                </div>
+                <div>
+                    <h3 className="text-sm font-black text-white uppercase tracking-tight leading-none">{title}</h3>
+                    <p className="text-[8px] font-black text-white/20 uppercase tracking-[0.2em] mt-1">Global Overview</p>
+                </div>
             </div>
 
             {/* Content Container */}

@@ -283,7 +283,7 @@ export default function PublicRegistration() {
             const studentId = student.id;
 
             // 4. Paymob Handshake (Online Payment)
-            if (selectedPlan && selectedPlan.price > 0 && formData.payment_method !== 'cash') {
+            if (selectedPlan && selectedPlan.price > 0 && (formData.payment_method === 'card' || formData.payment_method === 'wallet')) {
                 try {
                     const { data: paymobData, error: paymobError } = await supabase.functions.invoke('paymob-process', {
                         body: {
@@ -312,15 +312,22 @@ export default function PublicRegistration() {
                         notes: `Online Registration - ${selectedPlan.name}`
                     });
 
-                    if (paymobData.redirect_url) {
-                        window.location.href = paymobData.redirect_url;
-                        return; // Stop here, redirect takes over
-                    } else if (paymobData.payment_key) {
-                        // For Card, we might use an iframe or redirect to Paymob's default iframe
-                        // Assuming we use iframe ID for Card (standard Paymob flow)
-                        const iframeId = "815668"; // This should ideally be a setting too
-                        window.location.href = `https://accept.paymob.com/api/acceptance/iframes/${iframeId}?payment_token=${paymobData.payment_key}`;
+                    if (paymobData.payment_token) {
+                        // V3 Card Payment Flow
+                        // The user MUST provide their exact Iframe ID from the Paymob Dashboard.
+                        // For now, I'm using a placeholder that we will replace with their actual ID.
+                        const iframeId = "PLACEHOLDER_IFRAME_ID"; // We will ask user for this!
+                        window.location.href = `https://accept.paymob.com/api/acceptance/iframes/${iframeId}?payment_token=${paymobData.payment_token}`;
                         return;
+                    } else if (paymobData.redirect_url) {
+                         // V3 Wallet Payment Flow
+                         window.location.href = paymobData.redirect_url;
+                         return;
+                    } else {
+                        const errorMsg = paymobData.error || "فشل في التواصل مع بوابة الدفع";
+                        const details = paymobData.details ? JSON.stringify(paymobData.details) : "";
+                        console.error("Paymob Error Details:", paymobData);
+                        throw new Error(`${errorMsg}: ${details}`);
                     }
                 } catch (payError) {
                     console.error('Paymob initiation failed:', payError);

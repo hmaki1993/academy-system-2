@@ -10,7 +10,7 @@ export default function JumpRopeTraining() {
     const rpm = isTracking ? 88 : 0;
 
     return (
-        <div className="relative h-screen w-full bg-black overflow-hidden font-sans selection:bg-primary/30 antialiased">
+        <div className="relative h-full w-full bg-black overflow-hidden font-sans selection:bg-primary/30 antialiased">
             {/* 1. Immersive Camera Base */}
             <div className="absolute inset-0 z-0 flex flex-col items-center justify-center bg-[#080808]">
                 {isTracking && (
@@ -22,7 +22,7 @@ export default function JumpRopeTraining() {
             </div>
 
             {/* 3. Primary Stats HUD (Centered and Clean) */}
-            <div className="absolute left-1/2 -translate-x-1/2 top-40 z-40 flex flex-col items-center pointer-events-none">
+            <div className="absolute left-1/2 -translate-x-1/2 top-32 z-40 flex flex-col items-center pointer-events-none">
                  <div className="text-primary text-[10px] font-black uppercase tracking-[0.5em] mb-4 drop-shadow-[0_0_15px_rgba(255,59,48,0.8)]">Jumps</div>
                  <div className="text-[120px] font-black text-white leading-none tracking-tighter drop-shadow-[0_10px_30px_rgba(255,255,255,0.2)]">
                      {jumps}
@@ -30,7 +30,7 @@ export default function JumpRopeTraining() {
             </div>
 
             {/* 4. Secondary Telemetry Bar (Bottom, Wide Glassmorphism) */}
-            <div className="absolute bottom-28 inset-x-8 z-40">
+            <div className="absolute bottom-40 inset-x-8 z-40">
                 <div className="max-w-md mx-auto bg-black/40 backdrop-blur-2xl border border-white/10 rounded-[2.5rem] p-6 shadow-[0_30px_60px_rgba(0,0,0,0.5)] flex items-center justify-around">
                     <div className="text-center">
                         <p className="text-white/30 text-[9px] font-black uppercase tracking-[0.2em] mb-1">Time</p>
@@ -55,7 +55,7 @@ export default function JumpRopeTraining() {
             </div>
 
             {/* 5. Floating Action Control */}
-            <div className="absolute bottom-10 inset-x-0 z-50 flex justify-center">
+            <div className="absolute bottom-20 inset-x-0 z-50 flex justify-center">
                 {!isTracking ? (
                     <button 
                         onClick={() => setIsTracking(true)}

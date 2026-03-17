@@ -1,42 +1,39 @@
 @import "tailwindcss";
 
 @theme {
-  --color-primary: #10b981;
-  /* Emerald 500 */
+  --color-primary: #FF5F6D;
+  /* Coral Gradient Start */
   --color-primary-foreground: #ffffff;
-  --color-gold: #D4AF37;
-  /* Premium Gold */
-  --color-gold-muted: rgba(212, 175, 55, 0.5);
   --color-secondary: #000000;
-  /* Absolute Black */
-  --color-secondary-foreground: #ffffff;
-  --color-accent: #34d399;
-  /* Emerald 400 */
-  --color-accent-foreground: #ffffff;
-  --color-background: #000000;
   /* Pure Deep Black */
-  --color-surface: #0a0a0a;
-  /* Elevated Surface */
-  --color-hover: rgba(255, 255, 255, 0.05);
-  --color-hover-border: rgba(255, 255, 255, 0.1);
+  --color-secondary-foreground: #ffffff;
+  --color-accent: #FFC371;
+  /* Orange Gradient End */
+  --color-accent-foreground: #ffffff;
+  --color-background: #050505;
+  /* Ultra Deep Black */
+  --color-surface: rgba(15, 15, 15, 0.6);
+  /* Glass Surface */
+  --color-hover: rgba(255, 255, 255, 0.08);
+  --color-hover-border: rgba(255, 255, 255, 0.15);
   --color-input-bg: #0a0a0a;
 
-  /* Precise Pastel Accent Tokens from Reference - Dynamic */
-  --color-pastel-mint: color-mix(in srgb, var(--color-primary, #10b981) 12%, #fff);
-  --color-pastel-yellow: color-mix(in srgb, var(--color-accent, #34d399) 12%, #fff);
-  --color-pastel-coral: color-mix(in srgb, var(--color-primary, #10b981) 15%, var(--color-accent) 5%, #fff);
-  --color-pastel-blue: color-mix(in srgb, var(--color-accent, #34d399) 15%, var(--color-primary) 5%, #fff);
+  /* Jump Rope Pro Palette */
+  --color-jrp-coral: #FF5F6D;
+  --color-jrp-orange: #FFC371;
+  --color-jrp-blue: #2193b0;
+  --color-jrp-dark: #050505;
 
-  --shadow-premium: 0 40px 80px -20px rgba(0, 0, 0, 0.8);
-  --shadow-glass: 0 8px 32px 0 rgba(0, 0, 0, 0.8);
+  --shadow-premium: 0 40px 80px -20px rgba(0, 0, 0, 0.9);
+  --shadow-glass: 0 8px 32px 0 rgba(0, 0, 0, 0.9);
 
-  --radius: 0.75rem;
-  /* Original compact rounding */
+  --radius: 1.5rem;
+  /* Rounded-3xl style from image */
   --glass-opacity: 0.1;
 
   /* Theme Aware Variables */
-  --color-text-base: #f8fafc;
-  --color-text-muted: rgba(255, 255, 255, 0.5);
+  --color-text-base: #ffffff;
+  --color-text-muted: rgba(255, 255, 255, 0.4);
   --color-surface-border: rgba(255, 255, 255, 0.1);
 }
 
@@ -225,10 +222,28 @@ body {
 }
 
 .premium-gradient-text {
-  background: linear-gradient(to right, var(--color-primary), var(--color-accent));
+  background: linear-gradient(to right, #FF5F6D, #FFC371);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
+}
+
+.jrp-gradient {
+  background: linear-gradient(135deg, #FF5F6D 0%, #FFC371 100%);
+}
+
+.jrp-card {
+  background: rgba(15, 15, 15, 0.7);
+  backdrop-filter: blur(25px);
+  -webkit-backdrop-filter: blur(25px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 1.5rem;
+  transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
+}
+
+.jrp-card:hover {
+  border-color: rgba(255, 95, 109, 0.3);
+  transform: translateY(-2px);
 }
 
 /* 
@@ -439,6 +454,20 @@ input[type=number] {
   }
 }
 
+@keyframes spin-slow {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin-slow {
+  animation: spin-slow 8s linear infinite;
+}
+
 @keyframes shimmer {
   from {
     transform: translateX(-100%) skewX(-12deg);
@@ -464,17 +493,23 @@ input[type=number] {
   justify-content: center;
   border-radius: 9999px;
   transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  /* Force visible icon color — overrides global text-white/* -> text-muted rule */
+  color: rgba(255, 255, 255, 0.75) !important;
 }
 
 .nav-icon-container.active {
   background: transparent;
-  color: var(--color-primary);
-  /* Removed drop-shadow and scale to ensure absolute centering */
+  color: var(--color-primary) !important;
 }
 
 .nav-icon-container svg {
-  color: inherit;
+  color: inherit !important;
   fill: none;
+}
+
+/* Footer buttons (globe / logout) in desktop sidebar */
+aside .nav-footer-icon {
+  color: rgba(255, 255, 255, 0.75) !important;
 }
 
 /* Removed hover override to allow Tailwind classes to take effect */

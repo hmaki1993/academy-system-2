@@ -164,7 +164,7 @@ export default function DashboardLayout() {
 
                         if (toastCount.current < 3) {
                             // Check user preferences before showing toast
-                            const shouldShowToast = 
+                            const shouldShowToast =
                                 (newNote.type === 'payment' && settings.notify_payments !== false) ||
                                 (newNote.type === 'attendance_absence' && settings.notify_absences !== false) ||
                                 (newNote.type === 'student' && settings.notify_registrations !== false) ||
@@ -574,29 +574,32 @@ export default function DashboardLayout() {
                 onMouseEnter={() => setIsHoveringSidebar(true)}
                 onMouseLeave={() => setIsHoveringSidebar(false)}
                 className={`fixed z-[300] transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] flex flex-col no-print
-                    /* Mobile: Full Screen Setup */
                     bottom-0 left-0 right-0 w-full h-[100dvh]
-                    bg-[#0d0d0f]/95 backdrop-blur-3xl border-none
-                    lg:bg-transparent lg:backdrop-blur-none lg:border-t-0
-                    /* Desktop: Sidebar Setup */
-                    lg:top-0 lg:bottom-0 lg:h-full lg:rounded-none ${isRtl ? 'lg:right-0 lg:left-auto lg:border-l lg:border-white/10' : 'lg:left-0 lg:right-auto lg:border-r lg:border-white/10'}
-                    ${isHoveringSidebar ? 'lg:w-64 lg:bg-[#0a0c10]/40 lg:backdrop-blur-xl' : 'lg:w-20'}
-                    /* Visibility Transforms */
+                    lg:top-0 lg:bottom-0 lg:h-full lg:rounded-none
+                    ${isRtl ? 'lg:right-0 lg:left-auto lg:border-l' : 'lg:left-0 lg:right-auto lg:border-r'}
+                    ${isHoveringSidebar
+                        ? 'lg:w-64 lg:bg-white/[0.02] lg:backdrop-blur-3xl lg:border-white/[0.05] lg:shadow-[20px_0_60px_-15px_rgba(0,0,0,0.8)]'
+                        : 'lg:w-20 lg:bg-white/[0.01] lg:backdrop-blur-2xl lg:border-transparent lg:shadow-none'
+                    }
                     transform ${sidebarOpen
-                        ? 'translate-y-0 lg:translate-y-0 lg:translate-x-0'
+                        ? 'translate-y-0 lg:translate-x-0'
                         : isSidebarRevealed
-                            ? `translate-y-full lg:translate-y-0 lg:translate-x-0`
+                            ? 'translate-y-full lg:translate-y-0 lg:translate-x-0'
                             : `translate-y-full lg:translate-y-0 ${isRtl ? 'lg:translate-x-12 lg:opacity-0' : 'lg:-translate-x-12 lg:opacity-0'}`
-                    }`}
+                    }
+                `}
                 style={{ zIndex: 300 }}
             >
+                {/* Intrinsic Glow - Matching the reference image exactly */}
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(255,95,95,0.12),transparent_70%)] pointer-events-none z-0" />
+
                 {/* ---- MOBILE LAYOUT: Full-Screen Glassy Grid ---- */}
-                <div className="lg:hidden flex flex-col h-[100dvh] bg-[#0d0d0f]/95 backdrop-blur-3xl pt-safe pb-safe overflow-hidden">
+                <div className="lg:hidden flex flex-col h-[100dvh] bg-black/40 backdrop-blur-3xl pt-safe pb-safe overflow-hidden">
                     {/* Mobile Header: Centered Logo + Drag Indicator */}
                     <div className="relative flex flex-col items-center justify-center pt-5 pb-3 shrink-0">
                         {/* Center Drag Indicator */}
                         <div className="w-10 h-1 bg-white/10 rounded-full cursor-pointer mb-3" onClick={() => setSidebarOpen(false)} />
-                        
+
                         {/* Logo */}
                         <button onClick={() => setIsLogoModalOpen(true)} className="flex items-center">
                             <img
@@ -668,13 +671,13 @@ export default function DashboardLayout() {
                 </div>
 
                 {/* ---- DESKTOP LAYOUT: Unchanged sidebar ---- */}
-                <div className="hidden lg:flex w-full flex-1 flex-col relative overflow-y-auto lg:overflow-visible custom-scrollbar pb-6 lg:pb-0">
+                <div className="hidden lg:flex w-full flex-1 flex-col relative no-scrollbar pb-6 lg:pb-0">
                     {/* Sidebar Header - Compact Logo */}
                     <div className="pt-1 lg:pt-4 pb-1 shrink-0 w-full grid place-items-center">
                         <button
                             onClick={() => setIsLogoModalOpen(true)}
                             onMouseEnter={playHoverSound}
-                            className="relative group grid place-items-center focus:outline-none z-10 w-full bg-transparent"
+                            className="relative group grid place-items-center focus:outline-none z-10 w-full"
                         >
                             <img
                                 src={settings.logo_url || "/logo.png"}
@@ -684,7 +687,7 @@ export default function DashboardLayout() {
                         </button>
                     </div>
 
-                    <div className="flex-1 flex flex-col items-center py-1 lg:py-1 px-0 space-y-0.5 lg:space-y-1 w-full">
+                    <div className="flex-1 flex flex-col items-center py-1 lg:py-1 px-0 space-y-0.5 lg:space-y-1 w-full overflow-y-auto no-scrollbar">
                         {navItems.map((item) => {
                             const Icon = item.icon;
                             const isActive = location.pathname === item.to;
@@ -703,13 +706,13 @@ export default function DashboardLayout() {
                                         className={`relative group grid w-full ${isHoveringSidebar ? 'grid-cols-[80px_1fr] items-center' : 'place-items-center'} p-1.5 rounded-none transition-all duration-300 hover:text-gold`}
                                     >
                                         <div
-                                            className={`nav-icon-container shrink-0 w-8 h-8 rounded-xl flex items-center justify-center transition-all duration-500 mx-auto ${isActive ? 'active text-primary' : 'bg-transparent text-white/40 group-hover:text-gold group-hover:scale-110'}`}
+                                            className={`nav-icon-container shrink-0 w-8 h-8 rounded-xl flex items-center justify-center transition-all duration-500 mx-auto ${isActive ? 'active text-primary' : 'bg-transparent text-white/70 group-hover:text-gold group-hover:scale-110'}`}
                                         >
-                                            <Icon className={`w-4 h-4 ${isActive ? 'text-primary' : ''} transition-all duration-300 group-hover:scale-110 group-hover:text-gold`} />
+                                            <Icon className={`w-4 h-4 ${isActive ? 'text-primary' : 'text-white/70'} transition-all duration-300 group-hover:scale-110 group-hover:text-gold`} />
                                         </div>
 
                                         {/* Desktop Label - Reveals on Hover */}
-                                        <span className={`font-bold uppercase tracking-widest text-[11px] transition-all duration-500 whitespace-nowrap overflow-hidden ${isHoveringSidebar ? 'w-40 opacity-100 translate-x-0' : 'w-0 opacity-0 -translate-x-2'} ${isActive ? 'text-primary' : 'text-white/60 group-hover:text-gold group-hover:translate-x-1'}`}>
+                                        <span className={`font-bold uppercase tracking-widest text-[11px] transition-all duration-500 whitespace-nowrap overflow-hidden ${isHoveringSidebar ? 'w-40 opacity-100 translate-x-0' : 'w-0 opacity-0 -translate-x-2'} ${isActive ? 'text-primary' : 'text-white/75 group-hover:text-gold group-hover:translate-x-1'}`}>
                                             {t(item.label)}
                                         </span>
 
@@ -726,7 +729,7 @@ export default function DashboardLayout() {
                     </div>
 
                     {/* Footer - Desktop: Bottom buttons */}
-                    <div className={`flex flex-col gap-2 pb-2 border-t border-white/5 pt-2 mt-1 shrink-0 ${isHoveringSidebar ? 'items-start px-4' : 'items-center'}`}>
+                    <div className={`flex flex-col gap-2 pb-4 border-none pt-2 mt-auto shrink-0 ${isHoveringSidebar ? 'items-start px-4' : 'items-center'}`}>
                         <button
                             onClick={() => {
                                 const newLang = i18n.language === 'en' ? 'ar' : 'en';
@@ -738,7 +741,7 @@ export default function DashboardLayout() {
                             className={`grid w-full text-muted hover:text-gold transition-all duration-300 group ${isHoveringSidebar ? 'grid-cols-[80px_1fr] items-center' : 'place-items-center'}`}
                             title="Change Language"
                         >
-                            <div className="w-7 h-7 lg:w-8 lg:h-8 flex items-center justify-center rounded-lg lg:rounded-xl shrink-0 mx-auto transition-all duration-300 group-hover:scale-110 group-hover:text-gold">
+                            <div className="w-7 h-7 lg:w-8 lg:h-8 flex items-center justify-center rounded-lg lg:rounded-xl shrink-0 mx-auto transition-all duration-300 group-hover:scale-110 group-hover:text-gold text-white/70">
                                 <Globe className="w-3.5 h-3.5 lg:w-4 lg:h-4" />
                             </div>
                             <span className={`font-bold uppercase tracking-widest text-[11px] whitespace-nowrap transition-all duration-500 overflow-hidden ${isHoveringSidebar ? 'w-40 opacity-100 translate-x-0' : 'w-0 opacity-0 -translate-x-2'} group-hover:translate-x-1 group-hover:text-gold`}>
@@ -752,7 +755,7 @@ export default function DashboardLayout() {
                             className={`grid w-full text-rose-500 hover:text-gold transition-all duration-300 group ${isHoveringSidebar ? 'grid-cols-[80px_1fr] items-center' : 'place-items-center'}`}
                             title="Logout"
                         >
-                            <div className="w-7 h-7 lg:w-8 lg:h-8 flex items-center justify-center shrink-0 mx-auto transition-all duration-300 group-hover:scale-110 group-hover:text-gold">
+                            <div className="w-7 h-7 lg:w-8 lg:h-8 flex items-center justify-center shrink-0 mx-auto transition-all duration-300 group-hover:scale-110 text-rose-500">
                                 <LogOut className="w-3.5 h-3.5 lg:w-4 lg:h-4 transition-transform" />
                             </div>
                             <span className={`font-bold uppercase tracking-widest text-[11px] whitespace-nowrap transition-all duration-500 overflow-hidden ${isHoveringSidebar ? 'w-40 opacity-100 translate-x-0' : 'w-0 opacity-0 -translate-x-2'} group-hover:translate-x-1 group-hover:text-gold`}>
@@ -766,7 +769,7 @@ export default function DashboardLayout() {
             {/* Main Content Area */}
             <div className={`flex-1 flex flex-col min-w-0 h-full transition-all duration-500 ${isChatView && !isHoveringSidebar ? 'lg:m-0' : (isRtl ? 'lg:mr-20' : 'lg:ml-20')}`}>
                 {/* Header - Branding */}
-                {!location.pathname.includes('/communications') && (
+                {!location.pathname.includes('/communications') && !location.pathname.includes('/ai-training') && (
                     <header className={`relative z-20 w-full pt-4 lg:pt-0 px-4 sm:px-6 lg:px-0 flex flex-col items-center lg:items-center`}>
                         <div className="w-full max-w-7xl lg:max-w-none h-18 lg:h-12 flex items-center justify-between px-2 sm:px-6 relative">
                             {/* Left Side Section - Clock & Mobile Toggle */}
@@ -948,9 +951,8 @@ export default function DashboardLayout() {
                 )}
 
                 {/* Page Content */}
-                <main className={`flex-1 min-h-0 ${location.pathname.includes('/communications') ? 'p-0 overflow-hidden' : 'p-3 sm:p-5 overflow-y-auto overflow-x-hidden'}`}>
+                <main className={`flex-1 min-h-0 ${location.pathname.includes('/communications') || location.pathname.includes('/ai-training') ? 'p-0 overflow-hidden' : 'p-3 sm:p-5 overflow-y-auto overflow-x-hidden'}`}>
                     <Outlet context={{ role, fullName, userId }} />
-
                 </main>
             </div >
 

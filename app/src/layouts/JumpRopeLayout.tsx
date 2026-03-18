@@ -77,8 +77,8 @@ export default function JumpRopeLayout() {
 
             {/* Main Content Area - Scrollable */}
             {/* Main Content Area - Scrollable */}
-            <main className={`flex-1 w-full ${location.pathname === '/jump-rope/training' ? 'max-w-none overflow-hidden' : 'max-w-md overflow-y-auto overflow-x-hidden scroll-smooth pb-24'} mx-auto relative sm:pb-0 z-10 custom-scrollbar`}>
-                <div className="min-h-full flex flex-col">
+            <main className={`flex-1 w-full flex flex-col ${location.pathname === '/jump-rope/training' ? 'max-w-none' : 'max-w-md overflow-y-auto overflow-x-hidden scroll-smooth pb-24'} mx-auto relative sm:pb-0 z-10 custom-scrollbar`}>
+                <div className="flex-1 flex flex-col">
                     <Outlet />
                 </div>
             </main>

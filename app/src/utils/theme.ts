@@ -13,14 +13,14 @@ export const applyThemeStyles = (themeId: string) => {
             root.style.setProperty('--color-accent', '#c084fc'); // Purple 400
             root.style.setProperty('color', '#f1f5f9');
         } else if (themeId === 'obsidian') {
-            // Polished Obsidian - Sleek Black
-            root.style.setProperty('--color-primary', '#a78bfa'); // Purple
+            // Jump Rope Pro - Coral & Black
+            root.style.setProperty('--color-primary', '#FF5F6D'); // Coral
             root.style.setProperty('--color-primary-foreground', '#ffffff');
-            root.style.setProperty('--color-secondary', '#18181b'); // Zinc 900
-            root.style.setProperty('--color-background', '#09090b'); // Zinc 950
-            root.style.setProperty('--color-surface', 'rgba(24, 24, 27, 0.7)');
-            root.style.setProperty('--color-accent', '#a78bfa'); // Purple
-            root.style.setProperty('color', '#fafafa');
+            root.style.setProperty('--color-secondary', '#000000'); // Black
+            root.style.setProperty('--color-background', '#050505'); // Deepest Black
+            root.style.setProperty('--color-surface', 'rgba(15, 15, 15, 0.6)');
+            root.style.setProperty('--color-accent', '#FFC371'); // Orange
+            root.style.setProperty('color', '#ffffff');
         } else if (themeId === 'emerald') {
             // Deep Emerald - Professional Green
             root.style.setProperty('--color-primary', '#34d399'); // Emerald 400

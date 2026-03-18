@@ -232,7 +232,7 @@ export default function HeadCoachDashboard() {
 
 
     return (
-        <div className="space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-700">
+        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
             <PageHeader
                 title={t('dashboard.headCoachTitle', 'Head Coach Hub')}
                 subtitle={t('dashboard.headCoachSubtitle', 'Academy Management & Live Analytics')}
@@ -287,13 +287,13 @@ export default function HeadCoachDashboard() {
                 </div>
             )}
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 {/* Attendance Card */}
-                <div className="glass-card bg-primary/[0.03] group col-span-1 flex flex-col justify-between p-6 rounded-[2rem] relative overflow-hidden h-full">
-                    <div className="flex items-center justify-between mb-6 relative z-10">
+                <div className="glass-card bg-primary/[0.03] group col-span-1 flex flex-col justify-between p-4 rounded-[1.5rem] relative overflow-hidden h-full">
+                    <div className="flex items-center justify-between mb-4 relative z-10">
                         <div className="flex items-center gap-3">
-                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-1000 border border-white/5 bg-white/5 backdrop-blur-xl`}>
-                                <Clock className={`w-5 h-5 ${isCheckedIn ? 'text-primary animate-pulse' : 'text-rose-500'}`} />
+                            <div className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all duration-1000 border border-white/5 bg-white/5 backdrop-blur-xl`}>
+                                <Clock className={`w-4 h-4 ${isCheckedIn ? 'text-primary animate-pulse' : 'text-rose-500'}`} />
                             </div>
                             <div>
                                 <h2 className="text-sm font-black text-white uppercase tracking-tight leading-none">{t('common.attendance')}</h2>
@@ -332,12 +332,12 @@ export default function HeadCoachDashboard() {
                     </div>
                     <div className="flex-1 flex flex-col items-center justify-center py-4 relative z-10">
                         {isCheckedIn ? (
-                            <div className="text-4xl font-black text-white tracking-widest font-mono whitespace-nowrap">
+                            <div className="text-2xl font-black text-white tracking-widest font-mono whitespace-nowrap">
                                 {formatTimer(elapsedTime)}
                             </div>
                         ) : dailyTotalSeconds > 0 ? (
                             <div className="flex flex-col items-center gap-1">
-                                <div className="text-4xl font-black text-primary/80 tracking-widest font-mono whitespace-nowrap">
+                                <div className="text-2xl font-black text-primary/80 tracking-widest font-mono whitespace-nowrap">
                                     {formatTimer(dailyTotalSeconds)}
                                 </div>
                                 <div className="px-2 py-0.5 bg-primary/10 border border-primary/20 rounded-full">
@@ -351,7 +351,7 @@ export default function HeadCoachDashboard() {
                     <div className="pt-4 relative z-10">
                         <button
                             onClick={isCheckedIn ? handleCheckOut : handleCheckIn}
-                            className={`w-full py-3.5 rounded-xl font-black uppercase tracking-[0.3em] text-[10px] flex items-center justify-center gap-3 transition-all duration-300 hover:scale-[1.03] active:scale-[0.98] shadow-xl ${isCheckedIn
+                            className={`w-full py-2 rounded-xl font-black uppercase tracking-[0.3em] text-[9px] flex items-center justify-center gap-3 transition-all duration-300 hover:scale-[1.03] active:scale-[0.98] shadow-xl ${isCheckedIn
                                 ? 'bg-white/10 text-white hover:bg-white/20'
                                 : 'bg-primary text-white hover:bg-primary/90 shadow-primary/20'}`}
                         >
@@ -362,11 +362,11 @@ export default function HeadCoachDashboard() {
                 </div>
 
                 {/* Quick Actions */}
-                <div className="glass-card p-6 rounded-[2rem] border border-white/5 shadow-premium relative overflow-hidden group col-span-1 bg-white/[0.01] flex flex-col justify-between h-full">
-                    <div className="flex items-center justify-between mb-8 relative z-10">
+                <div className="glass-card p-4 rounded-[1.5rem] border border-white/5 shadow-premium relative overflow-hidden group col-span-1 bg-white/[0.01] flex flex-col justify-between h-full">
+                    <div className="flex items-center justify-between mb-5 relative z-10">
                         <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/5 backdrop-blur-xl flex items-center justify-center text-white/40">
-                                <Users className="w-5 h-5" />
+                            <div className="w-8 h-8 rounded-xl bg-white/5 border border-white/5 backdrop-blur-xl flex items-center justify-center text-white/40">
+                                <Users className="w-4 h-4" />
                             </div>
                             <div>
                                 <h2 className="text-sm font-black text-white uppercase tracking-tight leading-none">Quick Actions</h2>

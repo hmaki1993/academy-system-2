@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useOutletContext } from 'react-router-dom';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, subMonths, addMonths, isToday } from 'date-fns';
@@ -959,10 +959,10 @@ export default function ReceptionDashboard({ role }: { role?: string }) {
             </PageHeader>
 
             {/* Personal Earnings Widget */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                 <div
                     onClick={() => setShowEarningsModal(true)}
-                    className="glass-card p-6 rounded-2xl border border-white/10 shadow-premium relative overflow-hidden group cursor-pointer hover:bg-white/[0.03] active:scale-[0.98] transition-all"
+                    className="glass-card p-4 rounded-xl border border-white/10 shadow-premium relative overflow-hidden group cursor-pointer hover:bg-white/[0.03] active:scale-[0.98] transition-all"
                 >
                     <div className="absolute -bottom-24 -right-24 w-48 h-48 bg-amber-500/5 rounded-full blur-3xl transition-all duration-700"></div>
                     <div className="flex items-center justify-between mb-3 relative z-10">

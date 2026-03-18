@@ -29,6 +29,14 @@ const LandingPage = lazy(() => import('./pages/LandingPage'));
 const Communications = lazy(() => import('./pages/Communications'));
 const AITraining = lazy(() => import('./pages/AITraining'));
 
+// Jump Rope Independent Layout & App
+const JumpRopeLayout = lazy(() => import('./layouts/JumpRopeLayout'));
+const JumpRopeHub = lazy(() => import('./pages/JumpRopeHub'));
+const JumpRopeTraining = lazy(() => import('./pages/JumpRopeTraining'));
+const JumpRopeLeaderboard = lazy(() => import('./pages/JumpRopeLeaderboard'));
+const JumpRopeHistory = lazy(() => import('./pages/JumpRopeHistory'));
+const JumpRopeSettings = lazy(() => import('./pages/JumpRopeSettings'));
+
 import { initializeTheme } from './utils/theme';
 import { CurrencyProvider } from './context/CurrencyContext';
 import { ThemeProvider, useTheme } from './context/ThemeContext';
@@ -133,6 +141,27 @@ function AppContent() {
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route path="/registration" element={<PublicRegistration />} />
+
+            {/* Jump Rope Standalone application route — own branded Suspense */}
+            <Route path="/jump-rope" element={
+              <Suspense fallback={
+                <div className="min-h-screen bg-[#050505] flex flex-col items-center justify-center gap-4">
+                  <div className="relative w-16 h-16">
+                    <div className="absolute inset-0 border-2 border-primary/20 rounded-full" />
+                    <div className="absolute inset-0 border-2 border-primary rounded-full border-t-transparent animate-spin" />
+                  </div>
+                  <p className="text-white/20 font-black tracking-[0.4em] text-[10px] uppercase">Jump Rope Pro</p>
+                </div>
+              }>
+                <JumpRopeLayout />
+              </Suspense>
+            }>
+              <Route index element={<JumpRopeHub />} />
+              <Route path="training" element={<JumpRopeTraining />} />
+              <Route path="leaderboard" element={<JumpRopeLeaderboard />} />
+              <Route path="history" element={<JumpRopeHistory />} />
+              <Route path="settings" element={<JumpRopeSettings />} />
+            </Route>
 
             {/* Protected Routes */}
             <Route element={<ProtectedRoute />}>

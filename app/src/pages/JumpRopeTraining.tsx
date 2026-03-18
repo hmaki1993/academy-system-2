@@ -1,92 +1,467 @@
-import React, { useState } from 'react';
-import { Play, Square, RefreshCcw, Activity } from 'lucide-react';
+import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
+import { Play, Square, RefreshCcw, Activity, Pause, Camera, Volume2, VolumeX, TrendingUp, Trophy, Clock, Zap, ArrowLeft, X, Loader2 } from 'lucide-react';
+import Webcam from 'react-webcam';
+import { useAddJumpRopeSession } from '../hooks/useData';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { useNavigate } from 'react-router-dom';
+
+const MEDIAPIPE_POSE_VERSION = '0.5.1675469404';
 
 export default function JumpRopeTraining() {
+    const navigate = useNavigate();
+    const webcamRef = useRef<Webcam>(null);
+    const canvasRef = useRef<HTMLCanvasElement>(null);
+    const { mutate: addSession, isPending: isSaving } = useAddJumpRopeSession();
+
+    // --- Core State ---
     const [isTracking, setIsTracking] = useState(false);
+    const [jumps, setJumps] = useState(0);
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    const [setupStatus, setSetupStatus] = useState<'MOVING' | 'STEP_BACK' | 'READY'>('MOVING');
+    const [movementPct, setMovementPct] = useState(0);
+    const [showSummary, setShowSummary] = useState(false);
+    const [activeSeconds, setActiveSeconds] = useState(0);
+    const [totalSeconds, setTotalSeconds] = useState(0);
+    const [intensityStatus, setIntensityStatus] = useState<'WORKING' | 'RESTING'>('RESTING');
+    const [voiceEnabled, setVoiceEnabled] = useState(true);
+    const [rpm, setRpm] = useState(0);
     
-    // Placeholder state for demo
-    const jumps = isTracking ? 124 : 0;
-    const time = isTracking ? "01:24" : "00:00";
-    const rpm = isTracking ? 88 : 0;
+    // Countdown Timer State
+    const [countdownMins, setCountdownMins] = useState(0);
+    const [countdownSecs, setCountdownSecs] = useState(0);
+    const [timerRemaining, setTimerRemaining] = useState<number | null>(null);
+
+    // Timer Adjust Helpers
+    const adjustMins = (delta: number) => setCountdownMins(m => Math.max(0, Math.min(99, m + delta)));
+    const adjustSecs = (delta: number) => setCountdownSecs(s => Math.max(0, Math.min(59, s + delta)));
+
+    // --- Voice Synthesis ---
+    const speak = useCallback((text: string) => {
+        if (!voiceEnabled || !window.speechSynthesis) return;
+        window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.rate = 1.2;
+        utterance.pitch = 1.1;
+        window.speechSynthesis.speak(utterance);
+    }, [voiceEnabled]);
+
+    // --- Detection Refs ---
+    const jumpCountRef = useRef(0);
+    const jumpStatusRef = useRef<'standing' | 'jumping'>('standing');
+    const baselineY = useRef<number | null>(null);
+    const bodyHeightRef = useRef<number>(200);
+    const peakY = useRef<number>(0);
+    const lastNoseY = useRef<number>(0);
+    const lastNoseX = useRef<number>(0);
+    const lastShoulderWidth = useRef<number>(0);
+    const lastDisplacementRef = useRef<number>(0);
+    const emaSmoothY = useRef<number | null>(null);
+    const isStableRef = useRef(false);
+    const stabilityStartRef = useRef<number | null>(null);
+    const trackingLossStartRef = useRef<number | null>(null);
+    const velocityRef = useRef(0);
+    const lastFrameTime = useRef(Date.now());
+    const lastActivityTimeRef = useRef(0);
+    const workTimeRef = useRef(0);
+    const restTimeRef = useRef(0);
+    const timerRemainingRef = useRef<number | null>(null);
+    const intensityHistoryRef = useRef<any[]>([]);
+
+    const handleVideoLoad = () => {
+        setIsLoading(false);
+        setError(null);
+    };
+
+    const handleCameraError = (err: any) => {
+        setError("Camera failed. Please check permissions.");
+        setIsLoading(false);
+    };
+
+    const onResults = useCallback((results: any) => {
+        if (!canvasRef.current || !results.poseLandmarks) return;
+        const canvasCtx = canvasRef.current.getContext('2d');
+        if (!canvasCtx) return;
+
+        const W = canvasRef.current.width;
+        const H = canvasRef.current.height;
+        const now = Date.now();
+        const deltaTime = (now - lastFrameTime.current) / 1000;
+        if (deltaTime < 0.001) return;
+        lastFrameTime.current = now;
+
+        canvasCtx.clearRect(0, 0, W, H);
+
+        const nose = results.poseLandmarks[0];
+        const lShoulder = results.poseLandmarks[11];
+        const rShoulder = results.poseLandmarks[12];
+        const lAnkle = results.poseLandmarks[27];
+        const rAnkle = results.poseLandmarks[28];
+
+        if (!nose || !lShoulder || !rShoulder) return;
+
+        const isFullBody = !!(lAnkle && rAnkle);
+        const noseY = nose.y * H;
+        const noseX = nose.x * W;
+        const shoulderW = Math.abs(lShoulder.x - rShoulder.x) * W;
+
+        const frameVelocityY = Math.abs(lastNoseY.current - noseY) / deltaTime;
+        const frameVelocityX = Math.abs(lastNoseX.current - noseX) / deltaTime;
+        const scaleVelocity = (shoulderW - lastShoulderWidth.current) / deltaTime;
+
+        const isTooClose = shoulderW > (W * 0.38);
+        const isApproaching = scaleVelocity > 180;
+        const isCurrentlyMoving = frameVelocityY > 400 || frameVelocityX > 200 || isApproaching;
+
+        lastNoseY.current = noseY;
+        lastNoseX.current = noseX;
+        lastShoulderWidth.current = shoulderW;
+
+        if (isStableRef.current) {
+            if (isTooClose || isApproaching) {
+                if (trackingLossStartRef.current === null) trackingLossStartRef.current = now;
+                else if (now - trackingLossStartRef.current > 600) {
+                    isStableRef.current = false;
+                    setSetupStatus('STEP_BACK');
+                    return;
+                }
+            } else {
+                trackingLossStartRef.current = null;
+                setSetupStatus('READY');
+            }
+        } else {
+            if (isCurrentlyMoving || !isFullBody || isTooClose) {
+                stabilityStartRef.current = null;
+                setSetupStatus(isTooClose || !isFullBody ? 'STEP_BACK' : 'MOVING');
+                baselineY.current = noseY;
+                setMovementPct(0);
+                return;
+            }
+            if (stabilityStartRef.current === null) stabilityStartRef.current = now;
+            else if (now - stabilityStartRef.current > 1500) {
+                isStableRef.current = true;
+                setSetupStatus('READY');
+            }
+            baselineY.current = noseY;
+            return;
+        }
+
+        const bodyH = Math.abs(((lAnkle?.y ?? rAnkle?.y ?? 0) - nose.y) * H);
+        bodyHeightRef.current = Math.max(100, bodyH);
+
+        if (emaSmoothY.current === null) emaSmoothY.current = noseY;
+        emaSmoothY.current = emaSmoothY.current * 0.4 + noseY * 0.6;
+        const smoothY = emaSmoothY.current;
+
+        const displacement = (baselineY.current || noseY) - smoothY;
+        velocityRef.current = velocityRef.current * 0.3 + (displacement - lastDisplacementRef.current) / deltaTime * 0.7;
+        lastDisplacementRef.current = displacement;
+
+        const jumpMinThreshold = Math.max(12, bodyHeightRef.current * 0.025);
+        const pct = Math.max(0, Math.min(100, (displacement / (bodyHeightRef.current * 0.10)) * 100));
+        setMovementPct(Math.round(pct));
+
+        // State Machine
+        if (jumpStatusRef.current === 'standing') {
+            if (displacement > jumpMinThreshold && velocityRef.current > 40) {
+                jumpStatusRef.current = 'jumping';
+                peakY.current = displacement;
+            } else if (Math.abs(velocityRef.current) < 15 && baselineY.current !== null) {
+                baselineY.current = baselineY.current * 0.95 + smoothY * 0.05;
+            }
+        } else {
+            if (displacement > peakY.current) peakY.current = displacement;
+            if (velocityRef.current < -30 || displacement < jumpMinThreshold * 0.5) {
+                if (peakY.current > jumpMinThreshold && scaleVelocity < 100) {
+                    jumpCountRef.current += 1;
+                    setJumps(jumpCountRef.current);
+                    if ('vibrate' in navigator) navigator.vibrate(50);
+                    lastActivityTimeRef.current = Date.now();
+                    if (jumpCountRef.current % 10 === 0) speak(jumpCountRef.current.toString());
+                }
+                jumpStatusRef.current = 'standing';
+                peakY.current = 0;
+            }
+        }
+    }, [speak]);
+
+    useEffect(() => {
+        let active = true;
+        let pose: any = null;
+        const setupPose = async () => {
+            try {
+                const mpPose = await import('@mediapipe/pose');
+                const PoseConstructor = mpPose.Pose || (mpPose as any).default?.Pose || (window as any).Pose;
+                pose = new PoseConstructor({ locateFile: (file: string) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose@${MEDIAPIPE_POSE_VERSION}/${file}` });
+                pose.setOptions({ modelComplexity: 0, smoothLandmarks: false, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 });
+                pose.onResults(onResults);
+                const loop = async () => {
+                    if (webcamRef.current?.video?.readyState === 4 && pose) await pose.send({ image: webcamRef.current.video });
+                    if (active) requestAnimationFrame(loop);
+                };
+                loop();
+            } catch (err) { setError("AI Engine failed."); setIsLoading(false); }
+        };
+        setupPose();
+        return () => { active = false; pose?.close?.(); };
+    }, [onResults]);
+
+    useEffect(() => {
+        if (!isTracking) return;
+        const interval = setInterval(() => {
+            const now = Date.now();
+            setTotalSeconds(s => s + 1);
+            const isWorking = lastActivityTimeRef.current > 0 && (now - lastActivityTimeRef.current) < 4000;
+            if (isWorking) {
+                workTimeRef.current += 1;
+                setActiveSeconds(workTimeRef.current);
+                setIntensityStatus('WORKING');
+            } else {
+                restTimeRef.current += 1;
+                setIntensityStatus('RESTING');
+            }
+
+            // Record intensity history for chart
+            intensityHistoryRef.current.push({
+                time: workTimeRef.current + restTimeRef.current,
+                jpm: Math.round(jumpCountRef.current / ((workTimeRef.current || 1) / 60))
+            });
+
+            if (workTimeRef.current % 2 === 0) {
+                setRpm(Math.round(jumpCountRef.current / ((workTimeRef.current || 1) / 60)) || 0);
+            }
+
+            if (timerRemainingRef.current !== null) {
+                const nextValue = Math.max(0, timerRemainingRef.current - 1);
+                timerRemainingRef.current = nextValue;
+                setTimerRemaining(nextValue);
+                if (nextValue === 0) handleFinish();
+            }
+        }, 1000);
+        return () => clearInterval(interval);
+    }, [isTracking]);
+
+    const handleFinish = useCallback(() => {
+        setIsTracking(false);
+        const finalRpm = Math.round(jumpCountRef.current / ((workTimeRef.current || 1) / 60)) || 0;
+        addSession({ jumps: jumpCountRef.current, duration: workTimeRef.current + restTimeRef.current, rpm: finalRpm });
+        setShowSummary(true);
+        const j = jumpCountRef.current;
+        const msg = j === 0 ? 'Session ended with no jumps detected.'
+            : j < 10 ? `Session ended. ${j} jumps.`
+            : j < 50 ? `Good effort! ${j} jumps completed.`
+            : j < 100 ? `Nice work! ${j} jumps completed.`
+            : j < 200 ? `Great session! ${j} jumps. Keep it up!`
+            : `Excellent! ${j} jumps. Outstanding performance!`;
+        speak(msg);
+    }, [addSession, speak]);
+
+    const handleStart = () => {
+        const total = (countdownMins * 60) + countdownSecs;
+        if (total > 0) {
+            setTimerRemaining(total);
+            timerRemainingRef.current = total;
+        } else {
+            setTimerRemaining(null);
+            timerRemainingRef.current = null;
+        }
+        setIsTracking(true);
+        jumpCountRef.current = 0;
+        setJumps(0);
+        workTimeRef.current = 0;
+        restTimeRef.current = 0;
+        lastActivityTimeRef.current = Date.now();
+        intensityHistoryRef.current = [];
+    };
 
     return (
-        <div className="flex-1 flex flex-col relative w-full bg-[#050505] overflow-hidden font-sans selection:bg-primary/30 antialiased">
+        <div className="flex-1 flex flex-col relative w-full bg-black overflow-hidden font-sans selection:bg-primary/30 antialiased" style={{ background: 'var(--jr-bg, #000)' }}>
             {/* 1. Immersive Camera Base */}
-            <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-[#080808]">
-                {isTracking && (
-                   <div className="w-full h-full bg-[#050505] relative overflow-hidden">
-                       <div className="absolute inset-x-0 top-1/2 h-[1px] bg-gradient-to-r from-transparent via-primary/30 to-transparent animate-pulse" />
-                       <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-black opacity-60" />
-                   </div> 
-                )}
+            <div className="absolute inset-0 z-10 flex flex-col items-center justify-center" style={{ background: 'var(--jr-bg, #080808)' }}>
+                <Webcam ref={webcamRef} className="w-full h-full object-cover opacity-60 grayscale-[0.5] contrast-[1.2]" mirrored={true} onUserMedia={handleVideoLoad} onUserMediaError={handleCameraError} />
+                <canvas ref={canvasRef} className="absolute inset-0 w-full h-full z-10 pointer-events-none opacity-50" width={640} height={480} />
             </div>
 
-            {/* 3. Primary Stats HUD (Visible only when tracking) */}
-            {isTracking && (
-                <div className="absolute left-1/2 -translate-x-1/2 top-40 z-40 flex flex-col items-center pointer-events-none">
-                    <div className="text-primary text-[10px] font-black uppercase tracking-[0.5em] mb-4 drop-shadow-[0_0_15px_rgba(255,59,48,0.8)]">Jumps</div>
-                    <div className="text-[140px] font-black text-white leading-none tracking-tighter drop-shadow-[0_10px_30px_rgba(255,255,255,0.2)]">
-                        {jumps}
+            {/* 2. Glassy Header Row (Centered Picker + Controls) */}
+            <div className={`absolute top-0 inset-x-0 z-50 p-4 flex items-center justify-between transition-all duration-700`}>
+                <button 
+                    onClick={() => navigate('/jump-rope')} 
+                    className="w-9 h-9 rounded-full border backdrop-blur-3xl flex items-center justify-center transition-all active:scale-90"
+                    style={{ background: 'var(--jr-surface, rgba(0,0,0,0.1))', borderColor: 'var(--jr-text-low, rgba(255,255,255,0.05))', color: 'var(--color-text-base)' }}
+                >
+                    <ArrowLeft size={16} />
+                </button>
+
+                {/* Centered Countdown Picker: Antigravity Pill Spinner */}
+                {!isTracking && (
+                    <div className="flex items-center gap-1 border backdrop-blur-3xl rounded-full px-2 py-0.5" style={{ background: 'var(--jr-surface, rgba(255,255,255,0.01))', borderColor: 'var(--jr-text-low, rgba(255,255,255,0.1))' }}>
+                        {/* Minutes */}
+                        <div className="flex flex-col items-center">
+                            <button onClick={() => adjustMins(1)} className="w-5 h-4 flex items-center justify-center text-white/20 hover:text-primary transition-colors text-[9px] leading-none active:scale-90">▲</button>
+                            <span className="font-mono font-black text-xs w-6 text-center leading-none py-0.5" style={{ color: 'var(--color-text-base)' }}>{String(countdownMins).padStart(2, '0')}</span>
+                            <button onClick={() => adjustMins(-1)} className="w-5 h-4 flex items-center justify-center text-white/20 hover:text-primary transition-colors text-[9px] leading-none active:scale-90">▼</button>
+                        </div>
+                        <span className="font-black text-xs mx-0.5" style={{ color: 'var(--jr-text-low, rgba(255,255,255,0.2))' }}>:</span>
+                        {/* Seconds */}
+                        <div className="flex flex-col items-center">
+                            <button onClick={() => adjustSecs(5)} className="w-5 h-4 flex items-center justify-center text-white/20 hover:text-primary transition-colors text-[9px] leading-none active:scale-90">▲</button>
+                            <span className="font-mono font-black text-xs w-6 text-center leading-none py-0.5" style={{ color: 'var(--color-text-base)' }}>{String(countdownSecs).padStart(2, '0')}</span>
+                            <button onClick={() => adjustSecs(-5)} className="w-5 h-4 flex items-center justify-center text-white/20 hover:text-primary transition-colors text-[9px] leading-none active:scale-90">▼</button>
+                        </div>
+                        <div className="w-[1px] h-4 ml-1" style={{ background: 'var(--jr-text-low, rgba(255,255,255,0.05))' }} />
+                        <Clock size={10} className="ml-1" style={{ color: 'var(--jr-text-low, rgba(255,255,255,0.2))' }} />
                     </div>
+                )}
+                
+                {isTracking && (
+                  <div className="flex items-center gap-3 border backdrop-blur-3xl rounded-full px-5 py-2" style={{ background: 'var(--jr-surface, rgba(255,255,255,0.02))', borderColor: 'var(--jr-text-low, rgba(255,255,255,0.05))' }}>
+                      <div className="flex flex-col items-center leading-none">
+                          <span className="text-primary text-[7px] font-black uppercase tracking-[0.2em] mb-0.5 opacity-80">{intensityStatus}</span>
+                          <span className="font-mono text-xs font-black tracking-wider" style={{ color: 'var(--color-text-base)' }}>{timerRemaining !== null ? `${Math.floor(timerRemaining/60)}:${String(timerRemaining%60).padStart(2,'0')}` : `${Math.floor(totalSeconds/60)}:${String(totalSeconds%60).padStart(2,'0')}`}</span>
+                      </div>
+                  </div>
+                )}
+
+                <button 
+                    onClick={() => setVoiceEnabled(!voiceEnabled)} 
+                    className={`w-9 h-9 rounded-full border backdrop-blur-3xl flex items-center justify-center transition-all active:scale-90 ${voiceEnabled ? 'bg-primary/5 border-primary/20 text-primary shadow-[0_0_15px_rgba(255,59,48,0.1)]' : 'bg-black/10 border-white/5 text-white/30'}`}
+                >
+                    {voiceEnabled ? <Volume2 size={16} /> : <VolumeX size={16} />}
+                </button>
+            </div>
+
+            {/* 3. Primary Stats HUD (Numeric Centered) */}
+            {isTracking ? (
+              <div className="absolute inset-0 z-40 flex flex-col items-center justify-center pointer-events-none">
+                  <div className="relative flex flex-col items-center">
+                    {/* Soft background glow */}
+                    <div className="absolute inset-0 bg-primary/5 blur-[120px] rounded-full scale-150" />
+                    
+                    <span className="text-primary text-[9px] font-black uppercase tracking-[0.8em] mb-6 drop-shadow-[0_0_10px_rgba(255,59,48,0.4)] relative z-10">JUMPS</span>
+                    <span className="text-[200px] font-black leading-none tracking-tighter drop-shadow-[0_20px_50px_rgba(0,0,0,0.8)] relative z-10" style={{ color: 'var(--color-text-base, #fff)' }}>{jumps}</span>
+                    
+                    <div className="mt-12 px-5 py-1.5 rounded-full border backdrop-blur-2xl relative z-10" style={{ background: 'var(--jr-surface, rgba(255,255,255,0.02))', borderColor: 'var(--jr-text-low, rgba(255,255,255,0.1))' }}>
+                        <span className="font-bold text-[9px] uppercase tracking-[0.3em]" style={{ color: 'var(--jr-text-low, #fff)' }}>{rpm} RPM</span>
+                    </div>
+                  </div>
+              </div>
+            ) : (
+                <div className="absolute inset-0 z-30 flex items-center justify-center pointer-events-none">
+                    {isLoading ? (
+                        <div className="flex flex-col items-center gap-3">
+                            <Loader2 className="w-6 h-6 text-primary/40 animate-spin" />
+                            <span className="text-[8px] font-black uppercase tracking-[0.4em] text-white/20">Syncing Engine</span>
+                        </div>
+                    ) : (
+                        <div className="flex flex-col items-center translate-y-24">
+                             <div className={`px-4 py-1 rounded-full border backdrop-blur-3xl transition-all duration-1000 ${setupStatus === 'READY' ? 'bg-emerald-500/5 border-emerald-500/10 text-emerald-400/60 shadow-[0_0_30px_rgba(52,211,153,0.1)]' : 'bg-primary/5 border-primary/10 text-primary/50'}`}>
+                                <span className="text-[9px] font-black uppercase tracking-[0.2em]">{setupStatus === 'READY' ? 'STEALTH READY' : setupStatus}</span>
+                            </div>
+                        </div>
+                    )}
                 </div>
             )}
 
-            {/* 4. Secondary Telemetry Bar (Visible only when tracking) */}
-            {isTracking && (
-                <div className="absolute bottom-40 inset-x-6 z-40">
-                    <div className="max-w-md mx-auto bg-black/60 backdrop-blur-2xl border border-white/10 rounded-[2.5rem] p-6 shadow-[0_30px_60px_rgba(0,0,0,0.5)] flex items-center justify-around pointer-events-auto">
-                        <div className="text-center">
-                            <p className="text-white/30 text-[9px] font-black uppercase tracking-[0.2em] mb-1">Time</p>
-                            <p className="text-xl font-black text-white font-mono tracking-wider">{time}</p>
-                        </div>
-                        
-                        <div className="w-[1px] h-8 bg-white/10" />
-
-                        <div className="text-center">
-                            <p className="text-white/30 text-[9px] font-black uppercase tracking-[0.2em] mb-1">RPM</p>
-                            <p className="text-xl font-black text-white font-mono tracking-wider">{rpm}</p>
-                        </div>
-
-                        <div className="w-[1px] h-8 bg-white/10" />
-
-                        <div className="text-center">
-                            <button 
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    setIsTracking(false);
-                                }} 
-                                className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center hover:bg-white/10 transition-colors"
-                            >
-                                <RefreshCcw className={`w-4 h-4 text-white/40 ${isTracking ? 'animate-spin-slow' : ''}`} />
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* 5. Floating Action Control */}
-            <div className="absolute bottom-20 inset-x-0 z-50 flex justify-center">
-                {!isTracking ? (
+            {/* 4. Bottom Control Bar */}
+            <div className="absolute bottom-28 inset-x-0 z-50 flex flex-col items-center">
+                {isTracking ? (
                     <button 
-                        onClick={() => setIsTracking(true)}
-                        className="group relative flex items-center gap-4 bg-primary px-10 py-5 rounded-[2.5rem] shadow-[0_0_40px_rgba(255,59,48,0.3)] hover:shadow-[0_0_60px_rgba(255,59,48,0.5)] transition-all duration-500 hover:scale-105 active:scale-95"
+                        onClick={handleFinish} 
+                        className="group flex items-center gap-3 border backdrop-blur-3xl px-7 py-2.5 rounded-full shadow-[0_20px_40px_rgba(0,0,0,0.5)] transition-all duration-500"
+                        style={{ background: 'var(--jr-surface, rgba(255,255,255,0.02))', borderColor: 'var(--jr-text-low, rgba(255,255,255,0.2))' }}
                     >
-                         <Play className="w-5 h-5 text-white fill-white" />
-                         <span className="text-xs font-black text-white uppercase tracking-[0.2em]">Start Training</span>
+                        <Square className="w-3 h-3 text-primary fill-primary" />
+                        <span className="text-[9px] font-black uppercase tracking-[0.2em]" style={{ color: 'var(--color-text-base)' }}>Finish Session</span>
                     </button>
                 ) : (
                     <button 
-                        onClick={() => setIsTracking(false)}
-                        className="group flex items-center gap-4 bg-white px-10 py-5 rounded-[2.5rem] shadow-2xl hover:scale-105 active:scale-95 transition-all duration-500"
+                        onClick={handleStart} 
+                        className="group relative flex items-center gap-4 border backdrop-blur-3xl px-7 py-3.5 rounded-full shadow-[0_10px_30px_rgba(0,0,0,0.4)] transition-all duration-500 hover:scale-105 active:scale-95 overflow-hidden"
+                        style={{ background: 'var(--jr-surface, rgba(255,255,255,0.01))', borderColor: 'var(--jr-text-low, rgba(255,255,255,0.3))' }}
                     >
-                         <Square className="w-4 h-4 text-black fill-black" />
-                         <span className="text-xs font-black text-black uppercase tracking-[0.2em]">Finish Session</span>
+                        <div className="absolute inset-0 bg-primary/[0.02] pointer-events-none" />
+                        <Play className="w-3.5 h-3.5 text-primary fill-primary relative z-10" />
+                        <span className="text-[10px] font-black text-white uppercase tracking-[0.3em] relative z-10" style={{ color: 'var(--color-text-base)' }}>Start Training</span>
                     </button>
                 )}
             </div>
 
-            {/* Background Glows for Spatial Depth */}
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[150%] h-[150%] bg-[radial-gradient(circle_at_center,rgba(255,59,48,0.03)_0%,transparent_70%)] pointer-events-none z-0" />
+            {/* 5. Antigravity Summary Modal */}
+            {showSummary && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/60 backdrop-blur-2xl animate-in fade-in duration-500">
+                    <div className="w-full max-w-md border rounded-[2.5rem] p-8 shadow-[0_40px_100px_rgba(0,0,0,0.6)] relative overflow-hidden flex flex-col gap-6" style={{ background: 'var(--jr-bg, rgba(10,10,10,0.95))', borderColor: 'var(--jr-text-low, rgba(255,255,255,0.1))' }}>
+                        {/* Spatial Background Elements */}
+                        <div className="absolute top-0 right-0 w-48 h-48 bg-primary/10 rounded-full blur-[80px] -translate-y-1/3 translate-x-1/3" />
+                        
+                        <div className="flex items-center justify-between relative z-10">
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center">
+                                    <Trophy className="w-5 h-5 text-primary" />
+                                </div>
+                                <div className="flex flex-col">
+                                    <h2 className="text-xl font-black leading-none mb-1" style={{ color: 'var(--color-text-base)' }}>Workout Report</h2>
+                                    <p className="text-[8px] font-black uppercase tracking-[0.2em] italic" style={{ color: 'var(--jr-text-low, rgba(255,255,255,0.3))' }}>Pure Performance</p>
+                                </div>
+                            </div>
+                            <button 
+                                onClick={() => setShowSummary(false)} 
+                                className="w-8 h-8 rounded-full transition-all"
+                                style={{ background: 'var(--jr-surface, rgba(255,255,255,0.05))', color: 'var(--jr-text-low)' }}
+                            >
+                                <X size={16} />
+                            </button>
+                        </div>
+
+                        <div className="grid grid-cols-3 gap-3 relative z-10">
+                            <div className="border backdrop-blur-3xl rounded-2xl p-4 flex flex-col items-center" style={{ background: 'var(--jr-surface, rgba(255,255,255,0.03))', borderColor: 'var(--jr-text-low, rgba(255,255,255,0.1))' }}>
+                                <span className="text-xl font-black mb-0.5" style={{ color: 'var(--color-text-base)' }}>{jumps}</span>
+                                <span className="text-[7px] font-bold uppercase tracking-[0.2em]" style={{ color: 'var(--jr-text-low, rgba(255,255,255,0.2))' }}>Jumps</span>
+                            </div>
+                            <div className="border backdrop-blur-3xl rounded-2xl p-4 flex flex-col items-center" style={{ background: 'var(--jr-surface, rgba(255,255,255,0.03))', borderColor: 'var(--jr-text-low, rgba(255,255,255,0.1))' }}>
+                                <span className="text-xl font-black text-primary mb-0.5">{rpm}</span>
+                                <span className="text-[7px] font-bold uppercase tracking-[0.2em]" style={{ color: 'var(--jr-text-low, rgba(255,255,255,0.2))' }}>Avg RPM</span>
+                            </div>
+                            <div className="border backdrop-blur-3xl rounded-2xl p-4 flex flex-col items-center text-center" style={{ background: 'var(--jr-surface, rgba(255,255,255,0.03))', borderColor: 'var(--jr-text-low, rgba(255,255,255,0.1))' }}>
+                                <span className="text-xs font-black mb-0.5 pt-2" style={{ color: 'var(--color-text-base)' }}>{Math.floor(activeSeconds/60)}m {activeSeconds%60}s</span>
+                                <span className="text-[7px] font-bold uppercase tracking-[0.2em] mt-1" style={{ color: 'var(--jr-text-low, rgba(255,255,255,0.2))' }}>Duration</span>
+                            </div>
+                        </div>
+
+                        <div className="w-full relative z-10" style={{ height: 128 }}>
+                            <ResponsiveContainer width="100%" height={128} debounce={50}>
+                                <AreaChart data={intensityHistoryRef.current}>
+                                    <defs>
+                                        <linearGradient id="premiumGlow" x1="0" y1="0" x2="0" y2="1">
+                                            <stop offset="5%" stopColor="#ff3b30" stopOpacity={0.2}/>
+                                            <stop offset="95%" stopColor="#ff3b30" stopOpacity={0}/>
+                                        </linearGradient>
+                                    </defs>
+                                    <Area type="monotone" dataKey="jpm" stroke="#ff3b30" strokeWidth={1.5} fillOpacity={1} fill="url(#premiumGlow)" />
+                                    <Tooltip 
+                                        contentStyle={{background: 'rgba(10,10,10,0.8)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '10px', fontSize: '9px', backdropFilter: 'blur(10px)'}} 
+                                        labelStyle={{display: 'none'}} 
+                                        itemStyle={{color: '#ff3b30', fontWeight: 'bold'}} 
+                                    />
+                                </AreaChart>
+                            </ResponsiveContainer>
+                        </div>
+
+                        <div className="flex flex-col items-center relative z-10">
+                             <p className="text-[9px] font-bold italic tracking-wide text-center uppercase opacity-60 leading-relaxed" style={{ color: 'var(--jr-text-low, rgba(255,255,255,0.2))' }}>
+                                "The only bad workout is the one<br/>that didn't happen."
+                             </p>
+                        </div>
+                        
+                        <button 
+                            onClick={() => setShowSummary(false)} 
+                            className="w-full py-4 border font-black uppercase text-[10px] tracking-[0.3em] rounded-2xl transition-all backdrop-blur-3xl shadow-[0_10px_30px_rgba(0,0,0,0.2)] relative z-10"
+                            style={{ background: 'var(--jr-surface, rgba(255,255,255,0.05))', borderColor: 'var(--jr-text-low, rgba(255,255,255,0.1))', color: 'var(--color-text-base)' }}
+                        >
+                            Dismiss Report
+                        </button>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

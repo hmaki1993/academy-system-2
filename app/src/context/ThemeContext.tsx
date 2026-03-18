@@ -364,7 +364,9 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     }, [settings]);
 
     useEffect(() => {
-        if (settings.academy_name && settings.academy_name !== 'Academy System') {
+        // Don't override the title when inside the Jump Rope standalone section
+        const isJumpRopeRoute = window.location.hash.includes('/jump-rope');
+        if (!isJumpRopeRoute && settings.academy_name && settings.academy_name !== 'Academy System') {
             document.title = settings.academy_name;
         }
         // Sync full settings for immediate theme pickup on refresh in index.html

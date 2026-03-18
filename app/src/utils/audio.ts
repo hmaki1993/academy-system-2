@@ -22,6 +22,8 @@ class SoundEngine {
      * Inspired by high-end camera shutters and mechanical switches.
      */
     public playHover() {
+        // Disabled per user request to remove hover sounds from sidebar/buttons
+        /*
         const now = Date.now();
         if (now - this.lastPlayTime < this.MIN_GATE_TIME) return;
         this.lastPlayTime = now;
@@ -95,6 +97,7 @@ class SoundEngine {
         } catch (e) {
             console.debug('Audio interaction prevented', e);
         }
+        */
     }
 }
 

@@ -144,10 +144,10 @@ export default function Dashboard() {
                         <button
                             onClick={() => setShowBatchTest(true)}
                             onMouseEnter={playHoverSound}
-                            className="group relative px-4 py-2 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 transition-all duration-300"
+                            className="group relative px-3 py-1.5 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 transition-all duration-300"
                         >
-                            <div className="flex items-center gap-2 text-[10px] font-black text-white uppercase tracking-widest relative z-10">
-                                <ClipboardCheck className="w-3.5 h-3.5 text-primary" />
+                            <div className="flex items-center gap-1.5 text-[9px] font-black text-white uppercase tracking-widest relative z-10">
+                                <ClipboardCheck className="w-3 h-3 text-primary" />
                                 {t('dashboard.batchAssessment')}
                             </div>
                         </button>
@@ -156,19 +156,19 @@ export default function Dashboard() {
             </div>
 
             {/* Stats Grid - Standardized Style */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                 {statCards.map((stat, index) => (
                     <div
                         key={index}
                         onClick={() => stat.path && navigate(stat.path)}
                         onMouseEnter={playHoverSound}
-                        className="glass-card p-5 md:p-6 group relative overflow-hidden bg-[#0a0c10]/40 backdrop-blur-xl border-white/5 hover:border-white/20 transition-all duration-300"
+                        className="glass-card p-3 md:p-4 group relative overflow-hidden bg-[#0a0c10]/40 backdrop-blur-xl border-white/5 hover:border-white/20 transition-all duration-300"
                     >
-                        <div className="flex items-start justify-between mb-6 relative z-10">
+                        <div className="flex items-start justify-between mb-3 relative z-10">
                             <div className="flex flex-col gap-0.5">
-                                <p className="text-[9px] font-black text-white/30 uppercase tracking-widest">{stat.label}</p>
+                                <p className="text-[8px] font-black text-white/30 uppercase tracking-widest">{stat.label}</p>
                                 <div className="flex items-center gap-2">
-                                    <h3 className="text-2xl md:text-3xl font-black text-white tracking-tight">
+                                    <h3 className="text-xl md:text-2xl font-black text-white tracking-tight">
                                         {loading ? '...' : stat.value}
                                     </h3>
                                     {stat.isLive && (
@@ -179,8 +179,8 @@ export default function Dashboard() {
                                     )}
                                 </div>
                             </div>
-                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-300 ${stat.bgClass}`}>
-                                <stat.icon className={`w-5 h-5 ${stat.iconClass}`} />
+                            <div className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all duration-300 ${stat.bgClass}`}>
+                                <stat.icon className={`w-4 h-4 ${stat.iconClass}`} />
                             </div>
                         </div>
 
@@ -198,10 +198,10 @@ export default function Dashboard() {
             </div>
 
             {/* Main Sections */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 <div
                     onClick={() => navigate('/app/finance')}
-                    className="glass-card p-6 cursor-pointer hover:bg-white/5 transition-colors"
+                    className="glass-card p-4 cursor-pointer hover:bg-white/5 transition-colors"
                 >
                     <div className="flex items-center gap-3 mb-6">
                         <TrendingUp className="w-5 h-5 text-primary" />
@@ -235,15 +235,15 @@ export default function Dashboard() {
 
 
             {/* Live Floor & Recent Activity Grid */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                 {/* Live Floor Widget */}
-                <div className="lg:col-span-2 h-full min-h-[500px]">
+                <div className="lg:col-span-2 h-full min-h-[400px]">
                     <LiveStudentsWidget />
                 </div>
 
                 {/* Recent Activity */}
-                <div className="lg:col-span-1 glass-card rounded-[2.5rem] overflow-hidden flex flex-col">
-                    <div className="p-6 border-b border-surface-border flex items-center justify-between">
+                <div className="lg:col-span-1 glass-card rounded-[2rem] overflow-hidden flex flex-col">
+                    <div className="p-4 border-b border-surface-border flex items-center justify-between">
                         <h3 className="text-lg font-black text-base uppercase tracking-tight flex items-center gap-3">
                             <span className="w-1.5 h-6 bg-primary rounded-full"></span>
                             {t('dashboard.newJoiners')}
@@ -256,7 +256,7 @@ export default function Dashboard() {
                         </button>
                     </div>
 
-                    <div className="p-6 space-y-4">
+                    <div className="p-4 space-y-3">
                         {loading ? (
                             <p className="text-muted text-sm font-black uppercase tracking-widest text-center py-6">{t('common.loading')}</p>
                         ) : displayStats.recentActivity.length === 0 ? (

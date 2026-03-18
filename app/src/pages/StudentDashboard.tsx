@@ -192,20 +192,20 @@ export default function StudentDashboard() {
 
             {/* Activities Stats */}
             {!isPtOnly && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     {/* Attended Sessions */}
                     <div
                         onMouseEnter={playHoverSound}
-                        className="glass-card bg-primary/[0.03] group h-full flex flex-col justify-between p-6 rounded-[2rem] relative overflow-hidden"
+                        className="glass-card bg-primary/[0.03] group h-full flex flex-col justify-between p-4 rounded-[1.5rem] relative overflow-hidden"
                     >
                         <div className="flex items-center justify-between gap-4 mb-4 relative z-10 text-white/40">
                             <p className="text-[10px] font-black uppercase tracking-[0.2em]">Attended Sessions</p>
-                            <div className="w-10 h-10 rounded-2xl bg-white/5 text-white/60 flex items-center justify-center border border-white/5 group-hover:scale-110 transition-all">
-                                <CheckCircle className="w-5 h-5" strokeWidth={2} />
+                            <div className="w-8 h-8 rounded-2xl bg-white/5 text-white/60 flex items-center justify-center border border-white/5 group-hover:scale-110 transition-all">
+                                <CheckCircle className="w-4 h-4" strokeWidth={2} />
                             </div>
                         </div>
                         <div className="relative z-10 flex items-baseline gap-3 text-white">
-                            <h3 className="text-5xl font-black tracking-tighter">
+                            <h3 className="text-3xl font-black tracking-tighter">
                                 {attendedSessions}
                             </h3>
                             <p className="text-[9px] font-bold text-white/30 uppercase tracking-widest mb-2">Total completed</p>
@@ -215,16 +215,16 @@ export default function StudentDashboard() {
                     {/* Remaining Sessions */}
                     <div
                         onMouseEnter={playHoverSound}
-                        className="glass-card bg-accent/[0.03] group h-full flex flex-col justify-between p-6 rounded-[2rem] relative overflow-hidden"
+                        className="glass-card bg-accent/[0.03] group h-full flex flex-col justify-between p-4 rounded-[1.5rem] relative overflow-hidden"
                     >
                         <div className="flex items-center justify-between gap-4 mb-4 relative z-10 text-white/40">
                             <p className="text-[10px] font-black uppercase tracking-[0.2em]">Remaining Sessions</p>
-                            <div className="w-10 h-10 rounded-2xl bg-white/5 text-white/60 flex items-center justify-center border border-white/5 group-hover:scale-110 transition-all">
-                                <Calendar className="w-5 h-5" strokeWidth={2} />
+                            <div className="w-8 h-8 rounded-2xl bg-white/5 text-white/60 flex items-center justify-center border border-white/5 group-hover:scale-110 transition-all">
+                                <Calendar className="w-4 h-4" strokeWidth={2} />
                             </div>
                         </div>
                         <div className="relative z-10 flex items-baseline gap-3 text-white">
-                            <h3 className="text-5xl font-black tracking-tighter">
+                            <h3 className="text-3xl font-black tracking-tighter">
                                 {sessionsRemaining}
                             </h3>
                             <p className="text-[9px] font-bold text-white/30 uppercase tracking-widest mb-2">{planName}</p>
@@ -241,7 +241,7 @@ export default function StudentDashboard() {
 
                 {isPtOnly ? (
                     /* VERY PREMIUM PT JOURNEY CARD */
-                    <div className="glass-card p-8 md:p-10 rounded-[3rem] border border-white/5 shadow-premium relative overflow-hidden bg-white/[0.01] backdrop-blur-3xl group/journey">
+                    <div className="glass-card p-5 md:p-6 rounded-[2rem] border border-white/5 shadow-premium relative overflow-hidden bg-white/[0.01] backdrop-blur-3xl group/journey">
                         <div className="flex flex-col md:flex-row md:items-center justify-between gap-8 relative z-10">
                             <div className="flex items-center gap-6">
                                 <div className="p-4 bg-primary/10 rounded-[1.8rem] text-primary border border-white/5 relative z-10 backdrop-blur-md">
@@ -266,7 +266,7 @@ export default function StudentDashboard() {
 
                             <button
                                 onClick={() => setShowCalendar(true)}
-                                className="group/btn relative px-10 py-5 bg-white text-black font-black uppercase tracking-[0.25em] text-[11px] rounded-2xl shadow-xl hover:shadow-2xl active:scale-95 transition-all flex items-center gap-4 overflow-hidden border border-transparent"
+                                className="group/btn relative px-5 py-2.5 bg-white text-black font-black uppercase tracking-[0.25em] text-[10px] rounded-xl shadow-xl hover:shadow-2xl active:scale-95 transition-all flex items-center gap-3 overflow-hidden border border-transparent"
                             >
                                 <Calendar className="w-4 h-4 text-black" />
                                 View Full Journey
@@ -275,19 +275,19 @@ export default function StudentDashboard() {
                         </div>
 
                         {/* Feature Badges */}
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-10 relative z-10">
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-6 relative z-10">
                             {[
                                 { label: 'Sessions Logged', value: attendedSessions, icon: CheckCircle, tint: 'bg-primary/10', iconColor: 'text-primary' },
                                 { label: 'Remaining', value: sessionsRemaining, icon: Clock, tint: 'bg-accent/10', iconColor: 'text-accent' },
                                 { label: 'Total Program', value: (attendedSessions + sessionsRemaining), icon: Shield, tint: 'bg-rose-500/10', iconColor: 'text-rose-400' },
                                 { label: 'Current Level', value: 'Prime', icon: Sparkles, tint: 'bg-indigo-500/10', iconColor: 'text-indigo-400' }
                             ].map((item, i) => (
-                                <div key={i} className={`glass-card bg-white/[0.02] border border-white/5 rounded-2xl flex flex-col items-center justify-center text-center group/item p-4 hover:bg-white/[0.05] transition-colors`}>
+                                <div key={i} className={`glass-card bg-white/[0.02] border border-white/5 rounded-xl flex flex-col items-center justify-center text-center group/item p-3 hover:bg-white/[0.05] transition-colors`}>
                                     <div className={`p-2 rounded-lg ${item.tint} mb-2`}>
                                         <item.icon className={`w-4 h-4 ${item.iconColor}`} />
                                     </div>
                                     <p className="text-[8px] font-black text-white/30 uppercase tracking-widest mb-1">{item.label}</p>
-                                    <p className="text-xl font-black text-white uppercase tracking-tight">{item.value}</p>
+                                    <p className="text-base font-black text-white uppercase tracking-tight">{item.value}</p>
                                 </div>
                             ))}
                         </div>

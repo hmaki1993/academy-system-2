@@ -15,46 +15,75 @@
   <meta name="theme-color" content="#050505">
   <title>Academy System</title>
   <script>
-    // Immediate theme application to prevent flash of default colors on refresh
+    // Immediate branding & theme application to prevent flash on refresh
     (function () {
       try {
-        const saved = localStorage.getItem('gym_settings');
-        if (!saved) return;
-        const s = JSON.parse(saved);
-
-        if (s.academy_name) document.title = s.academy_name;
-
+        const hash = window.location.hash || '';
         const root = document.documentElement;
-        if (s.primary_color) root.style.setProperty('--color-primary', s.primary_color);
-        if (s.secondary_color) {
-          root.style.setProperty('--color-secondary', s.secondary_color);
-          root.style.setProperty('--color-background', s.secondary_color);
 
-          // Fast luminance check for text colors
-          const hex = s.secondary_color;
-          if (typeof hex === 'string' && hex.startsWith('#')) {
-            const c = hex.substring(1);
-            const rgb = parseInt(c.length === 3 ? c[0] + c[0] + c[1] + c[1] + c[2] + c[2] : c, 16);
-            const r = (rgb >> 16) & 0xff;
-            const g = (rgb >> 8) & 0xff;
-            const b = (rgb >> 0) & 0xff;
-            const lum = 0.2126 * (r / 255) + 0.7152 * (g / 255) + 0.0722 * (b / 255);
-            if (lum > 0.6) {
-              root.style.setProperty('--color-text-base', s.text_color_base || '#0a0a0f');
-              root.style.setProperty('--color-text-muted', s.text_color_muted || '#475569');
-              root.style.setProperty('--is-light-mode', '1');
-            } else {
-              root.style.setProperty('--color-text-base', s.text_color_base || '#f8fafc');
-              root.style.setProperty('--color-text-muted', s.text_color_muted || 'rgba(255, 255, 255, 0.6)');
-              root.style.setProperty('--is-light-mode', '0');
+        if (hash.includes('/jump-rope')) {
+          // --- Standalone Jump Rope Mode ---
+          const jrSaved = localStorage.getItem('jump_rope_app_settings');
+          const jr = jrSaved ? JSON.parse(jrSaved) : { appName: 'Jump Rope Pro', themeId: 'ember' };
+          
+          document.title = jr.appName || 'Jump Rope Pro';
+          
+          // Apply minimal theme tokens immediately
+          const themes = {
+            ember: { p: '#ff3b30', bg: '#0d0302', t: '#fff', low: 'rgba(255,255,255,0.2)' },
+            ocean: { p: '#0ea5e9', bg: '#01090f', t: '#fff', low: 'rgba(255,255,255,0.2)' },
+            aurora: { p: '#a78bfa', bg: '#06020f', t: '#fff', low: 'rgba(255,255,255,0.2)' },
+            forest: { p: '#22c55e', bg: '#020f05', t: '#fff', low: 'rgba(255,255,255,0.2)' },
+            gold: { p: '#f59e0b', bg: '#0f0a02', t: '#fff', low: 'rgba(255,255,255,0.2)' },
+            rose: { p: '#f43f5e', bg: '#0f0207', t: '#fff', low: 'rgba(255,255,255,0.2)' },
+            'pure-black': { p: '#fff', bg: '#000', t: '#fff', low: 'rgba(255,255,255,0.2)' },
+            'pure-white': { p: '#000', bg: '#fff', t: '#000', low: 'rgba(0,0,0,0.2)' }
+          };
+          const theme = themes[jr.themeId] || themes.ember;
+          root.style.setProperty('--color-primary', theme.p);
+          root.style.setProperty('--color-text-base', theme.t);
+          root.style.setProperty('--jr-text-low', theme.low);
+          root.style.setProperty('--jr-bg', theme.bg);
+          root.style.color = theme.t;
+        } else {
+          // --- Main Academy Mode ---
+          const saved = localStorage.getItem('gym_settings');
+          if (!saved) return;
+          const s = JSON.parse(saved);
+
+          if (s.academy_name) document.title = s.academy_name;
+
+          if (s.primary_color) root.style.setProperty('--color-primary', s.primary_color);
+          if (s.secondary_color) {
+            root.style.setProperty('--color-secondary', s.secondary_color);
+            root.style.setProperty('--color-background', s.secondary_color);
+
+            // Fast luminance check for text colors
+            const hex = s.secondary_color;
+            if (typeof hex === 'string' && hex.startsWith('#')) {
+              const c = hex.substring(1);
+              const rgb = parseInt(c.length === 3 ? c[0] + c[0] + c[1] + c[1] + c[2] + c[2] : c, 16);
+              const r = (rgb >> 16) & 0xff;
+              const g = (rgb >> 8) & 0xff;
+              const b = (rgb >> 0) & 0xff;
+              const lum = 0.2126 * (r / 255) + 0.7152 * (g / 255) + 0.0722 * (b / 255);
+              if (lum > 0.6) {
+                root.style.setProperty('--color-text-base', s.text_color_base || '#0a0a0f');
+                root.style.setProperty('--color-text-muted', s.text_color_muted || '#475569');
+                root.style.setProperty('--is-light-mode', '1');
+              } else {
+                root.style.setProperty('--color-text-base', s.text_color_base || '#f8fafc');
+                root.style.setProperty('--color-text-muted', s.text_color_muted || 'rgba(255, 255, 255, 0.6)');
+                root.style.setProperty('--is-light-mode', '0');
+              }
             }
           }
+          if (s.accent_color) root.style.setProperty('--color-accent', s.accent_color);
+          if (s.surface_color) root.style.setProperty('--color-surface', s.surface_color);
+          if (s.input_bg_color) root.style.setProperty('--color-input-bg', s.input_bg_color);
+          if (s.font_family && s.font_family !== 'Cairo') root.style.setProperty('font-family', '"' + s.font_family + '", sans-serif');
+          if (s.font_scale) root.style.setProperty('font-size', (s.font_scale * 100) + '%');
         }
-        if (s.accent_color) root.style.setProperty('--color-accent', s.accent_color);
-        if (s.surface_color) root.style.setProperty('--color-surface', s.surface_color);
-        if (s.input_bg_color) root.style.setProperty('--color-input-bg', s.input_bg_color);
-        if (s.font_family && s.font_family !== 'Cairo') root.style.setProperty('font-family', '"' + s.font_family + '", sans-serif');
-        if (s.font_scale) root.style.setProperty('font-size', (s.font_scale * 100) + '%');
       } catch (e) { }
     })();
   </script>

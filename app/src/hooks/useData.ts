@@ -1,4 +1,4 @@
-import { useQuery, useMutation } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { supabase } from '../lib/supabase';
 import { calcElapsedSeconds } from '../utils/dateUtils';
@@ -543,5 +543,198 @@ export function useFinancialTrends() {
             return trends;
         },
         staleTime: 1000 * 60 * 10, // 10 minutes
+    });
+}
+
+// --- Jump Rope Training Hooks ---
+export function useJumpRopeLeaderboard(filter: 'global' | 'weekly' = 'weekly') {
+    return useQuery({
+        queryKey: ['jump_rope_leaderboard', filter],
+        queryFn: async () => {
+            let query = supabase
+                .from('jump_rope_sessions')
+                .select('jumps, created_at, user_id, profiles(full_name)')
+                .order('jumps', { ascending: false });
+
+            if (filter === 'weekly') {
+                const oneWeekAgo = new Date();
+                oneWeekAgo.setHours(0, 0, 0, 0);
+                oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+                query = query.gte('created_at', oneWeekAgo.toISOString());
+            }
+
+            const { data, error } = await query;
+            if (error) throw error;
+
+            // Group by user and sum jumps
+            const userScores: Record<string, any> = {};
+            data?.forEach(session => {
+                const uid = session.user_id;
+                if (!uid) return;
+                
+                if (!userScores[uid]) {
+                    userScores[uid] = {
+                        name: (session.profiles as any)?.full_name || 'Anonymous',
+                        jumps: 0,
+                        sessions: 0
+                    };
+                }
+                userScores[uid].jumps += session.jumps;
+                userScores[uid].sessions += 1;
+            });
+
+            return Object.values(userScores)
+                .sort((a, b) => b.jumps - a.jumps)
+                .slice(0, 10);
+        },
+        staleTime: 1000 * 60 * 5, // 5 minutes
+    });
+}
+
+export function useJumpRopeStats() {
+    return useQuery({
+        queryKey: ['jump_rope_stats'],
+        queryFn: async () => {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) return null;
+
+            const { data: sessions, error } = await supabase
+                .from('jump_rope_sessions')
+                .select('*')
+                .eq('user_id', user.id)
+                .order('created_at', { ascending: false });
+
+            if (error) throw error;
+
+            const totalJumps = sessions?.reduce((sum, s) => sum + s.jumps, 0) || 0;
+            const maxRpm = sessions?.reduce((max, s) => Math.max(max, s.rpm), 0) || 0;
+            const recentSessions = sessions?.slice(0, 5) || [];
+
+            return {
+                totalJumps,
+                maxRpm,
+                recentSessions,
+                sessionCount: sessions?.length || 0
+            };
+        },
+        staleTime: 1000 * 60 * 5,
+    });
+}
+
+export function useJumpRopeHistory() {
+    return useQuery({
+        queryKey: ['jump_rope_history'],
+        queryFn: async () => {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) return [];
+
+            const { data, error } = await supabase
+                .from('jump_rope_sessions')
+                .select('*')
+                .eq('user_id', user.id)
+                .order('created_at', { ascending: false });
+
+            if (error) throw error;
+            return data || [];
+        },
+        staleTime: 1000 * 60 * 5,
+    });
+}
+
+export function useAddJumpRopeSession() {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: async (session: { jumps: number; duration: number; rpm: number }) => {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) throw new Error('User not authenticated');
+
+            // Try to find student_id automatically (fails gracefully if column missing or not found)
+            let studentId = null;
+            try {
+                const { data: student } = await supabase
+                    .from('students')
+                    .select('id')
+                    .eq('user_id', user.id)
+                    .maybeSingle();
+                studentId = student?.id;
+            } catch (err) {
+                console.warn('Could not find student record for user:', err);
+            }
+
+            const { data, error } = await supabase
+                .from('jump_rope_sessions')
+                .insert([{
+                    ...session,
+                    user_id: user.id,
+                    student_id: studentId
+                }])
+                .select()
+                .single();
+
+            if (error) throw error;
+            return data;
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['jump_rope_stats'] });
+            queryClient.invalidateQueries({ queryKey: ['jump_rope_leaderboard'] });
+            queryClient.invalidateQueries({ queryKey: ['jump_rope_history'] });
+        },
+    });
+}
+
+export function useDeleteJumpRopeSession() {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: async (sessionId: string) => {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) throw new Error('User not authenticated');
+            
+            console.log('Attempting to delete session:', sessionId, 'as user:', user.id);
+            const { error, count } = await supabase
+                .from('jump_rope_sessions')
+                .delete({ count: 'exact' })
+                .eq('id', sessionId)
+                .eq('user_id', user.id);
+
+            console.log('Delete result:', { error, count });
+            if (error) throw error;
+            if (count === 0) {
+                console.error('No session deleted. This might be because the session does not belong to the current user or RLS is blocking it.');
+                throw new Error('Deletion failed: User may not own this record or RLS policy missing');
+            }
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['jump_rope_history'] });
+            queryClient.invalidateQueries({ queryKey: ['jump_rope_stats'] });
+            queryClient.invalidateQueries({ queryKey: ['jump_rope_leaderboard'] });
+        },
+    });
+}
+export function useDeleteMultipleJumpRopeSessions() {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: async (sessionIds: string[]) => {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) throw new Error('User not authenticated');
+
+            console.log('Attempting to delete multiple sessions:', sessionIds, 'as user:', user.id);
+            const { error, count } = await supabase
+                .from('jump_rope_sessions')
+                .delete({ count: 'exact' })
+                .in('id', sessionIds)
+                .eq('user_id', user.id);
+
+            console.log('Batch delete result:', { error, count });
+            if (error) throw error;
+            if (count === 0) {
+                console.error('No sessions deleted. Check ownership and RLS policies.');
+                throw new Error('Batch deletion failed');
+            }
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['jump_rope_history'] });
+            queryClient.invalidateQueries({ queryKey: ['jump_rope_stats'] });
+            queryClient.invalidateQueries({ queryKey: ['jump_rope_leaderboard'] });
+        },
     });
 }

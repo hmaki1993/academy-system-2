@@ -60,6 +60,7 @@ export default function JumpRopeTraining() {
     const isStableRef = useRef(false);
     const stabilityStartRef = useRef<number | null>(null);
     const trackingLossStartRef = useRef<number | null>(null);
+    const lastValidTimeRef = useRef<number>(0); // Fix for multi-person snapping
     const velocityRef = useRef(0);
     const lastFrameTime = useRef(Date.now());
     const lastActivityTimeRef = useRef(0);
@@ -145,6 +146,20 @@ export default function JumpRopeTraining() {
         const bestHip = (lHip.visibility || 0) > (rHip.visibility || 0) ? lHip : rHip;
         const hipY = bestHip.y * H;
         const hipX = bestHip.x * W;
+
+        // --- Single Person Tracking Stickiness ---
+        // MediaPipe tracks 1 person. If someone passes by, the skeleton "teleports".
+        const teleportDist = Math.hypot((lastHipX.current - hipX), (lastHipY.current - hipY));
+        if (lastHipX.current !== 0 && teleportDist > W * 0.15 && deltaTime < 0.2) {
+             // The AI snapped to someone else. Ignore it so the tracker stays locked on the original position.
+             if (now - lastValidTimeRef.current < 2000) {
+                 return; // Completely reject frame for up to 2 seconds until original person reappears
+             }
+             // If 2 seconds passed, accept the new person
+        } else {
+             lastValidTimeRef.current = now;
+        }
+        
         const shoulderW = Math.max(Math.abs(lShoulder.x - rShoulder.x) * W, 50);
 
         const frameVelocityY = Math.abs(lastHipY.current - hipY) / deltaTime;
@@ -200,8 +215,8 @@ export default function JumpRopeTraining() {
         velocityRef.current = velocityRef.current * 0.3 + (displacement - lastDisplacementRef.current) / deltaTime * 0.7;
         lastDisplacementRef.current = displacement;
 
-        // Increased thresholds: Requires a definitive upwards launch
-        const jumpMinThreshold = Math.max(12, bodyHeightRef.current * 0.03); 
+        // Fine-tuned thresholds: Low enough to catch fast/low jumps, high enough to ignore breathing/shuffling
+        const jumpMinThreshold = Math.max(8, bodyHeightRef.current * 0.02); 
         const pct = Math.max(0, Math.min(100, (displacement / (bodyHeightRef.current * 0.08)) * 100));
         setMovementPct(Math.round(pct));
 
@@ -213,7 +228,7 @@ export default function JumpRopeTraining() {
 
         // State Machine
         if (jumpStatusRef.current === 'standing') {
-            if (displacement > jumpMinThreshold && velocityRef.current > 50) {
+            if (displacement > jumpMinThreshold && velocityRef.current > 25) {
                 jumpStatusRef.current = 'jumping';
                 peakY.current = displacement;
             } else if (Math.abs(velocityRef.current) < 20 && baselineY.current !== null) {
@@ -223,7 +238,7 @@ export default function JumpRopeTraining() {
             if (displacement > peakY.current) peakY.current = displacement;
             
             // Require a definitive downward landing
-            if (velocityRef.current < -40 || displacement < jumpMinThreshold * 0.4) {
+            if (velocityRef.current < -25 || displacement < jumpMinThreshold * 0.5) {
                 if (peakY.current > jumpMinThreshold && scaleVelocity < 50) {
                     jumpCountRef.current += 1;
                     setJumps(jumpCountRef.current);

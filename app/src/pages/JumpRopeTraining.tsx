@@ -168,16 +168,16 @@ export default function JumpRopeTraining() {
         const shoulderW = Math.max(Math.abs(lShoulder.x - rShoulder.x) * W, 50);
         const scaleVelocity = (shoulderW - lastShoulderWidth.current) / deltaTime;
         const isTooClose = shoulderW > W * 0.38;
-        const isApproaching = scaleVelocity > 120;
+        const isApproaching = scaleVelocity > 40;  // Tightened: any forward lean kills the count immediately
 
         // --- 4. Frame-level velocity signals ---
         const frameVelocityY = Math.abs(lastHipY.current - trackY) / deltaTime;
         const frameVelocityX = Math.abs(lastHipX.current - trackX) / deltaTime;
 
         // KEY INSIGHT: Walking creates horizontal-dominant motion. Jumping creates vertical-dominant motion.
-        // If lateral velocity is more than 55% of vertical velocity, the person is walking not jumping.
+        // If lateral velocity is more than 45% of vertical velocity, the person is walking not jumping.
         const lateralRatio = frameVelocityY > 10 ? frameVelocityX / frameVelocityY : 0;
-        const isWalking = lateralRatio > 0.55 && frameVelocityX > 60;
+        const isWalking = lateralRatio > 0.45 && frameVelocityX > 50;
 
         // Combine all movement signals for stability detection
         const isCurrentlyMoving = (frameVelocityY > 350 && !isWalking) || isApproaching;
@@ -407,12 +407,12 @@ export default function JumpRopeTraining() {
                 )}
                 
                 {isTracking && (
-                  <div className="flex items-center gap-3 border backdrop-blur-3xl rounded-full px-5 py-2" style={{ background: 'var(--jr-surface, rgba(255,255,255,0.02))', borderColor: 'var(--jr-text-low, rgba(255,255,255,0.05))' }}>
-                      <div className="flex flex-col items-center leading-none">
-                          <span className="text-primary text-[7px] font-black uppercase tracking-[0.2em] mb-0.5 opacity-80">{intensityStatus}</span>
-                          <span className="font-mono text-xs font-black tracking-wider" style={{ color: 'var(--color-text-base)' }}>{timerRemaining !== null ? `${Math.floor(timerRemaining/60)}:${String(timerRemaining%60).padStart(2,'0')}` : `${Math.floor(totalSeconds/60)}:${String(totalSeconds%60).padStart(2,'0')}`}</span>
-                      </div>
-                  </div>
+                   <div className="flex items-center gap-2 border backdrop-blur-3xl rounded-full px-3 py-1.5 overflow-hidden min-w-0 max-w-[140px]" style={{ background: 'var(--jr-surface, rgba(255,255,255,0.02))', borderColor: 'var(--jr-text-low, rgba(255,255,255,0.05))' }}>
+                       <div className="flex flex-col items-center leading-none min-w-0">
+                           <span className="text-primary text-[7px] font-black uppercase tracking-[0.1em] mb-0.5 opacity-80 truncate">{intensityStatus}</span>
+                           <span className="font-mono text-xs font-black tracking-wider truncate" style={{ color: 'var(--color-text-base)' }}>{timerRemaining !== null ? `${Math.floor(timerRemaining/60)}:${String(timerRemaining%60).padStart(2,'0')}` : `${Math.floor(totalSeconds/60)}:${String(totalSeconds%60).padStart(2,'0')}`}</span>
+                       </div>
+                   </div>
                 )}
 
                 <button 

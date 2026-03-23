@@ -1,6 +1,6 @@
 {
-    "name": "Healy System",
-    "short_name": "Healy",
+    "name": "Academy System",
+    "short_name": "Academy",
     "description": "Professional Academy Management System",
     "start_url": "/app",
     "display": "standalone",

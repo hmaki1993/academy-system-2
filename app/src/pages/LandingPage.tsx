@@ -22,7 +22,7 @@ export default function LandingPage() {
     const [branding, setBranding] = useState({
         academy_name: 'Academy System',
         logo_url: '/logo.png',
-        login_accent_color: '#D4AF37'
+        login_accent_color: '#A30000'
     });
 
     const [extractedPalette, setExtractedPalette] = useState({
@@ -142,7 +142,7 @@ export default function LandingPage() {
 
     return (
         // Main Container
-        <div className="min-h-[100dvh] lg:h-[100dvh] w-full flex flex-col relative overflow-x-hidden overflow-y-auto lg:overflow-hidden bg-[var(--color-background)] text-white selection:bg-white/20 font-cairo"
+        <div className="h-[100dvh] w-full flex flex-col relative overflow-x-hidden overflow-y-auto lg:overflow-hidden bg-[var(--color-background)] text-white selection:bg-white/20 font-cairo scroll-smooth custom-scrollbar"
             style={{
                 '--brand-primary': extractedPalette.primary,
                 '--brand-accent': extractedPalette.accent,
@@ -161,7 +161,7 @@ export default function LandingPage() {
             </div>
 
             {/* Content Layer */}
-            <div className="relative z-10 h-full flex flex-col p-4 md:px-10 md:py-4">
+            <div className="relative z-10 min-h-full flex flex-col p-4 md:px-10 md:py-4">
                 {/* Header */}
                 <header className="flex items-center justify-between mb-auto animate-in fade-in slide-in-from-top-4 duration-1000 mt-4 lg:mt-0">
                     <div className="flex items-center gap-3 lg:gap-5 group">
@@ -203,7 +203,7 @@ export default function LandingPage() {
                 </header>
 
                 {/* Main Split Layout */}
-                <main className="flex-1 flex flex-col lg:flex-row items-center justify-center gap-8 lg:gap-12 mb-auto mt-6 lg:mt-2 scale-95 lg:scale-95 origin-center">
+                <main className="flex-1 flex flex-col lg:flex-row items-center justify-center gap-8 lg:gap-12 mb-auto mt-6 lg:mt-2 lg:scale-95 origin-center">
                     {/* Left: Branding & Action */}
                     <div className="flex-1 max-w-xl text-center lg:text-left animate-in fade-in slide-in-from-left-8 duration-1000 delay-300">
                         <div className="inline-flex items-center gap-2 px-3 lg:px-4 py-1.5 rounded-full bg-white/[0.03] border border-white/10 mb-6 lg:mb-4 border-l-[var(--brand-primary)] border-l-2">
@@ -211,7 +211,7 @@ export default function LandingPage() {
                             <span className="text-[8px] lg:text-[9px] font-black uppercase tracking-[0.3em] text-white/50">Next-Generation Infrastructure</span>
                         </div>
 
-                        <h1 className="text-3xl sm:text-4xl md:text-6xl font-black mb-4 lg:mb-3 tracking-tight leading-[0.9] uppercase">
+                        <h1 className="text-[28px] xs:text-3xl sm:text-4xl md:text-6xl font-black mb-4 lg:mb-3 tracking-tight leading-[0.9] uppercase">
                             THE <span className="text-transparent bg-clip-text bg-gradient-to-r from-[var(--brand-primary)] to-[var(--brand-accent)] italic">ACADEMY</span> <br />
                             OS PLATFORM
                         </h1>
@@ -222,37 +222,37 @@ export default function LandingPage() {
                         </p>
 
                         {/* Integrated Slide Info - High Contrast */}
-                        <div className="flex flex-col gap-4 py-4 border-y border-white/10 animate-in fade-in slide-in-from-left-4 duration-1000 bg-white/[0.02] px-6 rounded-3xl backdrop-blur-sm relative group/info">
+                        <div className="flex flex-col gap-3 py-4 border-y border-white/10 animate-in fade-in slide-in-from-left-4 duration-1000 bg-white/[0.02] px-5 sm:px-6 rounded-2xl sm:rounded-3xl backdrop-blur-sm relative group/info">
                             <div className="absolute inset-0 bg-gradient-to-r from-[var(--brand-primary)]/5 to-transparent opacity-0 group-hover/info:opacity-100 transition-opacity rounded-3xl"></div>
-                            <div className="flex items-center gap-5 relative z-10 transition-transform duration-500 group-hover/info:translate-x-1">
-                                <div className="w-12 h-12 rounded-2xl bg-[var(--brand-primary)] p-0.5 shadow-lg shadow-[var(--brand-primary)]/20">
-                                    <div className="w-full h-full rounded-[0.9rem] bg-black/40 backdrop-blur-xl flex items-center justify-center text-white">
-                                        {React.cloneElement(previews[activeSlide].icon as React.ReactElement, { className: "w-6 h-6" })}
+                            <div className="flex items-center gap-4 sm:gap-5 relative z-10 transition-transform duration-500 group-hover/info:translate-x-1">
+                                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-[var(--brand-primary)] p-0.5 shadow-lg shadow-[var(--brand-primary)]/20">
+                                    <div className="w-full h-full rounded-[0.8rem] sm:rounded-[0.9rem] bg-black/40 backdrop-blur-xl flex items-center justify-center text-white">
+                                        {React.cloneElement(previews[activeSlide].icon as React.ReactElement, { className: "w-5 h-5 sm:w-6 sm:h-6" })}
                                     </div>
                                 </div>
                                 <div className="flex flex-col text-left">
-                                    <span className="text-[10px] font-black uppercase tracking-[0.4em] text-[var(--brand-primary)] drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]">
+                                    <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-[0.4em] text-[var(--brand-primary)] drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]">
                                         {previews[activeSlide].subtitle}
                                     </span>
-                                    <h3 className="text-2xl font-black tracking-tighter text-white uppercase italic drop-shadow-md">
+                                    <h3 className="text-xl sm:text-2xl font-black tracking-tighter text-white uppercase italic drop-shadow-md">
                                         {previews[activeSlide].title}
                                     </h3>
                                 </div>
                             </div>
-                            <p className="text-[12px] lg:text-[14px] text-white/70 font-medium leading-relaxed uppercase tracking-tight text-left max-w-md relative z-10">
+                            <p className="text-[11px] sm:text-[12px] lg:text-[14px] text-white/70 font-medium leading-relaxed uppercase tracking-tight text-left max-w-md relative z-10">
                                 {previews[activeSlide].description}
                             </p>
                         </div>
 
-                        <div className="flex flex-col sm:flex-row items-center gap-6 lg:gap-6 justify-center lg:justify-start mt-8 lg:mt-6">
+                        <div className="flex flex-col sm:flex-row items-center gap-5 sm:gap-6 justify-center lg:justify-start mt-6 lg:mt-6">
                             <button
                                 onClick={() => navigate('/login')}
-                                className="group relative px-6 py-3 lg:px-8 lg:py-4 bg-gradient-to-br from-[var(--brand-primary)] to-[var(--brand-primary)]/80 rounded-full overflow-hidden transition-all duration-500 hover:scale-105 active:scale-95 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.7)] hover:shadow-[0_25px_80px_-10px_var(--brand-primary)]/40 border border-white/20 w-full sm:w-auto"
+                                className="group relative px-6 py-3.5 lg:px-8 lg:py-4 bg-gradient-to-br from-[var(--brand-primary)] to-[var(--brand-primary)]/80 rounded-full overflow-hidden transition-all duration-500 hover:scale-105 active:scale-95 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.7)] hover:shadow-[0_25px_80px_-10px_var(--brand-primary)]/40 border border-white/20 w-full sm:w-auto"
                             >
                                 <div className="absolute inset-0 bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                                <div className="relative z-10 flex items-center gap-5 text-white filter drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]">
-                                    <span className="font-black uppercase tracking-[0.3em] text-[13px]">Master Access</span>
-                                    <ArrowRight className="w-5 h-5 group-hover:translate-x-2 transition-all duration-500" />
+                                <div className="relative z-10 flex items-center gap-4 sm:gap-5 justify-center text-white filter drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]">
+                                    <span className="font-black uppercase tracking-[0.3em] text-[12px] sm:text-[13px]">Master Access</span>
+                                    <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 group-hover:translate-x-2 transition-all duration-500" />
                                 </div>
 
                                 {/* Inner Glow */}
@@ -325,7 +325,7 @@ export default function LandingPage() {
                 </main>
 
                 {/* Footer Badges */}
-                <footer className="mt-8 lg:mt-2 pt-6 lg:pt-4 pb-8 lg:pb-4 border-t border-white/20 flex flex-col lg:flex-row items-center justify-between gap-8 lg:gap-4 animate-in fade-in slide-in-from-bottom-4 duration-1000 delay-700 bg-black/40 backdrop-blur-sm -mx-4 lg:-mx-10 px-4 lg:px-10 relative z-20">
+                <footer className="mt-8 lg:mt-2 pt-6 lg:pt-4 pb-8 lg:pb-4 border-t border-white/20 flex flex-col lg:flex-row items-center justify-between gap-6 lg:gap-4 animate-in fade-in slide-in-from-bottom-4 duration-1000 delay-700 bg-black/40 backdrop-blur-sm -mx-4 lg:-mx-10 px-4 lg:px-10 relative z-20">
                     <div className="flex flex-col sm:flex-row items-center gap-4 lg:gap-12 group/badges">
                         <div className="flex items-center gap-3 text-white transition-colors duration-500">
                             <Shield className="w-5 h-5 text-[var(--brand-primary)]" />
@@ -364,8 +364,20 @@ export default function LandingPage() {
                 .text-fill-transparent {
                     -webkit-text-fill-color: transparent;
                 }
-                ::-webkit-scrollbar {
-                    display: none;
+                .custom-scrollbar::-webkit-scrollbar {
+                    width: 4px !important;
+                    display: block !important;
+                }
+                .custom-scrollbar::-webkit-scrollbar-track {
+                    background: rgba(0, 0, 0, 0.2) !important;
+                }
+                .custom-scrollbar::-webkit-scrollbar-thumb {
+                    background: var(--brand-primary) !important;
+                    border-radius: 10px !important;
+                    opacity: 0.5 !important;
+                }
+                .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+                    background: var(--brand-accent) !important;
                 }
             `}</style>
         </div>

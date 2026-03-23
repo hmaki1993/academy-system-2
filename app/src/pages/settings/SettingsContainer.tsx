@@ -56,12 +56,12 @@ export default function Settings() {
     // Secret Section Visibility (Easter Egg)
     const [secretClicks, setSecretClicks] = useState(0);
     const [isSecretRevealed, setIsSecretRevealed] = useState(() => {
-        const saved = localStorage.getItem('healy_settings_secret_revealed');
+        const saved = localStorage.getItem('academy_settings_secret_revealed');
         return saved === 'true';
     });
     const [designMode, setDesignMode] = useState<'desktop' | 'mobile'>('desktop');
     const [activeTab, setActiveTab] = useState<'appearance' | 'profile' | 'academy' | 'login' | 'notifications'>(() => {
-        const savedSecret = localStorage.getItem('healy_settings_secret_revealed');
+        const savedSecret = localStorage.getItem('academy_settings_secret_revealed');
         if (role !== 'admin') return 'appearance';
         return savedSecret === 'true' ? 'login' : 'appearance';
     });
@@ -145,7 +145,7 @@ export default function Settings() {
             setSecretClicks(0);
             const newState = !isSecretRevealed;
             setIsSecretRevealed(newState);
-            localStorage.setItem('healy_settings_secret_revealed', String(newState));
+            localStorage.setItem('academy_settings_secret_revealed', String(newState));
 
             if (newState) {
                 setActiveTab('login');

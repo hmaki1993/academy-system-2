@@ -1,7 +1,7 @@
 @echo off
 setlocal enabledelayedexpansion
 echo =======================================
-echo    Healy Academy - GitHub Sync Pro
+echo    Academy System - GitHub Sync Pro
 echo =======================================
 echo.
 

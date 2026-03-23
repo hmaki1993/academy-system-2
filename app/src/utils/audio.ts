@@ -105,8 +105,8 @@ export const playHoverSound = () => {
     if (typeof window === 'undefined') return;
 
     // Singleton instance
-    if (!(window as any).__healySoundEngine) {
-        (window as any).__healySoundEngine = new SoundEngine();
+    if (!(window as any).__academySoundEngine) {
+        (window as any).__academySoundEngine = new SoundEngine();
     }
-    (window as any).__healySoundEngine.playHover();
+    (window as any).__academySoundEngine.playHover();
 };

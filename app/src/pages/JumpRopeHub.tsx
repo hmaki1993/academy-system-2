@@ -1,13 +1,25 @@
-import { Play, Activity, History, Flame, Trophy, Loader2, Dumbbell } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { Play, Activity, History, Flame, Trophy, Loader2, Dumbbell, User, Users } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useJumpRopeStats } from '../hooks/useData';
 import { format } from 'date-fns';
 import { loadJrSettings } from './JumpRopeSettings';
+import { supabase } from '../lib/supabase';
 
 export default function JumpRopeHub() {
     const navigate = useNavigate();
     const { data: stats, isLoading } = useJumpRopeStats();
     const settings = loadJrSettings();
+    const [userRole, setUserRole] = useState<string | null>(null);
+
+    useEffect(() => {
+        supabase.auth.getUser().then(({ data: { user } }) => {
+            if (user) {
+                supabase.from('profiles').select('role').eq('id', user.id).single()
+                    .then(({ data }) => setUserRole(data?.role));
+            }
+        });
+    }, []);
 
     if (isLoading) {
 // ... existing loader ...
@@ -33,82 +45,113 @@ export default function JumpRopeHub() {
         <div className="p-6 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-12 relative z-10">
             
             {/* User Profile Summary */}
-            <div className="flex items-center justify-between p-6 rounded-[2rem] border backdrop-blur-3xl shadow-[0_0_50px_rgba(0,0,0,0.1)] relative overflow-hidden group" style={{ background: 'var(--jr-surface, rgba(10,10,10,0.8))', borderColor: 'var(--jr-text-low, rgba(255,255,255,0.1))' }}>
-                {/* Subtle Background Glow */}
-                <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 rounded-full blur-[50px] pointer-events-none group-hover:bg-primary/20 transition-colors duration-700" />
+            <div className="flex flex-col items-start gap-4 pt-1 pb-6 relative group px-1">
                 
-                <div className="flex items-center gap-4 relative z-10">
-                    <div className="w-12 h-12 rounded-2xl bg-white/[0.03] border border-white/10 flex items-center justify-center overflow-hidden">
-                        {settings.logoDataUrl ? (
-                            <img src={settings.logoDataUrl} alt="logo" className="w-full h-full object-cover" />
+                {/* Avatar & Level Badge */}
+                <div className="relative">
+                    <div className="w-12 h-12 rounded-2xl bg-white/[0.03] border border-white/10 flex items-center justify-center overflow-hidden shadow-[0_8px_24px_rgba(0,0,0,0.2)]">
+                        {settings.profileDataUrl ? (
+                            <img src={settings.profileDataUrl} alt="profile" className="w-full h-full object-cover" />
                         ) : (
-                            <Dumbbell className="w-5 h-5 text-primary/40" />
+                            <User className="w-5 h-5 text-primary/40" />
                         )}
                     </div>
-                    <div className="space-y-1">
-                        <h2 className="text-xl font-black tracking-tight leading-none mb-1" style={{ color: 'var(--color-text-base)' }}>
-                            Hello, {settings.userName || 'Athlete'}!
-                        </h2>
-                        <p className="text-[9px] font-black uppercase tracking-[0.2em]" style={{ color: 'var(--jr-text-low, #71717a)' }}>Ready to break your record?</p>
+                    {/* Level Badge overlapping bottom right */}
+                    <div className="absolute -bottom-1.5 -right-1.5 w-6 h-6 rounded-full bg-[#050505] border border-primary/50 flex flex-col items-center justify-center shadow-[0_0_10px_rgba(255,59,48,0.2)] overflow-hidden">
+                        <span className="text-[8px] font-black text-primary drop-shadow-[0_0_5px_rgba(255,59,48,0.8)] z-10">{playerLevel}</span>
+                        <div className="absolute inset-x-0 bottom-0 bg-primary/20" style={{ height: `${((stats?.totalJumps || 0) % 5000) / 50}%` }} />
                     </div>
                 </div>
 
-                <div className="w-14 h-14 rounded-full bg-[#050505] flex flex-col items-center justify-center border border-primary/30 relative z-10 shadow-[0_0_20px_rgba(255,59,48,0.2)] glow-border overflow-hidden">
-                    <span className="text-base font-black text-primary drop-shadow-[0_0_10px_rgba(255,59,48,0.5)] z-10">{playerLevel}</span>
-                    <div className="absolute inset-x-0 bottom-0 bg-primary/20" style={{ height: `${((stats?.totalJumps || 0) % 5000) / 50}%` }} />
+                {/* Text Content */}
+                <div className="flex flex-col items-start space-y-1">
+                    <h2 className="text-xl font-black tracking-tight leading-none" style={{ color: 'var(--color-text-base)' }}>
+                        Hello,{' '}
+                        <span 
+                            style={{ 
+                                background: 'linear-gradient(135deg, var(--color-primary, #0ea5e9) 0%, #ffffff 100%)',
+                                WebkitBackgroundClip: 'text',
+                                WebkitTextFillColor: 'transparent',
+                                textShadow: '0 0 20px var(--jr-glow)',
+                            }}
+                        >
+                            {settings.userName || 'Athlete'}
+                        </span>
+                        !
+                    </h2>
+                    <p className="text-[9px] font-black uppercase tracking-[0.3em]" style={{ color: 'var(--jr-text-low, #71717a)' }}>Ready for today?</p>
                 </div>
             </div>
 
-            {/* Primary Action Button */}
-            <button
-                onClick={() => navigate('/jump-rope/training')}
-                className="w-full relative overflow-hidden rounded-[2.5rem] group transition-all duration-500 hover:scale-[0.98] active:scale-95 border backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.1)]"
-                style={{ background: 'var(--jr-surface, rgba(255,255,255,0.02))', borderColor: 'var(--jr-text-low, rgba(255,255,255,0.1))' }}
-            >
-                {/* Hover Glow Background */}
-                <div className="absolute inset-0 bg-gradient-to-t from-primary/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
+            {/* Primary Action Button - Minimal Pill Design */}
+            <div className="flex justify-center pt-1">
+                <button
+                    onClick={() => navigate('/jump-rope/training')}
+                    className="relative group px-8 py-3.5 rounded-full border transition-all duration-500 hover:scale-[0.98] active:scale-95 shadow-[0_10px_30px_rgba(0,0,0,0.15)]"
+                    style={{ 
+                        background: 'var(--jr-surface, rgba(255,255,255,0.03))', 
+                        borderColor: 'var(--jr-text-low, rgba(255,255,255,0.08))',
+                        boxShadow: '0 0 25px rgba(0,0,0,0.08), inset 0 0 15px rgba(255,59,48,0.02)'
+                    }}
+                >
+                    {/* Hover Active Background Glow */}
+                    <div className="absolute inset-0 rounded-full bg-primary/5 opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none" />
+                    <div className="absolute -inset-px rounded-full bg-gradient-to-r from-transparent via-primary/20 to-transparent opacity-0 group-hover:opacity-100 transition-all duration-1000 group-hover:scale-x-110 pointer-events-none" />
 
-                <div className="relative py-8 flex flex-col items-center justify-center gap-3">
-                    <div className="w-16 h-16 rounded-full bg-[#0a0a0a] border border-primary/30 flex items-center justify-center transition-all duration-500 group-hover:scale-110 shadow-[0_0_30px_rgba(255,59,48,0.2)] group-hover:shadow-[0_0_40px_rgba(255,59,48,0.4)] group-hover:border-primary/50 relative overflow-hidden">
-                        <Play className="w-6 h-6 text-primary drop-shadow-[0_0_15px_rgba(255,59,48,0.8)] ml-1 relative z-10" fill="currentColor" />
+                    <div className="relative flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-[#050505] border border-primary/40 flex items-center justify-center shadow-[0_0_15px_rgba(255,59,48,0.2)] group-hover:border-primary group-hover:shadow-[0_0_20px_rgba(255,59,48,0.3)] transition-all duration-500 overflow-hidden">
+                            <Play className="w-3 h-3 text-primary drop-shadow-[0_0_5px_rgba(255,59,48,0.8)] ml-0.5" fill="currentColor" />
+                        </div>
+                        <span className="text-[10px] font-black uppercase tracking-[0.4em] text-white/40 group-hover:text-white transition-all duration-500">Training</span>
                     </div>
-                    
-                    <div className="text-center">
-                        <h3 className="text-[10px] font-black tracking-[0.3em] uppercase transition-colors" style={{ color: 'var(--jr-text-low, rgba(255,255,255,0.5))' }}>Start Training</h3>
-                    </div>
-                </div>
-            </button>
+                </button>
+            </div>
 
             {/* Quick Stats Grid */}
             <div className="grid grid-cols-2 gap-3">
                 <button 
                     onClick={() => navigate('/jump-rope/leaderboard')}
-                    className="relative overflow-hidden p-5 flex flex-col items-center justify-center gap-3 group transition-all duration-300 text-center border rounded-[2rem] backdrop-blur-2xl shadow-[0_0_30px_rgba(0,0,0,0.1)]"
+                    className="relative overflow-hidden p-4 flex flex-col items-center justify-center gap-2 group transition-all duration-300 text-center border rounded-3xl backdrop-blur-xl shadow-md"
                     style={{ background: 'var(--jr-surface, rgba(10,10,10,0.8))', borderColor: 'var(--jr-text-low, rgba(255,255,255,0.05))' }}
                 >
-                    <div className="w-12 h-12 flex items-center justify-center border border-orange-500/20 rounded-[1.2rem] bg-orange-500/[0.05] group-hover:bg-orange-500/10 transition-colors shadow-inner">
-                        <Trophy className="w-5 h-5 text-orange-500/60 group-hover:text-orange-500 transition-colors drop-shadow-[0_0_10px_rgba(249,115,22,0.5)]" />
+                    <div className="w-8 h-8 flex items-center justify-center border border-orange-500/20 rounded-xl bg-orange-500/[0.05] group-hover:bg-orange-500/10 transition-colors shadow-inner">
+                        <Trophy className="w-3.5 h-3.5 text-orange-500/60 group-hover:text-orange-500 transition-colors drop-shadow-[0_0_8px_rgba(249,115,22,0.5)]" />
                     </div>
                     <div>
-                        <div className="text-2xl font-black drop-shadow-md tabular-nums tracking-tighter leading-none mb-1" style={{ color: 'var(--color-text-base)' }}>{stats?.totalJumps?.toLocaleString() || 0}</div>
-                        <div className="text-[8px] font-black tracking-[0.2em] uppercase" style={{ color: 'var(--jr-text-low, rgba(255,255,255,0.3))' }}>Total Jumps</div>
+                        <div className="text-lg font-black drop-shadow-sm tabular-nums tracking-tight leading-none mb-0.5" style={{ color: 'var(--color-text-base)' }}>{stats?.totalJumps?.toLocaleString() || 0}</div>
+                        <div className="text-[7px] font-black tracking-[0.2em] uppercase" style={{ color: 'var(--jr-text-low, rgba(255,255,255,0.3))' }}>Total Jumps</div>
                     </div>
                 </button>
 
                 <button 
                     onClick={() => navigate('/jump-rope/leaderboard')}
-                    className="relative overflow-hidden p-5 flex flex-col items-center justify-center gap-3 group transition-all duration-300 text-center border rounded-[2rem] backdrop-blur-2xl shadow-[0_0_30px_rgba(0,0,0,0.1)]"
+                    className="relative overflow-hidden p-4 flex flex-col items-center justify-center gap-2 group transition-all duration-300 text-center border rounded-3xl backdrop-blur-xl shadow-md"
                     style={{ background: 'var(--jr-surface, rgba(10,10,10,0.8))', borderColor: 'var(--jr-text-low, rgba(255,255,255,0.05))' }}
                 >
-                    <div className="w-12 h-12 flex items-center justify-center border border-blue-500/20 rounded-[1.2rem] bg-blue-500/[0.05] group-hover:bg-blue-500/10 transition-colors shadow-inner">
-                        <Activity className="w-5 h-5 text-blue-500/60 group-hover:text-blue-500 transition-colors drop-shadow-[0_0_10px_rgba(59,130,246,0.5)]" />
+                    <div className="w-8 h-8 flex items-center justify-center border border-blue-500/20 rounded-xl bg-blue-500/[0.05] group-hover:bg-blue-500/10 transition-colors shadow-inner">
+                        <Activity className="w-3.5 h-3.5 text-blue-500/60 group-hover:text-blue-500 transition-colors drop-shadow-[0_0_8px_rgba(59,130,246,0.5)]" />
                     </div>
                     <div>
-                        <div className="text-2xl font-black drop-shadow-md tabular-nums tracking-tighter leading-none mb-1" style={{ color: 'var(--color-text-base)' }}>{stats?.maxRpm || 0}</div>
-                        <div className="text-[8px] font-black tracking-[0.2em] uppercase" style={{ color: 'var(--jr-text-low, rgba(255,255,255,0.3))' }}>Max RPM</div>
+                        <div className="text-lg font-black drop-shadow-sm tabular-nums tracking-tight leading-none mb-0.5" style={{ color: 'var(--color-text-base)' }}>{stats?.maxRpm || 0}</div>
+                        <div className="text-[7px] font-black tracking-[0.2em] uppercase" style={{ color: 'var(--jr-text-low, rgba(255,255,255,0.3))' }}>Max RPM</div>
                     </div>
                 </button>
             </div>
+
+            {/* Admin Dashboard Protected Entry */}
+            {(userRole === 'admin' || userRole === 'coach') && (
+                <div className="pt-2">
+                    <button
+                        onClick={() => navigate('/jump-rope/admin')}
+                        className="w-full relative group overflow-hidden flex items-center justify-center gap-3 py-4 rounded-[1.25rem] border transition-all duration-500 hover:scale-[0.98] active:scale-95 shadow-lg backdrop-blur-xl"
+                        style={{ background: 'rgba(255, 59, 48, 0.05)', borderColor: 'rgba(255, 59, 48, 0.2)' }}
+                    >
+                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-[rgba(255,59,48,0.1)] to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
+                        <Users size={16} className="text-primary drop-shadow-[0_0_8px_rgba(255,59,48,0.8)]" />
+                        <span className="text-[11px] font-black uppercase tracking-[0.3em] text-primary">Admin Dashboard</span>
+                    </button>
+                </div>
+            )}
             
             {/* Recent Activity Section */}
             <div className="space-y-4 pt-2">

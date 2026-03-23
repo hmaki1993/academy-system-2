@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Upload, User, Palette, ChevronLeft, Check, Trash2, Dumbbell } from 'lucide-react';
+import { Upload, User, Palette, ChevronLeft, Check, Trash2, Dumbbell, LogOut } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { supabase } from '../lib/supabase';
 
 export const STORAGE_KEY = 'jump_rope_app_settings';
 
@@ -17,6 +18,7 @@ export interface JrSettings {
     appName: string;
     userName: string;
     logoDataUrl: string;
+    profileDataUrl: string;
     themeId: string;
 }
 
@@ -24,39 +26,41 @@ const DEFAULT: JrSettings = {
     appName: 'Jump Rope Pro',
     userName: '',
     logoDataUrl: '',
+    profileDataUrl: '',
     themeId: 'ember',
 };
 
 export function loadJrSettings(): JrSettings {
     try {
         const raw = localStorage.getItem(STORAGE_KEY);
-        if (raw) return { ...DEFAULT, ...JSON.parse(raw) };
+        if (raw) {
+            const parsed = JSON.parse(raw);
+            if (parsed.appName === 'JUMP ROP BRO') parsed.appName = 'Jump Rope Pro';
+            return { ...DEFAULT, ...parsed };
+        }
     } catch {}
     return { ...DEFAULT };
 }
 
 export function applyJrTheme(settings: JrSettings) {
-    const theme = THEMES.find(t => t.id === settings.themeId) || THEMES[0];
-    const root = document.documentElement;
-    const isLight = theme.text === '#000000';
-
-    root.style.setProperty('--color-primary', theme.primary);
-    root.style.setProperty('--color-text-base', theme.text || '#ffffff');
-    root.style.setProperty('--jr-text-low', isLight ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.2)');
-    root.style.setProperty('--jr-glow', theme.glow);
-    root.style.setProperty('--jr-bg', theme.bg);
-    root.style.setProperty('--jr-surface', theme.surface);
     document.title = settings.appName || 'Jump Rope Pro';
 }
 
 function saveSettings(s: JrSettings) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(s));
+    try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(s));
+    } catch (e) {
+        console.error('[JR] Failed to save settings to localStorage:', e);
+    }
     applyJrTheme(s);
+    // Notify the layout (and any listeners) that settings changed
+    window.dispatchEvent(new CustomEvent('jrSettingsChanged', { detail: s }));
 }
 
 export default function JumpRopeSettings() {
     const navigate = useNavigate();
     const fileRef = useRef<HTMLInputElement>(null);
+    const profileFileRef = useRef<HTMLInputElement>(null);
     const [settings, setSettings] = useState<JrSettings>(loadJrSettings);
     const [saved, setSaved] = useState(false);
 
@@ -74,16 +78,40 @@ export default function JumpRopeSettings() {
         reader.readAsDataURL(file);
     };
 
+    const handleProfilePhoto = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = ev => {
+            setSettings(s => ({ ...s, profileDataUrl: ev.target?.result as string }));
+        };
+        reader.readAsDataURL(file);
+    };
+
     const handleSave = () => {
         saveSettings(settings);
         setSaved(true);
         setTimeout(() => setSaved(false), 2000);
     };
 
+    const handleLogout = async () => {
+        try {
+            await supabase.auth.signOut();
+            navigate('/login');
+        } catch (e) {
+            console.error('Logout error:', e);
+        }
+    };
+
     const activeTheme = THEMES.find(t => t.id === settings.themeId) || THEMES[0];
 
     return (
-        <div className="min-h-screen text-white font-sans antialiased px-5 pt-6 pb-28" style={{ background: 'var(--jr-bg, #050505)' }}>
+        <div className="flex-1 flex flex-col w-full text-white font-sans antialiased px-5 pt-6 pb-0 relative overflow-hidden" style={{ background: 'var(--jr-bg, #050505)' }}>
+            {/* Background Glows */}
+            <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-primary/10 rounded-full blur-[120px] pointer-events-none" />
+            <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-primary/5 rounded-full blur-[120px] pointer-events-none" />
+            
+            <div className="relative z-10 flex flex-col flex-1">
             {/* Header */}
             <div className="flex items-center gap-3 mb-8">
                 <button
@@ -98,34 +126,72 @@ export default function JumpRopeSettings() {
                 </div>
             </div>
 
-            <div className="flex flex-col gap-6">
-                {/* — Logo Section — */}
-                <section className="bg-white/[0.02] border border-white/5 rounded-3xl p-5">
-                    <p className="text-[9px] font-black uppercase tracking-[0.25em] text-white/20 mb-4">App Logo</p>
+            <div className="flex flex-col flex-1 pb-2">
+                <div className="flex flex-col gap-4 mb-4">
+                    {/* — Profile Photo Section — */}
+                    <section className="bg-white/[0.02] border border-white/5 rounded-[2rem] p-4 backdrop-blur-md">
+                    <p className="text-[9px] font-black uppercase tracking-[0.25em] text-white/20 mb-4">Profile Photo</p>
                     <div className="flex items-center gap-4">
                         <div
                             className="w-16 h-16 rounded-2xl border border-white/10 bg-white/[0.03] flex items-center justify-center overflow-hidden flex-shrink-0 cursor-pointer hover:border-white/20 transition-all"
-                            onClick={() => fileRef.current?.click()}
+                            onClick={() => profileFileRef.current?.click()}
                         >
-                            {settings.logoDataUrl ? (
-                                <img src={settings.logoDataUrl} alt="logo" className="w-full h-full object-cover" />
+                            {settings.profileDataUrl ? (
+                                <img src={settings.profileDataUrl} alt="profile" className="w-full h-full object-cover" />
                             ) : (
-                                <Dumbbell size={24} className="text-white/20" />
+                                <User size={24} className="text-white/20" />
                             )}
                         </div>
 
                         <div className="flex flex-col gap-2">
                             <button
-                                onClick={() => fileRef.current?.click()}
+                                onClick={() => profileFileRef.current?.click()}
                                 className="flex items-center gap-2 bg-white/[0.04] border border-white/10 rounded-xl px-4 py-2.5 text-[10px] font-black uppercase tracking-[0.15em] text-white/60 hover:text-white hover:bg-white/[0.08] transition-all active:scale-95"
                             >
                                 <Upload size={12} />
-                                Upload Image
+                                Upload Photo
+                            </button>
+                            {settings.profileDataUrl && (
+                                <button
+                                    onClick={() => setSettings(s => ({ ...s, profileDataUrl: '' }))}
+                                    className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.15em] text-red-400/50 hover:text-red-400 transition-all"
+                                >
+                                    <Trash2 size={12} />
+                                    Remove
+                                </button>
+                            )}
+                        </div>
+                        <input ref={profileFileRef} type="file" accept="image/*" className="hidden" onChange={handleProfilePhoto} />
+                    </div>
+                </section>
+
+                {/* — Logo Section — */}
+                <section className="bg-white/[0.02] border border-white/5 rounded-[2rem] p-4 backdrop-blur-md">
+                    <p className="text-[9px] font-black uppercase tracking-[0.25em] text-white/20 mb-3">Brand Logo</p>
+                    <div className="flex items-center gap-4">
+                        <div
+                            className="w-14 h-14 rounded-2xl border border-white/10 bg-white/[0.03] flex items-center justify-center overflow-hidden flex-shrink-0 cursor-pointer hover:border-white/20 transition-all"
+                            onClick={() => fileRef.current?.click()}
+                        >
+                            {settings.logoDataUrl ? (
+                                <img src={settings.logoDataUrl} alt="logo" className="w-full h-full object-cover" />
+                            ) : (
+                                <Dumbbell size={20} className="text-white/20" />
+                            )}
+                        </div>
+
+                        <div className="flex flex-col gap-1.5 text-left">
+                            <button
+                                onClick={() => fileRef.current?.click()}
+                                className="flex items-center gap-2 bg-white/[0.04] border border-white/10 rounded-xl px-3 py-2 text-[10px] font-black uppercase tracking-[0.15em] text-white/60 hover:text-white hover:bg-white/[0.08] transition-all active:scale-95"
+                            >
+                                <Upload size={12} />
+                                Change Logo
                             </button>
                             {settings.logoDataUrl && (
                                 <button
                                     onClick={() => setSettings(s => ({ ...s, logoDataUrl: '' }))}
-                                    className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.15em] text-red-400/50 hover:text-red-400 transition-all"
+                                    className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.15em] text-red-400/50 hover:text-red-400 transition-all px-1"
                                 >
                                     <Trash2 size={12} />
                                     Remove
@@ -137,8 +203,8 @@ export default function JumpRopeSettings() {
                 </section>
 
                 {/* — App Name — */}
-                <section className="bg-white/[0.02] border border-white/5 rounded-3xl p-5">
-                    <p className="text-[9px] font-black uppercase tracking-[0.25em] text-white/20 mb-4">App Name</p>
+                <section className="bg-white/[0.02] border border-white/5 rounded-[2rem] p-4 backdrop-blur-md">
+                    <p className="text-[9px] font-black uppercase tracking-[0.25em] text-white/20 mb-3">App Name</p>
                     <div className="flex items-center gap-3 bg-white/[0.03] border border-white/5 rounded-2xl px-4 py-3 focus-within:border-white/20 transition-all">
                         <Dumbbell size={14} className="text-white/20 flex-shrink-0" />
                         <input
@@ -152,8 +218,8 @@ export default function JumpRopeSettings() {
                 </section>
 
                 {/* — User Name — */}
-                <section className="bg-white/[0.02] border border-white/5 rounded-3xl p-5">
-                    <p className="text-[9px] font-black uppercase tracking-[0.25em] text-white/20 mb-4">Your Name</p>
+                <section className="bg-white/[0.02] border border-white/5 rounded-[2rem] p-4 backdrop-blur-md">
+                    <p className="text-[9px] font-black uppercase tracking-[0.25em] text-white/20 mb-3">Your Name</p>
                     <div className="flex items-center gap-3 bg-white/[0.03] border border-white/5 rounded-2xl px-4 py-3 focus-within:border-white/20 transition-all">
                         <User size={14} className="text-white/20 flex-shrink-0" />
                         <input
@@ -167,7 +233,7 @@ export default function JumpRopeSettings() {
                 </section>
 
                 {/* — Theme Picker — */}
-                <section className="bg-white/[0.02] border border-white/5 rounded-3xl p-5">
+                <section className="bg-white/[0.02] border border-white/5 rounded-[2rem] p-4 backdrop-blur-md">
                     <div className="flex items-center gap-2 mb-4">
                         <Palette size={14} className="text-white/20" />
                         <p className="text-[9px] font-black uppercase tracking-[0.25em] text-white/20">Color Theme</p>
@@ -214,19 +280,34 @@ export default function JumpRopeSettings() {
                     </p>
                 </section>
 
-                {/* — Save Button — */}
-                <button
-                    onClick={handleSave}
-                    className={`w-full py-4 rounded-2xl font-black uppercase text-[11px] tracking-[0.3em] transition-all duration-300 active:scale-95 ${
-                        saved
-                            ? 'text-white'
-                            : 'bg-white/[0.05] border border-white/10 text-white hover:bg-white/[0.1] backdrop-blur-3xl'
-                    }`}
-                    style={saved ? { background: activeTheme.primary, border: `1px solid ${activeTheme.primary}` } : {}}
-                >
-                    {saved ? '✓ Saved & Applied!' : 'Save Settings'}
-                </button>
+                {/* — Actions — */}
+                <div className="mt-auto pt-6 flex flex-col gap-3">
+                    {/* Save Button */}
+                    <button
+                        onClick={handleSave}
+                        className={`w-full py-4 rounded-full font-black uppercase text-[11px] tracking-[0.3em] transition-all duration-500 active:scale-95 shadow-lg group relative overflow-hidden ${
+                            saved
+                                ? 'text-white'
+                                : 'bg-white/[0.05] border border-white/10 text-white hover:bg-white/[0.08] backdrop-blur-xl'
+                        }`}
+                        style={saved ? { background: activeTheme.primary, border: `1px solid ${activeTheme.primary}` } : {}}
+                    >
+                        {!saved && <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/[0.05] to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />}
+                        {saved ? '✓ Saved & Applied!' : 'Save Settings'}
+                    </button>
+
+                    {/* Logout / Switch Account */}
+                    <button
+                        onClick={handleLogout}
+                        className="w-full py-3.5 flex items-center justify-center gap-2 rounded-full font-black uppercase text-[10px] tracking-widest text-white/30 hover:text-white/80 hover:bg-white/[0.02] border border-transparent hover:border-white/5 transition-all duration-300 active:scale-95 backdrop-blur-3xl"
+                    >
+                        <LogOut size={12} className="shrink-0" />
+                        Switch User Account
+                    </button>
+                </div>
             </div>
         </div>
-    );
+    </div>
+</div>
+);
 }

@@ -99,6 +99,12 @@ export interface GymSettings {
 }
 
 export const applySettingsToRoot = (settings: GymSettings) => {
+    // 🛑 CRITICAL: Do NOT overwrite Jump Rope app themes!
+    if (window.location.hash.includes('/jump-rope')) {
+        console.log('🛑 ThemeContext: Skipping root theme apply (Jump Rope mode active)');
+        return;
+    }
+
     console.log('Applying theme settings to root:', settings);
     const root = document.documentElement;
 
@@ -371,6 +377,16 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
         }
         // Sync full settings for immediate theme pickup on refresh in index.html
         localStorage.setItem('gym_settings', JSON.stringify(settings));
+
+        // Listen for restoration events (e.g., when exiting Jump Rope app)
+        const handleRestore = () => {
+            console.log('🔄 ThemeContext: Restoring Gym Theme');
+            // Force apply bypassing the jump-rope route check by faking the location if needed, 
+            // but the route will have already changed when this fires.
+            applySettingsToRoot(settings);
+        };
+        window.addEventListener('restoreGymTheme', handleRestore);
+        return () => window.removeEventListener('restoreGymTheme', handleRestore);
     }, [settings]);
 
     useEffect(() => {

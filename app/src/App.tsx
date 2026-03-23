@@ -36,6 +36,7 @@ const JumpRopeTraining = lazy(() => import('./pages/JumpRopeTraining'));
 const JumpRopeLeaderboard = lazy(() => import('./pages/JumpRopeLeaderboard'));
 const JumpRopeHistory = lazy(() => import('./pages/JumpRopeHistory'));
 const JumpRopeSettings = lazy(() => import('./pages/JumpRopeSettings'));
+const JumpRopeAdmin = lazy(() => import('./pages/JumpRopeAdmin'));
 
 import { initializeTheme } from './utils/theme';
 import { CurrencyProvider } from './context/CurrencyContext';
@@ -161,6 +162,7 @@ function AppContent() {
               <Route path="leaderboard" element={<JumpRopeLeaderboard />} />
               <Route path="history" element={<JumpRopeHistory />} />
               <Route path="settings" element={<JumpRopeSettings />} />
+              <Route path="admin" element={<JumpRopeAdmin />} />
             </Route>
 
             {/* Protected Routes */}

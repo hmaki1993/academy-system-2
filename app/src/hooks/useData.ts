@@ -641,6 +641,59 @@ export function useJumpRopeHistory() {
     });
 }
 
+export interface JrAdminStat {
+    userId: string;
+    name: string;
+    avatarUrl: string;
+    role: string;
+    totalJumps: number;
+    sessionsCount: number;
+    lastSession: string | null;
+}
+
+export function useJumpRopeAdminStats() {
+    return useQuery({
+        queryKey: ['jump_rope_admin_stats'],
+        queryFn: async () => {
+            const { data, error } = await supabase
+                .from('jump_rope_sessions')
+                .select('jumps, created_at, user_id, profiles(full_name, avatar_url, role)')
+                .order('created_at', { ascending: false });
+
+            if (error) throw error;
+
+            const userStats: Record<string, JrAdminStat> = {};
+
+            data?.forEach(session => {
+                const uid = session.user_id;
+                if (!uid) return;
+                
+                if (!userStats[uid]) {
+                    const prof = session.profiles as any;
+                    userStats[uid] = {
+                        userId: uid,
+                        name: prof?.full_name || 'Unknown Athlete',
+                        avatarUrl: prof?.avatar_url || '',
+                        role: prof?.role || 'student',
+                        totalJumps: 0,
+                        sessionsCount: 0,
+                        lastSession: session.created_at
+                    };
+                }
+                userStats[uid].totalJumps += session.jumps;
+                userStats[uid].sessionsCount += 1;
+                
+                if (!userStats[uid].lastSession || new Date(session.created_at) > new Date(userStats[uid].lastSession!)) {
+                    userStats[uid].lastSession = session.created_at;
+                }
+            });
+
+            return Object.values(userStats).sort((a, b) => b.totalJumps - a.totalJumps);
+        },
+        staleTime: 1000 * 60 * 5,
+    });
+}
+
 export function useAddJumpRopeSession() {
     const queryClient = useQueryClient();
     return useMutation({

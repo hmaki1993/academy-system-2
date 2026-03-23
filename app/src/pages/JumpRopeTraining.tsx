@@ -157,13 +157,19 @@ export default function JumpRopeTraining() {
         velocityRef.current = velocityRef.current * 0.3 + (displacement - lastDisplacementRef.current) / deltaTime * 0.7;
         lastDisplacementRef.current = displacement;
 
-        const jumpMinThreshold = Math.max(12, bodyHeightRef.current * 0.025);
+        const jumpMinThreshold = Math.max(8, bodyHeightRef.current * 0.015); // Lowered to catch boxer skips and high-knees
         const pct = Math.max(0, Math.min(100, (displacement / (bodyHeightRef.current * 0.10)) * 100));
         setMovementPct(Math.round(pct));
 
+        // Strict Approach Lockout: Do not process jumps if the user is moving towards the camera to stop it
+        if (isApproaching || isTooClose) {
+            jumpStatusRef.current = 'standing';
+            return;
+        }
+
         // State Machine
         if (jumpStatusRef.current === 'standing') {
-            if (displacement > jumpMinThreshold && velocityRef.current > 40) {
+            if (displacement > jumpMinThreshold && velocityRef.current > 20) {
                 jumpStatusRef.current = 'jumping';
                 peakY.current = displacement;
             } else if (Math.abs(velocityRef.current) < 15 && baselineY.current !== null) {
@@ -171,13 +177,15 @@ export default function JumpRopeTraining() {
             }
         } else {
             if (displacement > peakY.current) peakY.current = displacement;
-            if (velocityRef.current < -30 || displacement < jumpMinThreshold * 0.5) {
-                if (peakY.current > jumpMinThreshold && scaleVelocity < 100) {
+            if (velocityRef.current < -20 || displacement < jumpMinThreshold * 0.5) {
+                if (peakY.current > jumpMinThreshold && scaleVelocity < 50) {
                     jumpCountRef.current += 1;
                     setJumps(jumpCountRef.current);
                     if ('vibrate' in navigator) navigator.vibrate(50);
                     lastActivityTimeRef.current = Date.now();
-                    if (jumpCountRef.current % 10 === 0) speak(jumpCountRef.current.toString());
+                    
+                    // Speak every single jump out loud for motivation and tracking
+                    speak(jumpCountRef.current.toString());
                 }
                 jumpStatusRef.current = 'standing';
                 peakY.current = 0;

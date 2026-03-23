@@ -81,12 +81,36 @@ const MobileBottomNav = () => (
 /* ─── Main Layout ────────────────────────────────────────────── */
 export default function JumpRopeLayout() {
     const location = useLocation();
-    const settings = loadJrSettings();
+    const [settings, setSettings] = React.useState(loadJrSettings);
+
+    // Hardcode THEMES directly in layout to ensure immediate access for local CSS vars
+    const THEMES = [
+        { id: 'ember',   name: 'Ember',   primary: '#ff3b30', glow: 'rgba(255,59,48,0.15)',   bg: '#0d0302', surface: 'rgba(255,59,48,0.04)', text: '#ffffff' },
+        { id: 'ocean',   name: 'Ocean',   primary: '#0ea5e9', glow: 'rgba(14,165,233,0.15)',  bg: '#01090f', surface: 'rgba(14,165,233,0.04)', text: '#ffffff' },
+        { id: 'aurora',  name: 'Aurora',  primary: '#a78bfa', glow: 'rgba(167,139,250,0.15)', bg: '#06020f', surface: 'rgba(167,139,250,0.04)', text: '#ffffff' },
+        { id: 'pure-black', name: 'Black', primary: '#ffffff', glow: 'rgba(255,255,255,0.1)', bg: '#000000', surface: 'rgba(255,255,255,0.05)', text: '#ffffff' },
+        { id: 'pure-white', name: 'White', primary: '#000000', glow: 'rgba(0,0,0,0.1)',       bg: '#ffffff', surface: 'rgba(0,0,0,0.05)',       text: '#000000' },
+        { id: 'rose',    name: 'Rose',    primary: '#f43f5e', glow: 'rgba(244,63,94,0.15)',   bg: '#0f0207', surface: 'rgba(244,63,94,0.04)', text: '#ffffff' },
+    ];
 
     React.useEffect(() => {
         applyJrTheme(settings);
         const prevTitle = document.title;
-        return () => { document.title = prevTitle; };
+        return () => {
+            document.title = prevTitle;
+            window.dispatchEvent(new Event('restoreGymTheme'));
+        };
+    }, [settings]);
+
+    React.useEffect(() => {
+        const handleSettingsChange = (e: Event) => {
+            const ce = e as CustomEvent;
+            if (ce.detail) {
+                setSettings(ce.detail);
+            }
+        };
+        window.addEventListener('jrSettingsChanged', handleSettingsChange);
+        return () => window.removeEventListener('jrSettingsChanged', handleSettingsChange);
     }, []);
 
     React.useEffect(() => {
@@ -98,7 +122,15 @@ export default function JumpRopeLayout() {
     return (
         <div
             className="h-screen w-full flex flex-col font-sans antialiased overflow-hidden relative transition-colors duration-700"
-            style={{ background: 'var(--jr-bg, #050505)', color: 'var(--color-text-base, #ffffff)' }}
+            style={{ 
+                background: 'var(--jr-bg, #050505)', 
+                color: 'var(--color-text-base, #ffffff)',
+                // ENFORCE THEME LOCALLY TO PREVENT ROOT CONFLICTS
+                '--color-primary': THEMES.find(t => t.id === settings.themeId)?.primary || '#ff3b30',
+                '--jr-glow': THEMES.find(t => t.id === settings.themeId)?.glow || 'rgba(255,59,48,0.15)',
+                '--jr-bg': THEMES.find(t => t.id === settings.themeId)?.bg || '#0d0302',
+                '--jr-surface': THEMES.find(t => t.id === settings.themeId)?.surface || 'rgba(255,59,48,0.04)',
+            } as React.CSSProperties}
         >
             {/* ── Animated Ambient Orbs ────────────────────────────────── */}
             <div
@@ -138,37 +170,51 @@ export default function JumpRopeLayout() {
                     <div className="flex items-center gap-3">
                         {/* Logo container with glow ring */}
                         <div
-                            className="w-9 h-9 rounded-xl flex items-center justify-center overflow-hidden shrink-0"
+                            className="w-10 h-10 rounded-[14px] flex items-center justify-center overflow-hidden shrink-0"
                             style={{
-                                background: 'rgba(255,255,255,0.04)',
-                                border: '1px solid rgba(255,255,255,0.08)',
-                                boxShadow: '0 0 6px rgba(255,255,255,0.06), 0 0 6px color-mix(in srgb, var(--color-primary, #ff3b30), transparent 60%)',
+                                background: 'linear-gradient(135deg, rgba(255,255,255,0.1), rgba(255,255,255,0.02))',
+                                backdropFilter: 'blur(12px)',
+                                border: '1px solid rgba(255,255,255,0.12)',
+                                boxShadow: '0 8px 32px 0 rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.1), 0 0 20px var(--jr-glow)',
                             }}
                         >
                             {settings.logoDataUrl ? (
                                 <img src={settings.logoDataUrl} alt="logo" className="w-full h-full object-cover" />
                             ) : (
                                 <Activity
-                                    className="w-4 h-4"
-                                    style={{ color: 'var(--color-primary, #ff3b30)', filter: 'drop-shadow(0 0 6px var(--color-primary, #ff3b30))' }}
+                                    className="w-5 h-5"
+                                    style={{ color: 'var(--color-primary, #ff3b30)', filter: 'drop-shadow(0 0 8px var(--color-primary, #ff3b30))' }}
                                 />
                             )}
                         </div>
 
-                        <div>
-                            <h1 className="font-black text-sm tracking-wide leading-none" style={{ color: 'var(--color-text-base, #fff)' }}>
+                        <div className="flex flex-col">
+                            <h1 
+                                className="font-black text-[15px] tracking-widest leading-none uppercase" 
+                                style={{ 
+                                    background: 'linear-gradient(to right, #ffffff, rgba(255,255,255,0.7))',
+                                    WebkitBackgroundClip: 'text',
+                                    WebkitTextFillColor: 'transparent',
+                                    filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.5))'
+                                }}
+                            >
                                 {settings.appName ? (
                                     settings.appName
                                 ) : (
                                     <>
                                         Jump Rope{' '}
-                                        <span style={{ color: 'var(--color-primary, #ff3b30)', textShadow: '0 0 12px var(--color-primary, #ff3b30)' }}>
+                                        <span style={{ 
+                                            background: 'linear-gradient(135deg, var(--color-primary, #ff3b30), #ffffff)', 
+                                            WebkitBackgroundClip: 'text', 
+                                            WebkitTextFillColor: 'transparent',
+                                            textShadow: '0 0 20px var(--jr-glow)' 
+                                        }}>
                                             Pro
                                         </span>
                                     </>
                                 )}
                             </h1>
-                            <p className="text-[9px] font-bold uppercase tracking-[0.2em] mt-0.5" style={{ color: 'rgba(255,255,255,0.3)' }}>
+                            <p className="text-[8px] font-black uppercase tracking-[0.3em] mt-1" style={{ color: 'var(--color-primary, #ff3b30)', opacity: 0.8 }}>
                                 Performance Tracker
                             </p>
                         </div>
@@ -200,7 +246,7 @@ export default function JumpRopeLayout() {
                 className={`flex-1 w-full flex flex-col mx-auto relative z-10 custom-scrollbar ${
                     isTraining
                         ? 'max-w-none overflow-hidden'
-                        : 'max-w-md overflow-y-auto overflow-x-hidden scroll-smooth pb-28'
+                        : 'max-w-md overflow-y-auto overflow-x-hidden scroll-smooth pb-20'
                 }`}
             >
                 {/* Per-page fade-in */}

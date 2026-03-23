@@ -6,12 +6,6 @@ const AITraining: React.FC = () => {
     return (
         <div className="p-4 md:p-8 min-h-screen">
             <div className="max-w-6xl mx-auto">
-                <div className="mb-8">
-                    <PageHeader
-                        title="Performance Tracker"
-                        subtitle="Advanced Performance Monitoring"
-                    />
-                </div>
 
                 <div className="grid grid-cols-1 gap-8">
                     <Suspense fallback={

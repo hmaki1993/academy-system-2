@@ -517,23 +517,30 @@ const JumpRopeCounter = () => {
 
     return (
         <div className="jump-counter-container animate-in fade-in duration-700">
-            <div className="flex items-center gap-3">
+            <div className="flex flex-col sm:flex-row items-center justify-center sm:justify-between gap-4 w-full mb-4">
                 <div className="header-minimal">
                     <p>{t('jumpCounter.subtitle')}</p>
-                    <h1 className="title-gradient">{t('jumpCounter.title')}</h1>
+                    <h1 className="title-gradient text-center sm:text-left">{t('jumpCounter.title')}</h1>
                 </div>
-                <button
-                    onClick={() => setVoiceEnabled(!voiceEnabled)}
-                    className={`btn-minimal !py-1 !px-3 !text-[9px] border-white/10 ${voiceEnabled ? 'bg-cyan-400 !text-black' : 'bg-white/5 text-white/40'}`}
-                >
-                    {voiceEnabled ? <Volume2 className="w-3 h-3" /> : <VolumeX className="w-3 h-3" />}
-                </button>
-                <button
-                    onClick={() => setShowHistory(!showHistory)}
-                    className={`btn-minimal !py-1 !px-3 !text-[9px] border-white/10 ${showHistory ? 'bg-cyan-400 !text-black' : 'bg-white/5 text-white/40'}`}
-                >
-                    {showHistory ? t('jumpCounter.hideHistory') : t('jumpCounter.showHistory')}
-                </button>
+                <div className="flex items-center gap-2">
+                    <button
+                        onClick={() => setVoiceEnabled(!voiceEnabled)}
+                        className={`btn-minimal !py-2 !px-4 !text-[10px] border-white/10 ${voiceEnabled ? 'bg-cyan-400 !text-black' : 'bg-white/5 text-white/40'}`}
+                    >
+                        <div className="flex items-center gap-2">
+                            {voiceEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
+                            <span className="uppercase tracking-widest">{voiceEnabled ? 'Voice ON' : 'Voice OFF'}</span>
+                        </div>
+                    </button>
+                    <button
+                        onClick={() => setShowHistory(!showHistory)}
+                        className={`btn-minimal !py-2 !px-4 !text-[10px] border-white/10 ${showHistory ? 'bg-cyan-400 !text-black' : 'bg-white/5 text-white/40'}`}
+                    >
+                        <div className="flex items-center gap-2">
+                            <span className="uppercase tracking-widest">{showHistory ? t('jumpCounter.hideHistory') : t('jumpCounter.showHistory')}</span>
+                        </div>
+                    </button>
+                </div>
             </div>
 
             <div className="video-wrapper">

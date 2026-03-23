@@ -591,33 +591,26 @@ export function useJumpRopeLeaderboard(filter: 'global' | 'weekly' = 'weekly') {
     });
 }
 
+const LOCAL_STORAGE_KEY = 'jr_standalone_sessions';
+
 export function useJumpRopeStats() {
     return useQuery({
         queryKey: ['jump_rope_stats'],
         queryFn: async () => {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (!user) return null;
+            const sessionsStr = localStorage.getItem(LOCAL_STORAGE_KEY) || '[]';
+            const sessions = JSON.parse(sessionsStr);
 
-            const { data: sessions, error } = await supabase
-                .from('jump_rope_sessions')
-                .select('*')
-                .eq('user_id', user.id)
-                .order('created_at', { ascending: false });
-
-            if (error) throw error;
-
-            const totalJumps = sessions?.reduce((sum, s) => sum + s.jumps, 0) || 0;
-            const maxRpm = sessions?.reduce((max, s) => Math.max(max, s.rpm), 0) || 0;
-            const recentSessions = sessions?.slice(0, 5) || [];
+            const totalJumps = sessions.reduce((sum: number, s: any) => sum + (s.jumps || 0), 0);
+            const maxRpm = sessions.reduce((max: number, s: any) => Math.max(max, s.rpm || 0), 0);
+            const recentSessions = sessions.slice(0, 5);
 
             return {
                 totalJumps,
                 maxRpm,
                 recentSessions,
-                sessionCount: sessions?.length || 0
+                sessionCount: sessions.length
             };
         },
-        staleTime: 1000 * 60 * 5,
     });
 }
 
@@ -625,19 +618,9 @@ export function useJumpRopeHistory() {
     return useQuery({
         queryKey: ['jump_rope_history'],
         queryFn: async () => {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (!user) return [];
-
-            const { data, error } = await supabase
-                .from('jump_rope_sessions')
-                .select('*')
-                .eq('user_id', user.id)
-                .order('created_at', { ascending: false });
-
-            if (error) throw error;
-            return data || [];
+            const sessionsStr = localStorage.getItem(LOCAL_STORAGE_KEY) || '[]';
+            return JSON.parse(sessionsStr);
         },
-        staleTime: 1000 * 60 * 5,
     });
 }
 
@@ -698,38 +681,23 @@ export function useAddJumpRopeSession() {
     const queryClient = useQueryClient();
     return useMutation({
         mutationFn: async (session: { jumps: number; duration: number; rpm: number }) => {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (!user) throw new Error('User not authenticated');
-
-            // Try to find student_id automatically (fails gracefully if column missing or not found)
-            let studentId = null;
-            try {
-                const { data: student } = await supabase
-                    .from('students')
-                    .select('id')
-                    .eq('user_id', user.id)
-                    .maybeSingle();
-                studentId = student?.id;
-            } catch (err) {
-                console.warn('Could not find student record for user:', err);
-            }
-
-            const { data, error } = await supabase
-                .from('jump_rope_sessions')
-                .insert([{
-                    ...session,
-                    user_id: user.id,
-                    student_id: studentId
-                }])
-                .select()
-                .single();
-
-            if (error) throw error;
-            return data;
+            const sessionsStr = localStorage.getItem(LOCAL_STORAGE_KEY) || '[]';
+            const sessions = JSON.parse(sessionsStr);
+            
+            const newSession = {
+                id: Date.now().toString(),
+                created_at: new Date().toISOString(),
+                user_id: 'anonymous_user',
+                ...session
+            };
+            
+            sessions.unshift(newSession); // Add to beginning
+            localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(sessions.slice(0, 500))); // Store up to 500
+            
+            return newSession;
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['jump_rope_stats'] });
-            queryClient.invalidateQueries({ queryKey: ['jump_rope_leaderboard'] });
             queryClient.invalidateQueries({ queryKey: ['jump_rope_history'] });
         },
     });
@@ -739,55 +707,30 @@ export function useDeleteJumpRopeSession() {
     const queryClient = useQueryClient();
     return useMutation({
         mutationFn: async (sessionId: string) => {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (!user) throw new Error('User not authenticated');
-            
-            console.log('Attempting to delete session:', sessionId, 'as user:', user.id);
-            const { error, count } = await supabase
-                .from('jump_rope_sessions')
-                .delete({ count: 'exact' })
-                .eq('id', sessionId)
-                .eq('user_id', user.id);
-
-            console.log('Delete result:', { error, count });
-            if (error) throw error;
-            if (count === 0) {
-                console.error('No session deleted. This might be because the session does not belong to the current user or RLS is blocking it.');
-                throw new Error('Deletion failed: User may not own this record or RLS policy missing');
-            }
+            const sessionsStr = localStorage.getItem(LOCAL_STORAGE_KEY) || '[]';
+            const sessions = JSON.parse(sessionsStr);
+            const filtered = sessions.filter((s: any) => s.id !== sessionId);
+            localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(filtered));
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['jump_rope_history'] });
             queryClient.invalidateQueries({ queryKey: ['jump_rope_stats'] });
-            queryClient.invalidateQueries({ queryKey: ['jump_rope_leaderboard'] });
         },
     });
 }
+
 export function useDeleteMultipleJumpRopeSessions() {
     const queryClient = useQueryClient();
     return useMutation({
         mutationFn: async (sessionIds: string[]) => {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (!user) throw new Error('User not authenticated');
-
-            console.log('Attempting to delete multiple sessions:', sessionIds, 'as user:', user.id);
-            const { error, count } = await supabase
-                .from('jump_rope_sessions')
-                .delete({ count: 'exact' })
-                .in('id', sessionIds)
-                .eq('user_id', user.id);
-
-            console.log('Batch delete result:', { error, count });
-            if (error) throw error;
-            if (count === 0) {
-                console.error('No sessions deleted. Check ownership and RLS policies.');
-                throw new Error('Batch deletion failed');
-            }
+            const sessionsStr = localStorage.getItem(LOCAL_STORAGE_KEY) || '[]';
+            const sessions = JSON.parse(sessionsStr);
+            const filtered = sessions.filter((s: any) => !sessionIds.includes(s.id));
+            localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(filtered));
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['jump_rope_history'] });
             queryClient.invalidateQueries({ queryKey: ['jump_rope_stats'] });
-            queryClient.invalidateQueries({ queryKey: ['jump_rope_leaderboard'] });
         },
     });
 }

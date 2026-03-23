@@ -438,7 +438,7 @@ export default function JumpRopeTraining() {
             )}
 
             {/* 4. Bottom Control Bar */}
-            <div className="absolute bottom-28 inset-x-0 z-50 flex flex-col items-center">
+            <div className="absolute bottom-40 lg:bottom-12 pb-safe inset-x-0 z-50 flex flex-col items-center">
                 {isTracking ? (
                     <button 
                         onClick={handleFinish} 

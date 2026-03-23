@@ -549,9 +549,10 @@ export default function DashboardLayout() {
 
     return (
         <div className="fixed inset-0 w-full flex bg-background font-cairo overflow-hidden">
-            {/* Immersive Background Glows */}
-            <div className="fixed -top-[20%] -left-[10%] w-[50%] h-[50%] bg-primary/10 rounded-full blur-[120px] pointer-events-none z-0"></div>
-            <div className="fixed -bottom-[20%] -right-[10%] w-[50%] h-[50%] bg-accent/10 rounded-full blur-[120px] pointer-events-none z-0"></div>
+            {/* Animated Cosmic Background Orbs */}
+            <div className="orb-primary fixed -top-[25%] -left-[10%] w-[55%] h-[55%] rounded-full blur-[140px] pointer-events-none z-0" style={{ background: 'radial-gradient(circle, rgba(99,102,241,0.18) 0%, transparent 70%)' }}></div>
+            <div className="orb-accent fixed -bottom-[25%] -right-[10%] w-[55%] h-[55%] rounded-full blur-[140px] pointer-events-none z-0" style={{ background: 'radial-gradient(circle, rgba(167,139,250,0.14) 0%, transparent 70%)' }}></div>
+            <div className="orb-small fixed top-[40%] right-[20%] w-[25%] h-[25%] rounded-full blur-[100px] pointer-events-none z-0" style={{ background: 'radial-gradient(circle, rgba(34,211,238,0.08) 0%, transparent 70%)' }}></div>
 
             {/* Mobile Sidebar Overlay */}
             {sidebarOpen && (
@@ -590,8 +591,8 @@ export default function DashboardLayout() {
                 `}
                 style={{ zIndex: 300 }}
             >
-                {/* Intrinsic Glow - Matching the reference image exactly */}
-                <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(255,95,95,0.12),transparent_70%)] pointer-events-none z-0" />
+                {/* Intrinsic Sidebar Glow */}
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_30%,rgba(99,102,241,0.10),transparent_65%)] pointer-events-none z-0" />
 
                 {/* ---- MOBILE LAYOUT: Full-Screen Glassy Grid ---- */}
                 <div className="lg:hidden flex flex-col h-[100dvh] bg-black/40 backdrop-blur-3xl pt-safe pb-safe overflow-hidden">
@@ -703,22 +704,22 @@ export default function DashboardLayout() {
                                         to={item.to}
                                         onClick={() => setSidebarOpen(false)}
                                         onMouseEnter={playHoverSound}
-                                        className={`relative group grid w-full ${isHoveringSidebar ? 'grid-cols-[80px_1fr] items-center' : 'place-items-center'} p-1.5 rounded-none transition-all duration-300 hover:text-gold`}
+                                        className={`relative group grid w-full ${isHoveringSidebar ? 'grid-cols-[80px_1fr] items-center' : 'place-items-center'} p-1.5 rounded-xl transition-all duration-300 ${isActive ? 'sidebar-active-glow' : 'hover:bg-white/[0.03]'}`}
                                     >
                                         <div
-                                            className={`nav-icon-container shrink-0 w-8 h-8 rounded-xl flex items-center justify-center transition-all duration-500 mx-auto ${isActive ? 'active text-primary' : 'bg-transparent text-white/70 group-hover:text-gold group-hover:scale-110'}`}
+                                            className={`nav-icon-container shrink-0 w-8 h-8 rounded-xl flex items-center justify-center transition-all duration-500 mx-auto ${isActive ? 'active text-primary scale-110' : 'bg-transparent text-violet-300/50 group-hover:text-violet-200 group-hover:scale-110'}`}
                                         >
-                                            <Icon className={`w-4 h-4 ${isActive ? 'text-primary' : 'text-white/70'} transition-all duration-300 group-hover:scale-110 group-hover:text-gold`} />
+                                            <Icon className={`w-4 h-4 ${isActive ? 'text-primary' : 'text-violet-300/50'} transition-all duration-300 group-hover:scale-110 group-hover:text-violet-200`} />
                                         </div>
 
                                         {/* Desktop Label - Reveals on Hover */}
-                                        <span className={`font-bold uppercase tracking-widest text-[11px] transition-all duration-500 whitespace-nowrap overflow-hidden ${isHoveringSidebar ? 'w-40 opacity-100 translate-x-0' : 'w-0 opacity-0 -translate-x-2'} ${isActive ? 'text-primary' : 'text-white/75 group-hover:text-gold group-hover:translate-x-1'}`}>
+                                        <span className={`font-bold uppercase tracking-widest text-[11px] transition-all duration-500 whitespace-nowrap overflow-hidden ${isHoveringSidebar ? 'w-40 opacity-100 translate-x-0' : 'w-0 opacity-0 -translate-x-2'} ${isActive ? 'text-primary' : 'text-violet-200/60 group-hover:text-violet-100 group-hover:translate-x-1'}`}>
                                             {t(item.label)}
                                         </span>
 
                                         {/* Desktop Tooltip */}
                                         {!isHoveringSidebar && (
-                                            <div className={`absolute ${isRtl ? 'right-full mr-4' : 'left-full ml-4'} px-3 py-1 rounded-lg bg-black/90 backdrop-blur-md border border-white/10 text-[10px] font-bold text-white uppercase tracking-widest opacity-0 pointer-events-none transition-all duration-300 group-hover:opacity-100 z-50 whitespace-nowrap`}>
+                                            <div className={`absolute ${isRtl ? 'right-full mr-4' : 'left-full ml-4'} px-3 py-1.5 rounded-xl bg-[#08081a]/95 backdrop-blur-xl border border-violet-500/20 text-[10px] font-bold text-violet-200 uppercase tracking-widest opacity-0 pointer-events-none transition-all duration-300 group-hover:opacity-100 z-50 whitespace-nowrap shadow-[0_0_20px_rgba(99,102,241,0.15)]`}>
                                                 {t(item.label)}
                                             </div>
                                         )}
@@ -770,7 +771,7 @@ export default function DashboardLayout() {
             <div className={`flex-1 flex flex-col min-w-0 h-full transition-all duration-500 ${isChatView && !isHoveringSidebar ? 'lg:m-0' : (isRtl ? 'lg:mr-20' : 'lg:ml-20')}`}>
                 {/* Header - Branding */}
                 {!location.pathname.includes('/communications') && !location.pathname.includes('/ai-training') && (
-                    <header className={`relative z-20 w-full pt-4 lg:pt-0 px-4 sm:px-6 lg:px-0 flex flex-col items-center lg:items-center`}>
+                    <header className={`premium-header-strip relative z-20 w-full pt-4 lg:pt-0 px-4 sm:px-6 lg:px-0 flex flex-col items-center lg:items-center`}>
                         <div className="w-full max-w-7xl lg:max-w-none h-18 lg:h-12 flex items-center justify-between px-2 sm:px-6 relative">
                             {/* Left Side Section - Clock & Mobile Toggle */}
                             <div className="flex items-center gap-4 lg:w-72">
@@ -909,13 +910,16 @@ export default function DashboardLayout() {
                                             <button
                                                 onClick={(e) => { e.stopPropagation(); setNotificationsOpen(!notificationsOpen); }}
                                                 onMouseEnter={playHoverSound}
-                                                className={`w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center rounded-full transition-all relative sidebar-3d-item ${notificationsOpen ? 'bg-primary/20 text-primary shadow-[inset_0_0_15px_rgba(var(--primary-rgb),0.3)] border border-primary/20 sidebar-3d-item-active' : 'text-white/70 hover:bg-white/10 hover:shadow-premium'}`}
+                                                className={`w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center rounded-full transition-all relative ${notificationsOpen ? 'bg-primary/20 text-primary border border-primary/30 shadow-[0_0_20px_rgba(99,102,241,0.3)]' : 'text-violet-300/70 hover:bg-violet-500/10 hover:text-violet-200'}`}
                                             >
                                                 <Bell className="w-3.5 h-3.5 sm:w-4 sm:h-4 transition-transform" />
                                                 {unreadCount > 0 && (
-                                                    <span className="absolute -top-1 -right-1 min-w-[16px] sm:min-w-[18px] h-[16px] sm:h-[18px] px-1 bg-gradient-to-br from-red-500 to-rose-600 text-white text-[8px] sm:text-[9px] font-black rounded-full flex items-center justify-center shadow-lg shadow-red-500/40 border-2 border-background">
-                                                        {unreadCount > 9 ? '9+' : unreadCount}
-                                                    </span>
+                                                    <>
+                                                        <span className="absolute -top-1 -right-1 min-w-[16px] sm:min-w-[18px] h-[16px] sm:h-[18px] px-1 bg-gradient-to-br from-violet-500 to-indigo-600 text-white text-[8px] sm:text-[9px] font-black rounded-full flex items-center justify-center shadow-lg shadow-violet-500/40 border-2 border-background z-10">
+                                                            {unreadCount > 9 ? '9+' : unreadCount}
+                                                        </span>
+                                                        <span className="absolute -top-1 -right-1 w-[16px] sm:w-[18px] h-[16px] sm:h-[18px] rounded-full bg-violet-500 animate-notification-ping opacity-75"></span>
+                                                    </>
                                                 )}
                                             </button>
                                         </div>
@@ -931,9 +935,9 @@ export default function DashboardLayout() {
                                                 setIsAvatarModalOpen(true);
                                             }}
                                             onMouseEnter={playHoverSound}
-                                            className={`w-11 h-11 rounded-full bg-gradient-to-br from-primary to-accent p-[2px] hover:scale-110 transition-all duration-500 relative cursor-pointer shadow-premium`}
+                                            className={`w-11 h-11 rounded-full bg-gradient-to-br from-indigo-500 via-violet-500 to-cyan-400 p-[2px] hover:scale-110 hover:shadow-[0_0_20px_rgba(99,102,241,0.5)] transition-all duration-500 relative cursor-pointer`}
                                         >
-                                            <div className="w-full h-full rounded-full bg-[#0E1D21] flex items-center justify-center overflow-hidden border border-white/10">
+                                            <div className="w-full h-full rounded-full bg-[#08081a] flex items-center justify-center overflow-hidden border border-indigo-500/20">
                                                 {avatarUrl ? (
                                                     <img src={avatarUrl} alt="" className="w-full h-full object-cover" />
                                                 ) : (
@@ -952,7 +956,9 @@ export default function DashboardLayout() {
 
                 {/* Page Content */}
                 <main className={`flex-1 min-h-0 ${location.pathname.includes('/communications') ? 'p-0 overflow-hidden' : 'p-3 sm:p-5 overflow-y-auto overflow-x-hidden'}`}>
-                    <Outlet context={{ role, fullName, userId }} />
+                    <div key={location.pathname} className="page-content h-full">
+                        <Outlet context={{ role, fullName, userId }} />
+                    </div>
                 </main>
             </div >
 

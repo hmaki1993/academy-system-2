@@ -112,7 +112,7 @@ export default function JumpRopeHistoryPage() {
                         <button
                             onClick={() => {
                                 if (selectedIds.length === history?.length) setSelectedIds([]);
-                                else setSelectedIds(history?.map(s => s.id) || []);
+                                else setSelectedIds(history?.map((s: any) => s.id) || []);
                             }}
                             className="text-[9px] font-black uppercase tracking-[0.1em] px-4 py-2.5 rounded-[1.2rem] transition-colors border"
                             style={{ 

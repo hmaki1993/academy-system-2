@@ -225,11 +225,17 @@ export default function JumpRopeTraining() {
         velocityRef.current = velocityRef.current * 0.3 + (displacement - lastDisplacementRef.current) / deltaTime * 0.7;
         lastDisplacementRef.current = displacement;
 
-        const jumpMinThreshold = Math.max(12, bodyHeightRef.current * 0.025);
+        const jumpMinThreshold = Math.max(20, bodyHeightRef.current * 0.04);
         const pct = Math.max(0, Math.min(100, (displacement / (bodyHeightRef.current * 0.10)) * 100));
         setMovementPct(Math.round(pct));
 
-        // --- State Machine (exact copy from JumpRopeCounter.tsx) ---
+        // Walking guard: lateral movement > 120px/s means the body is drifting sideways → not a jump
+        if (frameVelocityX > 120) {
+            jumpStatusRef.current = 'standing';
+            return;
+        }
+
+        // --- State Machine ---
         if (jumpStatusRef.current === 'standing') {
             if (displacement > jumpMinThreshold && velocityRef.current > 40) {
                 jumpStatusRef.current = 'jumping';
@@ -251,7 +257,7 @@ export default function JumpRopeTraining() {
                 jumpStatusRef.current = 'standing';
                 peakY.current = 0;
                 cooldownRef.current = true;
-                setTimeout(() => { cooldownRef.current = false; }, 120);
+                setTimeout(() => { cooldownRef.current = false; }, 250); // 250ms = max 4 jumps/sec
             }
         }
     }, [speak]);

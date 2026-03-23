@@ -141,21 +141,20 @@ export default function JumpRopeTraining() {
         // Draw Points
         [lShoulder, rShoulder, lElbow, rElbow, lWrist, rWrist, lHip, rHip, lKnee, rKnee, lAnkle, rAnkle, nose].forEach(p => drawPoint(p));
 
-        if (!lHip || !rHip || !lShoulder || !rShoulder) return;
-
-        const isFullBody = !!(lAnkle && rAnkle);
-        const hipY = ((lHip.y + rHip.y) / 2) * H;
-        const hipX = ((lHip.x + rHip.x) / 2) * W;
-        const shoulderW = Math.abs(lShoulder.x - rShoulder.x) * W;
+        // Select the most visible hip to prevent jitter when standing sideways (where one hip is hidden/guessed by AI)
+        const bestHip = (lHip.visibility || 0) > (rHip.visibility || 0) ? lHip : rHip;
+        const hipY = bestHip.y * H;
+        const hipX = bestHip.x * W;
+        const shoulderW = Math.max(Math.abs(lShoulder.x - rShoulder.x) * W, 50);
 
         const frameVelocityY = Math.abs(lastHipY.current - hipY) / deltaTime;
         const frameVelocityX = Math.abs(lastHipX.current - hipX) / deltaTime;
         const scaleVelocity = (shoulderW - lastShoulderWidth.current) / deltaTime;
 
         // Strict scale detection to stop counting when walking to end the session
-        const isTooClose = shoulderW > (W * 0.32); // If shoulders take up more than 32% of screen, user is very close
-        const isApproaching = scaleVelocity > 80;
-        const isCurrentlyMoving = frameVelocityY > 400 || frameVelocityX > 200 || isApproaching;
+        const isTooClose = shoulderW > (W * 0.35); // If shoulders take up more than 35% of screen, user is very close
+        const isApproaching = scaleVelocity > 100;
+        const isCurrentlyMoving = frameVelocityY > 400 || isApproaching;
 
         lastHipY.current = hipY;
         lastHipX.current = hipX;
@@ -202,12 +201,12 @@ export default function JumpRopeTraining() {
         lastDisplacementRef.current = displacement;
 
         // Increased thresholds: Requires a definitive upwards launch
-        const jumpMinThreshold = Math.max(15, bodyHeightRef.current * 0.035); 
+        const jumpMinThreshold = Math.max(12, bodyHeightRef.current * 0.03); 
         const pct = Math.max(0, Math.min(100, (displacement / (bodyHeightRef.current * 0.08)) * 100));
         setMovementPct(Math.round(pct));
 
         // Absolute Approach Lockout: Do not process jumps if the user is moving towards the camera to stop it
-        if (isApproaching || isTooClose || frameVelocityX > 150) {
+        if (isApproaching || isTooClose || frameVelocityX > 400) {
             jumpStatusRef.current = 'standing';
             return;
         }

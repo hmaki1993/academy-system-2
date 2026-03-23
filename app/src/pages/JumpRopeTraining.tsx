@@ -142,14 +142,14 @@ export default function JumpRopeTraining() {
         // Draw Points
         [lShoulder, rShoulder, lElbow, rElbow, lWrist, rWrist, lHip, rHip, lKnee, rKnee, lAnkle, rAnkle, nose].forEach(p => drawPoint(p));
 
-        // Select the most visible hip to prevent jitter when standing sideways (where one hip is hidden/guessed by AI)
-        const bestHip = (lHip.visibility || 0) > (rHip.visibility || 0) ? lHip : rHip;
-        const hipY = bestHip.y * H;
-        const hipX = bestHip.x * W;
+        // The user requested reverting back to the NOSE for tracking. 
+        // The nose is highly visible and has a larger vertical displacement during jumps.
+        const trackY = nose.y * H;
+        const trackX = nose.x * W;
 
         // --- Single Person Tracking Stickiness ---
         // MediaPipe tracks 1 person. If someone passes by, the skeleton "teleports".
-        const teleportDist = Math.hypot((lastHipX.current - hipX), (lastHipY.current - hipY));
+        const teleportDist = Math.hypot((lastHipX.current - trackX), (lastHipY.current - trackY));
         if (lastHipX.current !== 0 && teleportDist > W * 0.15 && deltaTime < 0.2) {
              // The AI snapped to someone else. Ignore it so the tracker stays locked on the original position.
              if (now - lastValidTimeRef.current < 2000) {
@@ -162,8 +162,8 @@ export default function JumpRopeTraining() {
         
         const shoulderW = Math.max(Math.abs(lShoulder.x - rShoulder.x) * W, 50);
 
-        const frameVelocityY = Math.abs(lastHipY.current - hipY) / deltaTime;
-        const frameVelocityX = Math.abs(lastHipX.current - hipX) / deltaTime;
+        const frameVelocityY = Math.abs(lastHipY.current - trackY) / deltaTime;
+        const frameVelocityX = Math.abs(lastHipX.current - trackX) / deltaTime;
         const scaleVelocity = (shoulderW - lastShoulderWidth.current) / deltaTime;
 
         // Strict scale detection to stop counting when walking to end the session
@@ -171,8 +171,8 @@ export default function JumpRopeTraining() {
         const isApproaching = scaleVelocity > 100;
         const isCurrentlyMoving = frameVelocityY > 400 || isApproaching;
 
-        lastHipY.current = hipY;
-        lastHipX.current = hipX;
+        lastHipY.current = trackY;
+        lastHipX.current = trackX;
         lastShoulderWidth.current = shoulderW;
 
         if (isStableRef.current) {
@@ -191,7 +191,7 @@ export default function JumpRopeTraining() {
             if (isCurrentlyMoving || isTooClose) {
                 stabilityStartRef.current = null;
                 setSetupStatus(isTooClose ? 'STEP_BACK' : 'MOVING');
-                baselineY.current = hipY;
+                baselineY.current = trackY;
                 setMovementPct(0);
                 return;
             }
@@ -200,18 +200,23 @@ export default function JumpRopeTraining() {
                 isStableRef.current = true;
                 setSetupStatus('READY');
             }
-            baselineY.current = hipY;
+            baselineY.current = trackY;
             return;
         }
 
-        const bodyH = Math.abs(((lAnkle?.y ?? rAnkle?.y ?? hipY) - nose.y) * H);
+        const bodyH = Math.abs(((lAnkle?.y ?? rAnkle?.y ?? trackY) - nose.y) * H);
         bodyHeightRef.current = Math.max(100, bodyH);
 
-        if (emaSmoothY.current === null) emaSmoothY.current = hipY;
-        emaSmoothY.current = emaSmoothY.current * 0.4 + hipY * 0.6;
-        const smoothY = emaSmoothY.current;
+        // Physics tracking using the Nose
+        if (emaSmoothY.current === null) emaSmoothY.current = trackY;
+        
+        // Asymmetric EMA: Fast to track quick upward jumps, slow to descend ignoring minor jitters
+        const alpha = trackY < emaSmoothY.current ? 0.6 : 0.3; 
+        const smoothY = emaSmoothY.current * (1 - alpha) + trackY * alpha;
+        emaSmoothY.current = smoothY;
 
-        const displacement = (baselineY.current || hipY) - smoothY;
+        // Velocity tracking using the smoothed Nose signal
+        const displacement = (baselineY.current || trackY) - smoothY;
         velocityRef.current = velocityRef.current * 0.3 + (displacement - lastDisplacementRef.current) / deltaTime * 0.7;
         lastDisplacementRef.current = displacement;
 

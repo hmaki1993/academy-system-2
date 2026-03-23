@@ -550,9 +550,9 @@ export default function DashboardLayout() {
     return (
         <div className="fixed inset-0 w-full flex bg-background font-cairo overflow-hidden">
             {/* Animated Cosmic Background Orbs */}
-            <div className="orb-primary fixed -top-[25%] -left-[10%] w-[55%] h-[55%] rounded-full blur-[140px] pointer-events-none z-0" style={{ background: 'radial-gradient(circle, rgba(99,102,241,0.18) 0%, transparent 70%)' }}></div>
-            <div className="orb-accent fixed -bottom-[25%] -right-[10%] w-[55%] h-[55%] rounded-full blur-[140px] pointer-events-none z-0" style={{ background: 'radial-gradient(circle, rgba(167,139,250,0.14) 0%, transparent 70%)' }}></div>
-            <div className="orb-small fixed top-[40%] right-[20%] w-[25%] h-[25%] rounded-full blur-[100px] pointer-events-none z-0" style={{ background: 'radial-gradient(circle, rgba(34,211,238,0.08) 0%, transparent 70%)' }}></div>
+            <div className="orb-primary fixed -top-[25%] -left-[10%] w-[55%] h-[55%] rounded-full blur-[140px] pointer-events-none z-0 opacity-20" style={{ background: 'radial-gradient(circle, var(--color-primary) 0%, transparent 70%)' }}></div>
+            <div className="orb-accent fixed -bottom-[25%] -right-[10%] w-[55%] h-[55%] rounded-full blur-[140px] pointer-events-none z-0 opacity-15" style={{ background: 'radial-gradient(circle, var(--color-primary) 0%, transparent 70%)' }}></div>
+            <div className="orb-small fixed top-[40%] right-[20%] w-[25%] h-[25%] rounded-full blur-[100px] pointer-events-none z-0 opacity-10" style={{ background: 'radial-gradient(circle, var(--color-primary) 0%, transparent 70%)' }}></div>
 
             {/* Mobile Sidebar Overlay */}
             {sidebarOpen && (
@@ -592,7 +592,7 @@ export default function DashboardLayout() {
                 style={{ zIndex: 300 }}
             >
                 {/* Intrinsic Sidebar Glow */}
-                <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_30%,rgba(99,102,241,0.10),transparent_65%)] pointer-events-none z-0" />
+                <div className="absolute inset-0 pointer-events-none z-0 opacity-10" style={{ background: 'radial-gradient(circle at 50% 30%, var(--color-primary), transparent 65%)' }} />
 
                 {/* ---- MOBILE LAYOUT: Full-Screen Glassy Grid ---- */}
                 <div className="lg:hidden flex flex-col h-[100dvh] bg-black/40 backdrop-blur-3xl pt-safe pb-safe overflow-hidden">
@@ -707,19 +707,26 @@ export default function DashboardLayout() {
                                         className={`relative group grid w-full ${isHoveringSidebar ? 'grid-cols-[80px_1fr] items-center' : 'place-items-center'} p-1.5 rounded-xl transition-all duration-300 ${isActive ? 'sidebar-active-glow' : 'hover:bg-white/[0.03]'}`}
                                     >
                                         <div
-                                            className={`nav-icon-container shrink-0 w-8 h-8 rounded-xl flex items-center justify-center transition-all duration-500 mx-auto ${isActive ? 'active text-primary scale-110' : 'bg-transparent text-violet-300/50 group-hover:text-violet-200 group-hover:scale-110'}`}
+                                            className={`nav-icon-container shrink-0 w-8 h-8 rounded-xl flex items-center justify-center transition-all duration-500 mx-auto ${isActive ? 'active text-primary scale-110' : 'bg-transparent text-white/50 group-hover:text-white group-hover:scale-110'}`}
+                                            style={{ color: isActive ? 'var(--color-primary)' : 'var(--color-text-base)' }}
                                         >
-                                            <Icon className={`w-4 h-4 ${isActive ? 'text-primary' : 'text-violet-300/50'} transition-all duration-300 group-hover:scale-110 group-hover:text-violet-200`} />
+                                            <Icon className={`w-4 h-4 transition-all duration-300 group-hover:scale-110 ${isActive ? '' : 'opacity-40 group-hover:opacity-100'}`} />
                                         </div>
 
                                         {/* Desktop Label - Reveals on Hover */}
-                                        <span className={`font-bold uppercase tracking-widest text-[11px] transition-all duration-500 whitespace-nowrap overflow-hidden ${isHoveringSidebar ? 'w-40 opacity-100 translate-x-0' : 'w-0 opacity-0 -translate-x-2'} ${isActive ? 'text-primary' : 'text-violet-200/60 group-hover:text-violet-100 group-hover:translate-x-1'}`}>
+                                        <span 
+                                            className={`font-bold uppercase tracking-widest text-[11px] transition-all duration-500 whitespace-nowrap overflow-hidden ${isHoveringSidebar ? 'w-40 opacity-100 translate-x-0' : 'w-0 opacity-0 -translate-x-2'} ${isActive ? '' : 'opacity-60 group-hover:opacity-100 group-hover:translate-x-1'}`}
+                                            style={{ color: isActive ? 'var(--color-primary)' : 'var(--color-text-base)' }}
+                                        >
                                             {t(item.label)}
                                         </span>
 
                                         {/* Desktop Tooltip */}
                                         {!isHoveringSidebar && (
-                                            <div className={`absolute ${isRtl ? 'right-full mr-4' : 'left-full ml-4'} px-3 py-1.5 rounded-xl bg-[#08081a]/95 backdrop-blur-xl border border-violet-500/20 text-[10px] font-bold text-violet-200 uppercase tracking-widest opacity-0 pointer-events-none transition-all duration-300 group-hover:opacity-100 z-50 whitespace-nowrap shadow-[0_0_20px_rgba(99,102,241,0.15)]`}>
+                                            <div 
+                                                className={`absolute ${isRtl ? 'right-full mr-4' : 'left-full ml-4'} px-3 py-1.5 rounded-xl bg-black/80 backdrop-blur-xl border border-white/10 text-[10px] font-bold uppercase tracking-widest opacity-0 pointer-events-none transition-all duration-300 group-hover:opacity-100 z-50 whitespace-nowrap shadow-xl`}
+                                                style={{ color: 'var(--color-text-base)' }}
+                                            >
                                                 {t(item.label)}
                                             </div>
                                         )}

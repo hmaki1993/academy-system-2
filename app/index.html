@@ -54,9 +54,30 @@
           if (s.academy_name) document.title = s.academy_name;
           if (s.logo_url) {
             const isLegacy = s.logo_url.toLowerCase().includes('healy');
+            const finalLogoUrl = isLegacy ? '/logo.png?v=2' : (s.logo_url.includes('?') ? s.logo_url : s.logo_url + '?v=2');
+            
+            // 1. Update Favicon
             const favicon = document.querySelector('link[rel="icon"]');
             if (favicon) {
-              favicon.href = isLegacy ? '/logo.png?v=2' : (s.logo_url.includes('?') ? s.logo_url : s.logo_url + '?v=2');
+              favicon.href = finalLogoUrl;
+            }
+
+            // 2. Dynamic PWA Manifest
+            const manifestLink = document.querySelector('link[rel="manifest"]');
+            if (manifestLink) {
+                const dynamicManifest = {
+                    "short_name": s.academy_name || "Academy",
+                    "name": s.academy_name || "Fame Academy System",
+                    "icons": [
+                        { "src": finalLogoUrl, "sizes": "192x192 256x256 512x512", "type": "image/png", "purpose": "any maskable" }
+                    ],
+                    "start_url": ".",
+                    "display": "standalone",
+                    "theme_color": s.primary_color || "#A30000",
+                    "background_color": s.secondary_color || "#050505"
+                };
+                const blob = new Blob([JSON.stringify(dynamicManifest)], {type: 'application/json'});
+                manifestLink.href = URL.createObjectURL(blob);
             }
           }
 

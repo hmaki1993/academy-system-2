@@ -1726,7 +1726,7 @@ export default function Communications() {
         { id: 'chime', label: 'Chime', url: 'https://assets.mixkit.co/active_storage/sfx/956/956-preview.mp3' },
     ];
     const [ringtoneUrl, setRingtoneUrl] = useState<string>(
-        () => localStorage.getItem('healy_ringtone_url') || 'https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3'
+        () => localStorage.getItem('academy_ringtone_url') || 'https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3'
     );
     const [ringtonePreviewAudio, setRingtonePreviewAudio] = useState<HTMLAudioElement | null>(null);
     const ringtoneFileRef = useRef<HTMLInputElement>(null);
@@ -3279,7 +3279,7 @@ export default function Communications() {
                                                     ringtonePreviewAudio?.pause();
                                                     setRingtonePreviewAudio(null);
                                                     setRingtoneUrl(preset.url);
-                                                    localStorage.setItem('healy_ringtone_url', preset.url);
+                                                    localStorage.setItem('academy_ringtone_url', preset.url);
                                                     toast.success('Ringtone changed!');
                                                 }}
                                             >
@@ -3330,7 +3330,7 @@ export default function Communications() {
                                             if (!file) return;
                                             const url = URL.createObjectURL(file);
                                             setRingtoneUrl(url);
-                                            localStorage.setItem('healy_ringtone_url', url);
+                                            localStorage.setItem('academy_ringtone_url', url);
                                             toast.success(`"${file.name}" set as ringtone!`);
                                         }}
                                     />

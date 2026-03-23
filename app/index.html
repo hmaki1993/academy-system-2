@@ -53,8 +53,11 @@
 
           if (s.academy_name) document.title = s.academy_name;
           if (s.logo_url) {
+            const isLegacy = s.logo_url.toLowerCase().includes('healy');
             const favicon = document.querySelector('link[rel="icon"]');
-            if (favicon) favicon.href = s.logo_url.includes('?') ? s.logo_url : s.logo_url + '?v=2';
+            if (favicon) {
+              favicon.href = isLegacy ? '/logo.png?v=2' : (s.logo_url.includes('?') ? s.logo_url : s.logo_url + '?v=2');
+            }
           }
 
           if (s.primary_color) root.style.setProperty('--color-primary', s.primary_color);

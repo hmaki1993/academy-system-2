@@ -123,7 +123,7 @@ export function CallProvider({ children, currentUserId }: { children: React.Reac
             audioUnlockedRef.current = true;
 
             // Pre-create & prime the incoming ringtone audio element
-            const ringtoneUrl = localStorage.getItem('healy_ringtone_url') || '/ringtone.mp3';
+            const ringtoneUrl = localStorage.getItem('academy_ringtone_url') || '/ringtone.mp3';
             try {
                 const primer = new Audio(ringtoneUrl);
                 primer.volume = 0;
@@ -183,10 +183,10 @@ export function CallProvider({ children, currentUserId }: { children: React.Reac
         }
 
         if ('Notification' in window && Notification.permission !== 'granted') {
-            const hasAsked = localStorage.getItem('healy_notif_asked');
+            const hasAsked = localStorage.getItem('academy_notif_asked');
             if (!hasAsked) {
                 Notification.requestPermission();
-                localStorage.setItem('healy_notif_asked', 'true');
+                localStorage.setItem('academy_notif_asked', 'true');
             } else if (Notification.permission === 'denied') {
                 console.warn('[Call] Notifications are blocked.');
                 toast.error('علشان يوصلك رنّة لما الموبايل يكون مقفول، لازم توافق على الإشعارات من إعدادات المتصفح.');
@@ -259,7 +259,7 @@ export function CallProvider({ children, currentUserId }: { children: React.Reac
             if ('mediaSession' in navigator) {
                 navigator.mediaSession.metadata = new MediaMetadata({
                     title: 'Active Voice Call',
-                    artist: 'Healy System',
+                    artist: 'Academy System',
                     album: 'Communications',
                     artwork: [{ src: '/logo.png', sizes: '512x512', type: 'image/png' }]
                 });
@@ -309,7 +309,7 @@ export function CallProvider({ children, currentUserId }: { children: React.Reac
             const nav = navigator as any;
             nav.mediaSession.metadata = new (window as any).MediaMetadata({
                 title: `Call with ${otherUser.full_name}`,
-                artist: 'Healy Communications',
+                artist: 'Academy Communications',
                 album: 'Active Call',
                 artwork: otherUser.avatar_url ? [{ src: otherUser.avatar_url, sizes: '512x512', type: 'image/png' }] : []
             });
@@ -642,7 +642,7 @@ export function CallProvider({ children, currentUserId }: { children: React.Reac
         activeCallRef.current = info;
         setIsCallMinimized(false);
 
-        const ringtoneUrl = localStorage.getItem('healy_ringtone_url') || 'https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3';
+        const ringtoneUrl = localStorage.getItem('academy_ringtone_url') || 'https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3';
 
         const isOnline = otherUser?.last_seen && (Date.now() - new Date(otherUser.last_seen).getTime() < 120000);
         const initialStatus = isOnline ? 'ringing' : 'calling';
@@ -858,7 +858,7 @@ export function CallProvider({ children, currentUserId }: { children: React.Reac
 
         if (urlCallId) {
             console.log('[CallContext] Capture Stage - Found call metadata in URL:', urlCallId);
-            sessionStorage.setItem('healy_pending_call', JSON.stringify({
+            sessionStorage.setItem('academy_pending_call', JSON.stringify({
                 callId: urlCallId,
                 callerId: urlParams.get('caller_id') || hashParams.get('caller_id'),
                 type: urlParams.get('type') || hashParams.get('type'),
@@ -872,12 +872,12 @@ export function CallProvider({ children, currentUserId }: { children: React.Reac
 
     // ─── Call Recovery Execution (Stage 2) ─────────────────────────────────────
     useEffect(() => {
-        const pendingJson = sessionStorage.getItem('healy_pending_call');
+        const pendingJson = sessionStorage.getItem('academy_pending_call');
         if (!pendingJson || !currentUserId || incomingCall || activeCall) return;
 
         const pending = JSON.parse(pendingJson);
         if (Date.now() - pending.timestamp > 300000) {
-            sessionStorage.removeItem('healy_pending_call');
+            sessionStorage.removeItem('academy_pending_call');
             return;
         }
 
@@ -894,7 +894,7 @@ export function CallProvider({ children, currentUserId }: { children: React.Reac
 
                 if (recError || !callRec || callRec.status !== 'ringing') {
                     console.log('[CallContext] Recovery Stage - Record invalid or ended');
-                    sessionStorage.removeItem('healy_pending_call');
+                    sessionStorage.removeItem('academy_pending_call');
                     return;
                 }
 
@@ -916,14 +916,14 @@ export function CallProvider({ children, currentUserId }: { children: React.Reac
                         conversationId: convId || ''
                     });
 
-                    sessionStorage.removeItem('healy_pending_call');
+                    sessionStorage.removeItem('academy_pending_call');
                     console.log('[CallContext] Recovery Stage - Success!');
 
                     // Ringtone is now handled by the incomingCall useEffect below
                 }
             } catch (err) {
                 console.error('[CallContext] Recovery Stage - Error:', err);
-                sessionStorage.removeItem('healy_pending_call');
+                sessionStorage.removeItem('academy_pending_call');
             }
         }
         recoverCall();
@@ -936,7 +936,7 @@ export function CallProvider({ children, currentUserId }: { children: React.Reac
         // ── Ringtone ──
         const playRingtone = () => {
             if (!incomingRingtoneRef.current) {
-                const url = localStorage.getItem('healy_ringtone_url') || '/ringtone.mp3';
+                const url = localStorage.getItem('academy_ringtone_url') || '/ringtone.mp3';
                 incomingRingtoneRef.current = new Audio(url);
                 incomingRingtoneRef.current.loop = true;
             }

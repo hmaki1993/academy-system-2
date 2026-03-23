@@ -463,6 +463,15 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
                         v !== null && (GYM_WIDE_KEYS.includes(key as any) || key.startsWith('login_'))
                     )
                 );
+                
+                // FORCE OVERRIDE: If database logo contains legacy branding, fall back to project default
+                if (filteredGlobal.logo_url && typeof filteredGlobal.logo_url === 'string' && filteredGlobal.logo_url.toLowerCase().includes('healy')) {
+                    filteredGlobal.logo_url = '/logo.png?v=2';
+                }
+                if (filteredGlobal.login_logo_url && typeof filteredGlobal.login_logo_url === 'string' && filteredGlobal.login_logo_url.toLowerCase().includes('healy')) {
+                    filteredGlobal.login_logo_url = '/logo.png?v=2';
+                }
+
                 finalSettings = { ...finalSettings, ...filteredGlobal };
             }
 

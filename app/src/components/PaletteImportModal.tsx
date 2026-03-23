@@ -141,7 +141,7 @@ const ROLES: { role: Role; label: string }[] = [
     { role: 'hover', label: 'Hover Glow' }, { role: 'hover_border', label: 'Hover Border' },
 ];
 
-const SK = 'healy_saved_palettes';
+const SK = 'academy_saved_palettes';
 const load = (): SavedPalette[] => {
     try {
         const raw = localStorage.getItem(SK) || '[]';
@@ -519,7 +519,7 @@ function ColorEditor({ colors, assignments, onAssign, activeRole, onSetActive, p
                         )}
                     </div>
                 </div>
-                <p className="text-center text-[5px] md:text-[6px] text-white/5 md:text-white/10 uppercase tracking-widest">Premium Theme Engine · By Healy</p>
+                <p className="text-center text-[5px] md:text-[6px] text-white/5 md:text-white/10 uppercase tracking-widest">Premium Theme Engine · By Fame Academy</p>
             </div>
         </div>
     );

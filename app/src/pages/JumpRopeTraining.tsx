@@ -52,8 +52,8 @@ export default function JumpRopeTraining() {
     const baselineY = useRef<number | null>(null);
     const bodyHeightRef = useRef<number>(200);
     const peakY = useRef<number>(0);
-    const lastNoseY = useRef<number>(0);
-    const lastNoseX = useRef<number>(0);
+    const lastHipY = useRef<number>(0);
+    const lastHipX = useRef<number>(0);
     const lastShoulderWidth = useRef<number>(0);
     const lastDisplacementRef = useRef<number>(0);
     const emaSmoothY = useRef<number | null>(null);
@@ -79,12 +79,20 @@ export default function JumpRopeTraining() {
     };
 
     const onResults = useCallback((results: any) => {
-        if (!canvasRef.current || !results.poseLandmarks) return;
-        const canvasCtx = canvasRef.current.getContext('2d');
+        if (!canvasRef.current || !results.poseLandmarks || !webcamRef.current?.video) return;
+        const video = webcamRef.current.video;
+        const canvas = canvasRef.current;
+        const canvasCtx = canvas.getContext('2d');
         if (!canvasCtx) return;
 
-        const W = canvasRef.current.width;
-        const H = canvasRef.current.height;
+        // Sync canvas size to video for accurate drawing overlay
+        if (canvas.width !== video.videoWidth || canvas.height !== video.videoHeight) {
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+        }
+
+        const W = canvas.width;
+        const H = canvas.height;
         const now = Date.now();
         const deltaTime = (now - lastFrameTime.current) / 1000;
         if (deltaTime < 0.001) return;
@@ -92,35 +100,71 @@ export default function JumpRopeTraining() {
 
         canvasCtx.clearRect(0, 0, W, H);
 
-        const nose = results.poseLandmarks[0];
-        const lShoulder = results.poseLandmarks[11];
-        const rShoulder = results.poseLandmarks[12];
-        const lAnkle = results.poseLandmarks[27];
-        const rAnkle = results.poseLandmarks[28];
+        // Draw Tracking Skeleton (AI Vision rendering)
+        canvasCtx.fillStyle = '#ff3b30'; // Primary Color
+        canvasCtx.strokeStyle = 'rgba(255, 59, 48, 0.4)';
+        canvasCtx.lineWidth = 2;
 
-        if (!nose || !lShoulder || !rShoulder) return;
+        const connect = (p1: any, p2: any) => {
+            if (p1 && p2 && p1.visibility > 0.5 && p2.visibility > 0.5) {
+                canvasCtx.beginPath();
+                canvasCtx.moveTo(p1.x * W, p1.y * H);
+                canvasCtx.lineTo(p2.x * W, p2.y * H);
+                canvasCtx.stroke();
+            }
+        };
+
+        const drawPoint = (p: any, radius = 4) => {
+            if (p && p.visibility > 0.5) {
+                canvasCtx.beginPath();
+                canvasCtx.arc(p.x * W, p.y * H, radius, 0, 2 * Math.PI);
+                canvasCtx.fill();
+            }
+        };
+
+        const LM = results.poseLandmarks;
+        const lShoulder = LM[11]; const rShoulder = LM[12];
+        const lElbow = LM[13];    const rElbow = LM[14];
+        const lWrist = LM[15];    const rWrist = LM[16];
+        const lHip = LM[23];      const rHip = LM[24];
+        const lKnee = LM[25];     const rKnee = LM[26];
+        const lAnkle = LM[27];    const rAnkle = LM[28];
+        const nose = LM[0];
+
+        // Draw Lines
+        connect(lShoulder, rShoulder); connect(lShoulder, lHip); connect(rShoulder, rHip); connect(lHip, rHip);
+        connect(lShoulder, lElbow); connect(lElbow, lWrist);
+        connect(rShoulder, rElbow); connect(rElbow, rWrist);
+        connect(lHip, lKnee); connect(lKnee, lAnkle);
+        connect(rHip, rKnee); connect(rKnee, rAnkle);
+
+        // Draw Points
+        [lShoulder, rShoulder, lElbow, rElbow, lWrist, rWrist, lHip, rHip, lKnee, rKnee, lAnkle, rAnkle, nose].forEach(p => drawPoint(p));
+
+        if (!lHip || !rHip || !lShoulder || !rShoulder) return;
 
         const isFullBody = !!(lAnkle && rAnkle);
-        const noseY = nose.y * H;
-        const noseX = nose.x * W;
+        const hipY = ((lHip.y + rHip.y) / 2) * H;
+        const hipX = ((lHip.x + rHip.x) / 2) * W;
         const shoulderW = Math.abs(lShoulder.x - rShoulder.x) * W;
 
-        const frameVelocityY = Math.abs(lastNoseY.current - noseY) / deltaTime;
-        const frameVelocityX = Math.abs(lastNoseX.current - noseX) / deltaTime;
+        const frameVelocityY = Math.abs(lastHipY.current - hipY) / deltaTime;
+        const frameVelocityX = Math.abs(lastHipX.current - hipX) / deltaTime;
         const scaleVelocity = (shoulderW - lastShoulderWidth.current) / deltaTime;
 
-        const isTooClose = shoulderW > (W * 0.38);
-        const isApproaching = scaleVelocity > 180;
-        const isCurrentlyMoving = frameVelocityY > 400 || frameVelocityX > 200 || isApproaching;
+        // More forgiving scale detection
+        const isTooClose = shoulderW > (W * 0.45);
+        const isApproaching = scaleVelocity > 250;
+        const isCurrentlyMoving = frameVelocityY > 500 || frameVelocityX > 250 || isApproaching;
 
-        lastNoseY.current = noseY;
-        lastNoseX.current = noseX;
+        lastHipY.current = hipY;
+        lastHipX.current = hipX;
         lastShoulderWidth.current = shoulderW;
 
         if (isStableRef.current) {
             if (isTooClose || isApproaching) {
                 if (trackingLossStartRef.current === null) trackingLossStartRef.current = now;
-                else if (now - trackingLossStartRef.current > 600) {
+                else if (now - trackingLossStartRef.current > 800) {
                     isStableRef.current = false;
                     setSetupStatus('STEP_BACK');
                     return;
@@ -130,35 +174,35 @@ export default function JumpRopeTraining() {
                 setSetupStatus('READY');
             }
         } else {
-            if (isCurrentlyMoving || !isFullBody || isTooClose) {
+            if (isCurrentlyMoving || isTooClose) {
                 stabilityStartRef.current = null;
-                setSetupStatus(isTooClose || !isFullBody ? 'STEP_BACK' : 'MOVING');
-                baselineY.current = noseY;
+                setSetupStatus(isTooClose ? 'STEP_BACK' : 'MOVING');
+                baselineY.current = hipY;
                 setMovementPct(0);
                 return;
             }
             if (stabilityStartRef.current === null) stabilityStartRef.current = now;
-            else if (now - stabilityStartRef.current > 1500) {
+            else if (now - stabilityStartRef.current > 1000) {
                 isStableRef.current = true;
                 setSetupStatus('READY');
             }
-            baselineY.current = noseY;
+            baselineY.current = hipY;
             return;
         }
 
-        const bodyH = Math.abs(((lAnkle?.y ?? rAnkle?.y ?? 0) - nose.y) * H);
+        const bodyH = Math.abs(((lAnkle?.y ?? rAnkle?.y ?? hipY) - nose.y) * H);
         bodyHeightRef.current = Math.max(100, bodyH);
 
-        if (emaSmoothY.current === null) emaSmoothY.current = noseY;
-        emaSmoothY.current = emaSmoothY.current * 0.4 + noseY * 0.6;
+        if (emaSmoothY.current === null) emaSmoothY.current = hipY;
+        emaSmoothY.current = emaSmoothY.current * 0.4 + hipY * 0.6;
         const smoothY = emaSmoothY.current;
 
-        const displacement = (baselineY.current || noseY) - smoothY;
+        const displacement = (baselineY.current || hipY) - smoothY;
         velocityRef.current = velocityRef.current * 0.3 + (displacement - lastDisplacementRef.current) / deltaTime * 0.7;
         lastDisplacementRef.current = displacement;
 
-        const jumpMinThreshold = Math.max(8, bodyHeightRef.current * 0.015); // Lowered to catch boxer skips and high-knees
-        const pct = Math.max(0, Math.min(100, (displacement / (bodyHeightRef.current * 0.10)) * 100));
+        const jumpMinThreshold = Math.max(6, bodyHeightRef.current * 0.012); // Extremely fine-tuned for hip tracking precision
+        const pct = Math.max(0, Math.min(100, (displacement / (bodyHeightRef.current * 0.08)) * 100));
         setMovementPct(Math.round(pct));
 
         // Strict Approach Lockout: Do not process jumps if the user is moving towards the camera to stop it
@@ -183,9 +227,10 @@ export default function JumpRopeTraining() {
                     setJumps(jumpCountRef.current);
                     if ('vibrate' in navigator) navigator.vibrate(50);
                     lastActivityTimeRef.current = Date.now();
-                    
-                    // Speak every single jump out loud for motivation and tracking
-                    speak(jumpCountRef.current.toString());
+                    // Speak every 10 jumps out loud for motivation and tracking without being too noisy
+                    if (jumpCountRef.current % 10 === 0) {
+                        speak(jumpCountRef.current.toString());
+                    }
                 }
                 jumpStatusRef.current = 'standing';
                 peakY.current = 0;

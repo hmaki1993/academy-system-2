@@ -157,24 +157,22 @@ export default function JumpRopeTraining() {
         const shoulderWide = Math.abs(lShoulder2.x - rShoulder2.x) * W;
         const scaleVelocity = (shoulderWide - lastShoulderWidth.current) / deltaTime;
 
-        // --- Use HIP MIDPOINT as anchor (not nose) ---
-        // Hips only move during full-body jumps. Head movements are completely ignored.
-        const hipMidY = ((lHip.x !== undefined ? lHip.y : rHip.y) + (rHip.x !== undefined ? rHip.y : lHip.y)) / 2 * H;
-        const hipMidX = ((lHip.x !== undefined ? lHip.x : rHip.x) + (rHip.x !== undefined ? rHip.x : lHip.x)) / 2 * W;
-        const hipAvailY = ((lHip.visibility || 0) + (rHip.visibility || 0)) > 0.4
-            ? ((lHip.y + rHip.y) / 2) * H
-            : noseY; // fallback to nose if hips not visible
+        // --- Use SHOULDER MIDPOINT as the ultimate stable anchor ---
+        // Shoulders don't bob independently like the head (nose) does.
+        // Shoulders don't get occluded by swinging arms like the hips do.
+        const shoulderMidY = ((lShoulder2.y + rShoulder2.y) / 2) * H;
+        const shoulderMidX = ((lShoulder2.x + rShoulder2.x) / 2) * W;
 
-        const frameVelocityY = Math.abs(lastHipY.current - hipAvailY) / deltaTime;
-        const frameVelocityX = Math.abs(lastHipX.current - hipMidX) / deltaTime;
+        const frameVelocityY = Math.abs(lastHipY.current - shoulderMidY) / deltaTime;
+        const frameVelocityX = Math.abs(lastHipX.current - shoulderMidX) / deltaTime;
 
         // Mirrored from JumpRopeCounter.tsx proven thresholds
         const isTooClose = shoulderWide > (W * 0.38);
         const isApproaching = scaleVelocity > 180;
         const isCurrentlyMoving = frameVelocityY > 400 || frameVelocityX > 200 || isApproaching;
 
-        lastHipY.current = hipAvailY;
-        lastHipX.current = hipMidX;
+        lastHipY.current = shoulderMidY;
+        lastHipX.current = shoulderMidX;
         lastShoulderWidth.current = shoulderWide;
 
         // --- Stability Gate (same as working tracker) ---
@@ -205,7 +203,7 @@ export default function JumpRopeTraining() {
             if (isCurrentlyMoving || !isFullBody || isTooClose) {
                 stabilityStartRef.current = null;
                 setSetupStatus(isTooClose || !isFullBody ? 'STEP_BACK' : 'MOVING');
-                baselineY.current = hipAvailY;
+                baselineY.current = shoulderMidY;
                 setMovementPct(0);
                 return;
             }
@@ -214,19 +212,19 @@ export default function JumpRopeTraining() {
                 isStableRef.current = true;
                 setSetupStatus('READY');
             }
-            baselineY.current = hipAvailY;
+            baselineY.current = shoulderMidY;
             return;
         }
 
-        if (baselineY.current === null) { baselineY.current = hipAvailY; return; }
+        if (baselineY.current === null) { baselineY.current = shoulderMidY; return; }
 
         // Body height for dynamic threshold (nose to ankle - accurate scale)
         const bodyH2 = Math.abs(((lAnkle2?.y ?? rAnkle2?.y ?? 0) - nose.y) * H);
         bodyHeightRef.current = Math.max(100, bodyH2);
 
-        // EMA Smoothing on the HIP signal
-        if (emaSmoothY.current === null) emaSmoothY.current = hipAvailY;
-        emaSmoothY.current = emaSmoothY.current * 0.4 + hipAvailY * 0.6;
+        // EMA Smoothing on the SHOULDER signal
+        if (emaSmoothY.current === null) emaSmoothY.current = shoulderMidY;
+        emaSmoothY.current = emaSmoothY.current * 0.4 + shoulderMidY * 0.6;
         const smoothY = emaSmoothY.current;
 
         const displacement = baselineY.current - smoothY;

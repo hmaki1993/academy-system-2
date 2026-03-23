@@ -517,10 +517,18 @@ const JumpRopeCounter = () => {
 
     return (
         <div className="jump-counter-container animate-in fade-in duration-700">
-            <div className="flex flex-col sm:flex-row items-center justify-center sm:justify-between gap-4 w-full mb-4">
-                <div className="header-minimal">
-                    <p>{t('jumpCounter.subtitle')}</p>
-                    <h1 className="title-gradient text-center sm:text-left">{t('jumpCounter.title')}</h1>
+            <div className="flex flex-col sm:flex-row items-center justify-center sm:justify-between gap-6 pb-6 mb-2 w-full">
+                <div className="flex flex-col gap-1 items-center sm:items-start text-center sm:text-left w-full sm:w-auto">
+                    <h1 className="text-2xl md:text-3xl font-black text-white uppercase tracking-tight leading-none">
+                        <span className="premium-gradient-text drop-shadow-[0_0_15px_rgba(244,63,94,0.3)]">
+                            {t('jumpCounter.title')}
+                        </span>
+                    </h1>
+                    <p className="text-white/40 text-[9px] font-black tracking-[0.2em] uppercase flex items-center justify-center sm:justify-start gap-2 w-full mt-1">
+                        <span className="w-4 h-[1px] bg-primary/50 inline-block"></span>
+                        {t('jumpCounter.subtitle')}
+                        <span className="w-4 h-[1px] bg-primary/50 inline-block sm:hidden"></span>
+                    </p>
                 </div>
                 <div className="flex items-center gap-2">
                     <button

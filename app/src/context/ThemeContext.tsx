@@ -236,7 +236,7 @@ export const defaultSettings: GymSettings = {
     language: 'en',
     premium_badge_color: '#A30000',
     brand_label_color: '#A30000',
-    academy_name: 'Academy System',
+    academy_name: 'Fame Academy',
     gym_address: 'City, Country',
     gym_phone: '+00 000 000 0000',
     login_bg_url: '/Tom Roberton Images _ Balance-and-Form _ 2.jpg',

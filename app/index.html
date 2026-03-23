@@ -13,7 +13,7 @@
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
   <link rel="manifest" href="/manifest.json" crossorigin="use-credentials">
   <meta name="theme-color" content="#050505">
-  <title>Academy System</title>
+  <title>Fame Academy</title>
   <script>
     // Immediate branding & theme application to prevent flash on refresh
     (function () {
@@ -52,6 +52,10 @@
           const s = JSON.parse(saved);
 
           if (s.academy_name) document.title = s.academy_name;
+          if (s.logo_url) {
+            const favicon = document.querySelector('link[rel="icon"]');
+            if (favicon) favicon.href = s.logo_url;
+          }
 
           if (s.primary_color) root.style.setProperty('--color-primary', s.primary_color);
           if (s.secondary_color) {

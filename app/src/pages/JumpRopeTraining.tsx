@@ -68,6 +68,7 @@ export default function JumpRopeTraining() {
     const restTimeRef = useRef(0);
     const timerRemainingRef = useRef<number | null>(null);
     const intensityHistoryRef = useRef<any[]>([]);
+    const cooldownRef = useRef(false);
 
     const handleVideoLoad = () => {
         setIsLoading(false);
@@ -142,57 +143,40 @@ export default function JumpRopeTraining() {
         // Draw Points
         [lShoulder, rShoulder, lElbow, rElbow, lWrist, rWrist, lHip, rHip, lKnee, rKnee, lAnkle, rAnkle, nose].forEach(p => drawPoint(p));
 
-        // ==============================================================
-        // SMART MOTION ENGINE (Multi-Signal Jump Discriminator)
-        // ==============================================================
+        // =====================================================
+        // PROVEN DETECTION ENGINE (from JumpRopeCounter.tsx)
+        // =====================================================
 
-        // --- 1. Anchor Point: Use midpoint between hips for stable tracking ---
-        // Hips are the most stable joint for vertical displacement during jumps.
-        // Nose can bob independently (head tilt) even when standing still.
-        const hipMidX = ((lHip.x + rHip.x) / 2) * W;
-        const hipMidY = ((lHip.y + rHip.y) / 2) * H;
-        // Fallback to nose if both hips are occluded
-        const hipVisibility = ((lHip.visibility || 0) + (rHip.visibility || 0)) / 2;
-        const trackX = hipVisibility > 0.4 ? hipMidX : nose.x * W;
-        const trackY = hipVisibility > 0.4 ? hipMidY : nose.y * H;
+        const lShoulder2 = LM[11]; const rShoulder2 = LM[12];
+        const lAnkle2 = LM[27];    const rAnkle2 = LM[28];
 
-        // --- 2. Anti-Snap: Ignore detection if the skeleton teleports (person switch) ---
-        const teleportDist = Math.hypot(lastHipX.current - trackX, lastHipY.current - trackY);
-        if (lastHipX.current !== 0 && teleportDist > W * 0.18 && deltaTime < 0.25) {
-            if (now - lastValidTimeRef.current < 2000) return;
-        } else {
-            lastValidTimeRef.current = now;
-        }
+        if (!nose || !lShoulder2 || !rShoulder2) return;
 
-        // --- 3. Shoulder scale (camera proximity signal) ---
-        const shoulderW = Math.max(Math.abs(lShoulder.x - rShoulder.x) * W, 50);
-        const scaleVelocity = (shoulderW - lastShoulderWidth.current) / deltaTime;
-        const isTooClose = shoulderW > W * 0.38;
-        const isApproaching = scaleVelocity > 40;  // Tightened: any forward lean kills the count immediately
+        const isFullBody = !!(lAnkle2 && rAnkle2);
+        const noseY = nose.y * H;
+        const noseX = nose.x * W;
+        const shoulderWide = Math.abs(lShoulder2.x - rShoulder2.x) * W;
+        const scaleVelocity = (shoulderWide - lastShoulderWidth.current) / deltaTime;
+        const frameVelocityY = Math.abs(lastHipY.current - noseY) / deltaTime;
+        const frameVelocityX = Math.abs(lastHipX.current - noseX) / deltaTime;
 
-        // --- 4. Frame-level velocity signals ---
-        const frameVelocityY = Math.abs(lastHipY.current - trackY) / deltaTime;
-        const frameVelocityX = Math.abs(lastHipX.current - trackX) / deltaTime;
+        // Mirrored from JumpRopeCounter.tsx proven thresholds
+        const isTooClose = shoulderWide > (W * 0.38);
+        const isApproaching = scaleVelocity > 180;
+        const isCurrentlyMoving = frameVelocityY > 400 || frameVelocityX > 200 || isApproaching;
 
-        // KEY INSIGHT: Walking creates horizontal-dominant motion. Jumping creates vertical-dominant motion.
-        // If lateral velocity is more than 45% of vertical velocity, the person is walking not jumping.
-        const lateralRatio = frameVelocityY > 10 ? frameVelocityX / frameVelocityY : 0;
-        const isWalking = lateralRatio > 0.45 && frameVelocityX > 50;
+        lastHipY.current = noseY;
+        lastHipX.current = noseX;
+        lastShoulderWidth.current = shoulderWide;
 
-        // Combine all movement signals for stability detection
-        const isCurrentlyMoving = (frameVelocityY > 350 && !isWalking) || isApproaching;
-
-        // Save state
-        lastHipY.current = trackY;
-        lastHipX.current = trackX;
-        lastShoulderWidth.current = shoulderW;
-
-        // --- 5. Stability Gate: Must be stable for 1s before counting any jumps ---
+        // --- Stability Gate (same as working tracker) ---
         if (isStableRef.current) {
             if (isTooClose || isApproaching) {
                 if (trackingLossStartRef.current === null) trackingLossStartRef.current = now;
-                else if (now - trackingLossStartRef.current > 800) {
+                else if (now - trackingLossStartRef.current > 600) {
                     isStableRef.current = false;
+                    stabilityStartRef.current = null;
+                    peakY.current = 0;
                     setSetupStatus('STEP_BACK');
                     return;
                 }
@@ -200,80 +184,74 @@ export default function JumpRopeTraining() {
                 trackingLossStartRef.current = null;
                 setSetupStatus('READY');
             }
+            const massiveLateralMovement = frameVelocityX > 500;
+            if (massiveLateralMovement) {
+                if (trackingLossStartRef.current === null) trackingLossStartRef.current = now;
+                else if (now - trackingLossStartRef.current > 1200) {
+                    isStableRef.current = false;
+                    stabilityStartRef.current = null;
+                    return;
+                }
+            }
         } else {
-            if (isCurrentlyMoving || isTooClose) {
+            if (isCurrentlyMoving || !isFullBody || isTooClose) {
                 stabilityStartRef.current = null;
-                setSetupStatus(isTooClose ? 'STEP_BACK' : 'MOVING');
-                baselineY.current = trackY;
+                setSetupStatus(isTooClose || !isFullBody ? 'STEP_BACK' : 'MOVING');
+                baselineY.current = noseY;
                 setMovementPct(0);
                 return;
             }
             if (stabilityStartRef.current === null) stabilityStartRef.current = now;
-            else if (now - stabilityStartRef.current > 1000) {
+            else if (now - stabilityStartRef.current > 1500) {
                 isStableRef.current = true;
                 setSetupStatus('READY');
             }
-            baselineY.current = trackY;
+            baselineY.current = noseY;
             return;
         }
 
-        // --- 6. Body Reference: Full height for threshold scaling ---
-        const ankleY = (lAnkle?.visibility || 0) > 0.3 ? lAnkle.y : (rAnkle?.visibility || 0) > 0.3 ? rAnkle.y : null;
-        const bodyH = ankleY !== null ? Math.abs((ankleY - nose.y) * H) : 200;
-        bodyHeightRef.current = Math.max(100, bodyH);
+        if (baselineY.current === null) { baselineY.current = noseY; return; }
 
-        // --- 7. Smoothing: Asymmetric EMA (fast up, slow down) ---
-        if (emaSmoothY.current === null) emaSmoothY.current = trackY;
-        // Rising displacement (jump up) → fast tracking. Falling back → slower release to avoid false triggers.
-        const alpha = trackY < emaSmoothY.current ? 0.65 : 0.25;
-        const smoothY = emaSmoothY.current * (1 - alpha) + trackY * alpha;
-        emaSmoothY.current = smoothY;
+        // Body height for dynamic threshold
+        const bodyH2 = Math.abs(((lAnkle2?.y ?? rAnkle2?.y ?? 0) - nose.y) * H);
+        bodyHeightRef.current = Math.max(100, bodyH2);
 
-        // --- 8. Displacement & Velocity ---
-        const displacement = (baselineY.current || trackY) - smoothY;
-        velocityRef.current = velocityRef.current * 0.25 + (displacement - lastDisplacementRef.current) / deltaTime * 0.75;
+        // EMA Smoothing - simple and proven
+        if (emaSmoothY.current === null) emaSmoothY.current = noseY;
+        emaSmoothY.current = emaSmoothY.current * 0.4 + noseY * 0.6;
+        const smoothY = emaSmoothY.current;
+
+        const displacement = baselineY.current - smoothY;
+        velocityRef.current = velocityRef.current * 0.3 + (displacement - lastDisplacementRef.current) / deltaTime * 0.7;
         lastDisplacementRef.current = displacement;
 
-        // --- 9. Dynamic Threshold (scales with body height) ---
-        // Min threshold: 2.5% of body height. This catches fast boxer skips (~3-4cm lift)
-        // but ignores breathing/sway (~0.5-1cm).
-        const jumpMinThreshold = Math.max(7, bodyHeightRef.current * 0.025);
-        const pct = Math.max(0, Math.min(100, (displacement / (bodyHeightRef.current * 0.08)) * 100));
+        const jumpMinThreshold = Math.max(12, bodyHeightRef.current * 0.025);
+        const pct = Math.max(0, Math.min(100, (displacement / (bodyHeightRef.current * 0.10)) * 100));
         setMovementPct(Math.round(pct));
 
-        // --- 10. Final Lockouts: Block counting if walking toward camera or lateral walking ---
-        if (isApproaching || isTooClose || isWalking) {
-            jumpStatusRef.current = 'standing';
-            return;
-        }
-
-        // --- 11. Jump State Machine ---
+        // --- State Machine (exact copy from JumpRopeCounter.tsx) ---
         if (jumpStatusRef.current === 'standing') {
-            // Enter jump state only when displacement is significant AND velocity is upward
-            if (displacement > jumpMinThreshold && velocityRef.current > 20) {
+            if (displacement > jumpMinThreshold && velocityRef.current > 40) {
                 jumpStatusRef.current = 'jumping';
                 peakY.current = displacement;
             } else if (Math.abs(velocityRef.current) < 15 && baselineY.current !== null) {
-                // Slowly adapt baseline to handle natural forward lean
-                baselineY.current = baselineY.current * 0.97 + smoothY * 0.03;
+                baselineY.current = baselineY.current * 0.95 + smoothY * 0.05;
             }
         } else {
             if (displacement > peakY.current) peakY.current = displacement;
 
-            // Count the jump on landing: when coming back down past threshold
-            if (velocityRef.current < -20 || displacement < jumpMinThreshold * 0.4) {
-                // Only count if: peak was real, camera wasn't approaching during jump
-                if (peakY.current > jumpMinThreshold && scaleVelocity < 60) {
+            if ((velocityRef.current < -30 || displacement < jumpMinThreshold * 0.5) && !cooldownRef.current) {
+                if (peakY.current > jumpMinThreshold && scaleVelocity < 100) {
                     jumpCountRef.current += 1;
                     setJumps(jumpCountRef.current);
                     if ('vibrate' in navigator) navigator.vibrate(50);
                     lastActivityTimeRef.current = Date.now();
-                    if (jumpCountRef.current % 10 === 0) {
-                        speak(jumpCountRef.current.toString());
-                    }
+                    if (jumpCountRef.current % 10 === 0) speak(jumpCountRef.current.toString());
                 }
                 jumpStatusRef.current = 'standing';
                 peakY.current = 0;
+                cooldownRef.current = true;
+                setTimeout(() => { cooldownRef.current = false; }, 120);
             }
         }
     }, [speak]);

@@ -152,10 +152,10 @@ export default function JumpRopeTraining() {
         const frameVelocityX = Math.abs(lastHipX.current - hipX) / deltaTime;
         const scaleVelocity = (shoulderW - lastShoulderWidth.current) / deltaTime;
 
-        // More forgiving scale detection
-        const isTooClose = shoulderW > (W * 0.45);
-        const isApproaching = scaleVelocity > 250;
-        const isCurrentlyMoving = frameVelocityY > 500 || frameVelocityX > 250 || isApproaching;
+        // Strict scale detection to stop counting when walking to end the session
+        const isTooClose = shoulderW > (W * 0.32); // If shoulders take up more than 32% of screen, user is very close
+        const isApproaching = scaleVelocity > 80;
+        const isCurrentlyMoving = frameVelocityY > 400 || frameVelocityX > 200 || isApproaching;
 
         lastHipY.current = hipY;
         lastHipX.current = hipX;
@@ -201,27 +201,30 @@ export default function JumpRopeTraining() {
         velocityRef.current = velocityRef.current * 0.3 + (displacement - lastDisplacementRef.current) / deltaTime * 0.7;
         lastDisplacementRef.current = displacement;
 
-        const jumpMinThreshold = Math.max(6, bodyHeightRef.current * 0.012); // Extremely fine-tuned for hip tracking precision
+        // Increased thresholds: Requires a definitive upwards launch
+        const jumpMinThreshold = Math.max(15, bodyHeightRef.current * 0.035); 
         const pct = Math.max(0, Math.min(100, (displacement / (bodyHeightRef.current * 0.08)) * 100));
         setMovementPct(Math.round(pct));
 
-        // Strict Approach Lockout: Do not process jumps if the user is moving towards the camera to stop it
-        if (isApproaching || isTooClose) {
+        // Absolute Approach Lockout: Do not process jumps if the user is moving towards the camera to stop it
+        if (isApproaching || isTooClose || frameVelocityX > 150) {
             jumpStatusRef.current = 'standing';
             return;
         }
 
         // State Machine
         if (jumpStatusRef.current === 'standing') {
-            if (displacement > jumpMinThreshold && velocityRef.current > 20) {
+            if (displacement > jumpMinThreshold && velocityRef.current > 50) {
                 jumpStatusRef.current = 'jumping';
                 peakY.current = displacement;
-            } else if (Math.abs(velocityRef.current) < 15 && baselineY.current !== null) {
+            } else if (Math.abs(velocityRef.current) < 20 && baselineY.current !== null) {
                 baselineY.current = baselineY.current * 0.95 + smoothY * 0.05;
             }
         } else {
             if (displacement > peakY.current) peakY.current = displacement;
-            if (velocityRef.current < -20 || displacement < jumpMinThreshold * 0.5) {
+            
+            // Require a definitive downward landing
+            if (velocityRef.current < -40 || displacement < jumpMinThreshold * 0.4) {
                 if (peakY.current > jumpMinThreshold && scaleVelocity < 50) {
                     jumpCountRef.current += 1;
                     setJumps(jumpCountRef.current);

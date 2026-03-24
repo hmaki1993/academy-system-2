@@ -289,15 +289,16 @@ export default function JumpRopeTraining() {
         setMovementPct(Math.round(pct));
 
         // --- SYNC GUARD: Validate Nose vs Hip ---
-        // When you jump, hips must rise at least 65% of the nose's movement.
-        // When you tilt head, hips stay stable while nose moves.
+        // When you jump, hips must rise. When you head nod, hips stay stable.
         const hipDisplacement = (baselineHipY.current ?? hipMidY) - hipMidY;
-        const isBodySync = hipDisplacement > (displacement * 0.4);
+        // Require hips to move up by at least 1.5% of body height to filter head nods,
+        // without requiring a strict 40% correlation which breaks on small hops.
+        const isBodySync = hipDisplacement > Math.max(4, bodyHeightRef.current * 0.015);
         const isWalkingLaterally = smoothedVelXRef.current > 130;
 
         if (jumpStatusRef.current === 'standing') {
             // Must have displacement + upward velocity + body sync (hips moving too)
-            if (displacement > jumpMinThreshold && velocityRef.current > 30 && isBodySync && !isWalkingLaterally) {
+            if (displacement > jumpMinThreshold && velocityRef.current > 15 && isBodySync && !isWalkingLaterally) {
                 jumpStatusRef.current = 'jumping';
                 peakY.current = displacement;
             } else if (Math.abs(velocityRef.current) < 15) {

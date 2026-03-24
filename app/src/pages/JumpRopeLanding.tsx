@@ -66,11 +66,27 @@ export default function JumpRopeLanding() {
                             <Activity className="w-5 h-5 text-blue-400" />
                         )}
                     </div>
+                    <div
+                        className="w-14 h-14 rounded-2xl flex items-center justify-center overflow-hidden shrink-0 border border-white/10"
+                        style={{ background: 'linear-gradient(135deg, rgba(255,255,255,0.05), rgba(255,255,255,0.01))' }}
+                    >
+                        <Activity className="w-7 h-7 text-primary" />
+                    </div>
                     <div>
-                        <h1 className="text-sm font-black tracking-widest uppercase text-white drop-shadow-md">
-                            {settings.appName || 'Jump Rope Pro'}
+                        <h1 
+                            className="text-[18px] font-extrabold tracking-[0.45em] uppercase"
+                            style={{ 
+                                background: 'linear-gradient(90deg, #818cf8 0%, #c084fc 45%, #22d3ee 100%)',
+                                WebkitBackgroundClip: 'text',
+                                WebkitTextFillColor: 'transparent',
+                                backgroundClip: 'text',
+                                color: 'transparent',
+                                filter: 'drop-shadow(0 0 15px rgba(129,140,248,0.3))'
+                            }}
+                        >
+                            JUMP ROPE PRO
                         </h1>
-                        <p className="text-[8px] font-bold tracking-[0.3em] uppercase text-blue-400/80">Performance Tracker</p>
+                        <p className="text-[7.5px] font-black tracking-[0.45em] uppercase text-white/30 mt-1.5 ml-0.5">Global Performance Elite</p>
                     </div>
                 </div>
             </header>

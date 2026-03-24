@@ -159,8 +159,8 @@ export default function JumpRopeTraining() {
         // --- Proximity Hysteresis & Stabilization ---
         // Enter at 0.38, Exit at 0.34 to prevent flickering
         const wasTooClose = setupStatusRef.current === 'TOO_CLOSE';
-        const isTooClose = wasTooClose ? (shoulderW > W * 0.34) : (shoulderW > W * 0.38);
-        const isApproaching = scaleVelocity > 180;
+        const isTooClose = wasTooClose ? (shoulderW > W * 0.35) : (shoulderW > W * 0.40); // Slightly more aggressive entry
+        const isApproaching = scaleVelocity > 200; // Require higher approach velocity to avoid jitter
         const isCurrentlyMoving = frameVelocityY > 400 || frameVelocityX > 200 || isApproaching;
         
         lastCenterY.current = noseY;
@@ -293,11 +293,12 @@ export default function JumpRopeTraining() {
             // Stability Checks:
             // 1. Minimum displacement (Height check)
             // 2. High velocity upward (Impulse check)
-            // 3. Proximity check (Too close blocks count)
-            // 4. Hip-displacement validation (Suppresses head-tilts)
-            const isBodyMoving = hipDisplacement > (jumpMinThreshold * 0.5);
+            const isBodyMoving = hipDisplacement > (jumpMinThreshold * 0.4);
             
-            if (displacement > jumpMinThreshold && velocityRef.current > 45 && !isTooClose && isBodyMoving) {
+            // Strict counting filter: Block if too close or moving towards camera
+            const isSuppressed = isTooClose || isApproaching;
+
+            if (displacement > jumpMinThreshold && velocityRef.current > 35 && !isSuppressed && isBodyMoving) {
                 jumpStatusRef.current = 'jumping';
                 peakY.current = displacement;
                 isJumpingRef.current = true;
@@ -325,7 +326,8 @@ export default function JumpRopeTraining() {
                 jumpStatusRef.current = 'standing';
                 cooldownRef.current = true;
                 isJumpingRef.current = false;
-                setTimeout(() => { cooldownRef.current = false; }, 150);
+                // Faster cooldown for high-speed jumps (90ms = ~660 RPM max theoretical)
+                setTimeout(() => { cooldownRef.current = false; }, 90);
             }
         }
     }, [isTracking, speak]);

@@ -196,34 +196,24 @@ export default function JumpRopeLayout() {
                             )}
                         </div>
 
-                        <div className="flex flex-col">
+                        <div className="h-10 w-[1px] bg-white/5 mx-1" />
+                        
+                        <div className="flex flex-col gap-0.5">
                             <h1 
-                                className="font-black text-[15px] tracking-widest leading-none uppercase" 
+                                className="font-extrabold text-[15.5px] tracking-[0.45em] leading-none uppercase" 
                                 style={{ 
-                                    background: 'linear-gradient(to right, #ffffff, var(--jr-text-soft))',
+                                    background: 'linear-gradient(90deg, #818cf8 0%, #c084fc 45%, #22d3ee 100%)',
                                     WebkitBackgroundClip: 'text',
                                     WebkitTextFillColor: 'transparent',
-                                    filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.5))'
+                                    backgroundClip: 'text',
+                                    color: 'transparent',
+                                    filter: 'drop-shadow(0 0 15px rgba(129,140,248,0.3))'
                                 }}
                             >
-                                {settings.appName ? (
-                                    settings.appName
-                                ) : (
-                                    <>
-                                        Jump Rope{' '}
-                                        <span style={{ 
-                                            background: 'linear-gradient(135deg, var(--color-primary, #ff3b30), #ffffff)', 
-                                            WebkitBackgroundClip: 'text', 
-                                            WebkitTextFillColor: 'transparent',
-                                            textShadow: '0 0 20px var(--jr-glow)' 
-                                        }}>
-                                            Pro
-                                        </span>
-                                    </>
-                                )}
+                                {settings.appName || 'JUMP ROPE PRO'}
                             </h1>
-                            <p className="text-[8px] font-black uppercase tracking-[0.3em] mt-1" style={{ color: 'var(--color-primary, #ff3b30)', opacity: settings.themeId === 'pure-white' ? 1 : 0.8 }}>
-                                Performance Tracker
+                            <p className="text-[7px] font-black uppercase tracking-[0.55em] text-white/20 ml-0.5">
+                                Performance Tracking Elite
                             </p>
                         </div>
                     </div>

@@ -23,7 +23,7 @@ export interface JrSettings {
 }
 
 const DEFAULT: JrSettings = {
-    appName: 'Jump Rope Pro',
+    appName: 'JUMP ROPE PRO',
     userName: '',
     logoDataUrl: '',
     profileDataUrl: '',
@@ -35,7 +35,9 @@ export function loadJrSettings(): JrSettings {
         const raw = localStorage.getItem(STORAGE_KEY);
         if (raw) {
             const parsed = JSON.parse(raw);
-            if (parsed.appName === 'JUMP ROP BRO') parsed.appName = 'Jump Rope Pro';
+            if (parsed.appName === 'JUMP ROP BRO' || parsed.appName === 'Jump Rope Pro' || parsed.appName === 'JUMP IQ') {
+                parsed.appName = 'JUMP ROPE PRO';
+            }
             return { ...DEFAULT, ...parsed };
         }
     } catch {}

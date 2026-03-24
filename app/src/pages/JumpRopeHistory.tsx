@@ -204,24 +204,30 @@ export default function JumpRopeHistoryPage() {
                                     )}
                                 </div>
 
-                                {/* Stats row */}
-                                <div className="flex items-center gap-3 ml-[2.75rem]">
-                                    <div className="flex items-center gap-1.5 flex-1 bg-white/[0.02] p-2 rounded-xl border border-white/[0.02]">
-                                        <Activity size={10} className="text-primary/60" />
-                                        <span className="text-sm font-black tabular-nums" style={{ color: 'var(--color-text-base)' }}>{session.jumps}</span>
-                                        <span className="text-[7px] font-black uppercase tracking-widest" style={{ color: 'var(--jr-text-low, rgba(255,255,255,0.3))' }}>Jumps</span>
+                                {/* Stats row - Optimized to fit on a single row without scrolling */}
+                                <div className="grid grid-cols-3 gap-2 ml-[2.75rem]">
+                                    <div className="flex items-center gap-1.5 bg-white/[0.03] px-2 py-1.5 rounded-xl border border-white/[0.03] min-w-0">
+                                        <Activity size={10} className="text-primary/60 shrink-0" />
+                                        <div className="flex flex-col leading-none">
+                                            <span className="text-xs font-black tabular-nums text-white truncate">{session.jumps}</span>
+                                            <span className="text-[6px] font-black uppercase tracking-tight text-white/30 truncate">Jumps</span>
+                                        </div>
                                     </div>
                                     
-                                    <div className="flex items-center gap-1.5 flex-1 bg-white/[0.02] p-2 rounded-xl border border-white/[0.02]">
-                                        <Zap size={10} className="text-orange-500/60" />
-                                        <span className="text-sm font-black tabular-nums" style={{ color: 'var(--color-text-base)' }}>{session.rpm || 0}</span>
-                                        <span className="text-[7px] font-black uppercase tracking-widest" style={{ color: 'var(--jr-text-low, rgba(255,255,255,0.3))' }}>RPM</span>
+                                    <div className="flex items-center gap-1.5 bg-white/[0.03] px-2 py-1.5 rounded-xl border border-white/[0.03] min-w-0">
+                                        <Zap size={10} className="text-orange-500/60 shrink-0" />
+                                        <div className="flex flex-col leading-none">
+                                            <span className="text-xs font-black tabular-nums text-white truncate">{session.rpm || 0}</span>
+                                            <span className="text-[6px] font-black uppercase tracking-tight text-white/30 truncate">RPM</span>
+                                        </div>
                                     </div>
                                     
-                                    <div className="flex items-center gap-1.5 flex-1 bg-white/[0.02] p-2 rounded-xl border border-white/[0.02]">
-                                        <Timer size={10} className="text-blue-500/60" />
-                                        <span className="text-sm font-black tabular-nums" style={{ color: 'var(--color-text-base)' }}>{(session.duration / 60).toFixed(1)}</span>
-                                        <span className="text-[7px] font-black uppercase tracking-widest" style={{ color: 'var(--jr-text-low, rgba(255,255,255,0.3))' }}>Mins</span>
+                                    <div className="flex items-center gap-1.5 bg-white/[0.03] px-2 py-1.5 rounded-xl border border-white/[0.03] min-w-0">
+                                        <Timer size={10} className="text-blue-500/60 shrink-0" />
+                                        <div className="flex flex-col leading-none">
+                                            <span className="text-xs font-black tabular-nums text-white truncate">{(session.duration / 60).toFixed(1)}</span>
+                                            <span className="text-[6px] font-black uppercase tracking-tight text-white/30 truncate">Mins</span>
+                                        </div>
                                     </div>
                                 </div>
                             </div>

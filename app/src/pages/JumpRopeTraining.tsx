@@ -376,11 +376,21 @@ export default function JumpRopeTraining() {
     const handleFinish = useCallback(() => {
         setIsSessionActive(false);
         isSessionActiveRef.current = false;
-        setFinalRestSecs(restTimeRef.current);
-        const finalRpm = Math.round(jumpCountRef.current / ((workTimeRef.current || 1) / 60)) || 0;
-        addSession({ jumps: jumpCountRef.current, duration: workTimeRef.current + restTimeRef.current, rpm: finalRpm });
+        
+        // Finalize Stat Calculations from Refs (Source of Truth)
+        const totalWork = workTimeRef.current;
+        const totalRest = restTimeRef.current;
+        const totalJumps = jumpCountRef.current;
+        const finalRpm = Math.round(totalJumps / ((totalWork || 1) / 60)) || 0;
+
+        setFinalRestSecs(totalRest);
+        setJumps(totalJumps);
+        setRpm(finalRpm);
+        setTotalSeconds(totalWork + totalRest);
+
+        addSession({ jumps: totalJumps, duration: totalWork + totalRest, rpm: finalRpm });
         setShowSummary(true);
-        speak(`${jumpCountRef.current} jumps completed.`);
+        speak(`${totalJumps} jumps completed.`);
     }, [addSession, speak]);
 
     const handleStart = () => {
@@ -420,34 +430,34 @@ export default function JumpRopeTraining() {
 
             {/* 2. Professional HUD Control Layer (TOP) */}
             <div className="absolute top-0 inset-x-0 z-50 p-6 flex flex-col gap-6 pointer-events-none">
-                <div className="flex items-center justify-between pointer-events-auto">
-                    {/* Retro-Styled Page Identification */}
+                <div className="flex items-start justify-between pointer-events-auto">
+                    {/* Compact Athletic Identification */}
                     <div className="flex flex-col">
                         <h1 className="text-3xl md:text-4xl font-black uppercase tracking-tighter text-blue-400 drop-shadow-[0_0_20px_rgba(96,165,250,0.4)]">
-                            Performance Tracker
+                            TRAIN
                         </h1>
-                        <div className="flex items-center gap-2 mt-1">
-                            <div className="w-4 h-[1px] bg-blue-400/50" />
-                            <p className="text-[9px] font-black uppercase tracking-[0.3em] text-white/40">
-                                Stand 2-3M Away • Full Body Visibility
+                        <div className="flex items-center gap-2 mt-2">
+                            <div className="w-6 h-[2px] bg-blue-400" />
+                            <p className="text-[10px] font-black uppercase tracking-[0.4em] text-white/50">
+                                Pro Performance Tracker
                             </p>
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-col items-end gap-2 shrink-0">
                         {/* Parity Action Buttons from Reference */}
                         <button 
                             onClick={() => setVoiceEnabled(!voiceEnabled)} 
-                            className={`px-4 py-2 rounded-xl border backdrop-blur-3xl flex items-center gap-2 transition-all active:scale-95 ${voiceEnabled ? 'bg-blue-400 text-black border-blue-400' : 'bg-white/5 border-white/10 text-white/40'}`}
+                            className={`min-w-[100px] h-9 rounded-2xl border backdrop-blur-3xl flex items-center justify-center gap-2 transition-all active:scale-95 mb-1 ${voiceEnabled ? 'bg-blue-400 text-black border-blue-400 shadow-[0_0_20px_rgba(96,165,250,0.3)]' : 'bg-white/5 border-white/10 text-white/40'}`}
                         >
-                            {voiceEnabled ? <Volume2 size={14} /> : <VolumeX size={14} />}
-                            <span className="text-[9px] font-black uppercase tracking-widest">{voiceEnabled ? 'VOICE ON' : 'VOICE OFF'}</span>
+                            {voiceEnabled ? <Volume2 size={12} className="fill-current" /> : <VolumeX size={12} />}
+                            <span className="text-[10px] font-black uppercase tracking-widest">{voiceEnabled ? 'VOICE ON' : 'VOICE OFF'}</span>
                         </button>
                         
                         {!isSessionActive && (
                             <button 
-                                onClick={() => navigate('/jump-rope/leaderboard')} 
-                                className="px-4 py-2 rounded-xl border border-white/10 bg-white/5 backdrop-blur-3xl text-white/40 text-[9px] font-black uppercase tracking-widest active:scale-95"
+                                onClick={() => navigate('/jump-rope/history')} 
+                                className="min-w-[100px] h-8 rounded-xl border border-white/10 bg-white/5 backdrop-blur-3xl text-white/40 text-[8px] font-black uppercase tracking-widest active:scale-95"
                             >
                                 SHOW HISTORY
                             </button>
@@ -683,7 +693,40 @@ export default function JumpRopeTraining() {
                     <p className="text-sm font-black uppercase tracking-[0.4em] text-red-500/60 mb-12">
                         Please Step Back
                     </p>
-                    <div className="flex flex-col items-center gap-3">
+
+                    <div className="flex flex-col items-center gap-4 w-full max-w-[280px] pointer-events-auto">
+                        {isSessionActive && (
+                            <div className="w-full flex flex-col items-center gap-2 mb-4 bg-white/5 border border-white/10 rounded-3xl py-6 backdrop-blur-3xl shadow-[0_20px_60px_rgba(0,0,0,0.5)]">
+                                <span className="text-blue-400 text-[10px] font-black uppercase tracking-[0.4em] mb-1">{intensityStatus}</span>
+                                <span className="font-mono text-3xl font-black tracking-widest text-white leading-none">
+                                    {timerRemaining !== null ? `${Math.floor(timerRemaining/60)}:${String(timerRemaining%60).padStart(2,'0')}` : `${Math.floor(totalSeconds/60)}:${String(totalSeconds%60).padStart(2,'0')}`}
+                                </span>
+                                {intensityStatus === 'RESTING' && currentRestSecs > 0 && (
+                                    <div className="flex items-center gap-2 mt-4 text-red-500 animate-pulse">
+                                        <Zap size={14} className="fill-red-500" />
+                                        <span className="font-mono font-black text-sm">{Math.floor(currentRestSecs/60)}:{String(currentRestSecs%60).padStart(2,'0')}</span>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        {isSessionActive && (
+                            <button 
+                                onClick={handleFinish}
+                                className="w-full py-4 rounded-2xl bg-white/10 border border-white/20 text-white font-black uppercase tracking-[0.2em] text-xs backdrop-blur-md active:scale-95 transition-all"
+                            >
+                                Finish Session
+                            </button>
+                        )}
+                        <button 
+                            onClick={() => navigate('/jump-rope')}
+                            className="w-full py-4 rounded-2xl bg-red-500/10 border border-red-500/20 text-red-500 font-black uppercase tracking-[0.2em] text-xs backdrop-blur-md active:scale-95 transition-all"
+                        >
+                            Back To Home
+                        </button>
+                    </div>
+
+                    <div className="mt-12 flex flex-col items-center gap-3">
                         <div className="w-1.5 h-1.5 rounded-full bg-white opacity-20" />
                         <div className="w-1.5 h-1.5 rounded-full bg-white opacity-40" />
                         <div className="w-1.5 h-1.5 rounded-full bg-white opacity-60" />

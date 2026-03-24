@@ -372,10 +372,14 @@ export function CallProvider({ children, currentUserId }: { children: React.Reac
                 // Wait for service worker to be ready
                 await navigator.serviceWorker.ready;
 
-                // Request permission
-                if (Notification.permission === 'default') {
+                // Request permission - ONLY if not already denied or opted out
+                const hasOptedOut = localStorage.getItem('academy_skip_notifications') === 'true';
+                if (Notification.permission === 'default' && !hasOptedOut) {
                     const permission = await Notification.requestPermission();
-                    if (permission !== 'granted') return;
+                    if (permission !== 'granted') {
+                        localStorage.setItem('academy_skip_notifications', 'true');
+                        return;
+                    }
                 } else if (Notification.permission === 'denied') {
                     return;
                 }
@@ -395,21 +399,16 @@ export function CallProvider({ children, currentUserId }: { children: React.Reac
                 }).eq('id', currentUserId);
 
                 if (updateError) {
-                    console.error('[Call] Failed to save subscription to DB:', updateError);
-                    toast.error('فشل في حفظ اشتراك الإشعارات في قاعدة البيانات');
+                    console.warn('[Call] Failed to save subscription to DB (Non-critical):', updateError);
                 } else {
                     console.log('[Call] Push subscription successful and saved.');
                     setPushReady(true);
                 }
 
             } catch (err: any) {
-                console.error('[Call] Failed to setup push notifications:', err);
+                // Silencing intrusive error toasts for non-critical calling service
+                console.warn('[Call] Notification setup skipped or failed:', err.message);
                 setPushReady(false);
-                if (err.message?.includes('registration failed')) {
-                    toast.error('فشل تسجيل الـ Service Worker - تأكد من استخدام HTTPS');
-                } else {
-                    toast.error('خطأ في إعداد الإشعارات: ' + (err.message || 'Unknown error'));
-                }
             }
         }
 
@@ -1039,7 +1038,7 @@ export function CallProvider({ children, currentUserId }: { children: React.Reac
                 console.log(`[CallContext] Realtime status for user ${currentUserId}:`, status);
                 setRealtimeStatus(status as any);
                 if (status === 'CHANNEL_ERROR') {
-                    console.error('[CallContext] Realtime channel error. Calls will not ring!');
+                    console.warn('[CallContext] Realtime connection standby (Calling features limited).');
                 }
             });
 

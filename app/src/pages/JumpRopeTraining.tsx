@@ -262,7 +262,7 @@ export default function JumpRopeTraining() {
 
         // --- 3. JUMP DETECTION LOGIC (Pixel Units) ---
         if (emaSmoothY.current === null) emaSmoothY.current = nose.y;
-        emaSmoothY.current = emaSmoothY.current * 0.4 + nose.y * 0.6;
+        emaSmoothY.current = (emaSmoothY.current ?? nose.y) * 0.4 + nose.y * 0.6;
         const currentSmoothY = emaSmoothY.current ?? nose.y;
         
         // Final Displacement (In Pixels)
@@ -288,8 +288,8 @@ export default function JumpRopeTraining() {
                 jumpStatusRef.current = 'jumping';
                 peakY.current = displacement;
             } else if (Math.abs(velocityRef.current) < 30) {
-                baselineY.current = baselineY.current * 0.95 + noseY_raw * 0.05;
-                baselineHipY.current = baselineHipY.current * 0.95 + hipMidY * 0.05;
+                baselineY.current = (baselineY.current ?? noseY_raw) * 0.95 + noseY_raw * 0.05;
+                baselineHipY.current = (baselineHipY.current ?? hipMidY) * 0.95 + hipMidY * 0.05;
             }
         } else {
             if (displacement > peakY.current) peakY.current = displacement;

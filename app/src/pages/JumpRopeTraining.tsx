@@ -32,10 +32,31 @@ export default function JumpRopeTraining() {
     const [countdownSecs, setCountdownSecs] = useState(0);
     const [timerRemaining, setTimerRemaining] = useState<number | null>(null);
     const [isTimerActive, setIsTimerActive] = useState(false);
+    const [showTimerPicker, setShowTimerPicker] = useState(false);
+    const minsScrollRef = useRef<HTMLDivElement>(null);
+    const secsScrollRef = useRef<HTMLDivElement>(null);
+    const ITEM_H = 44;
+    const MIN_OPTIONS = Array.from({length: 21}, (_, i) => i);
+    const SEC_OPTIONS = Array.from({length: 12}, (_, i) => i * 5);
 
-    // Timer Adjust Helpers
-    const adjustMins = (delta: number) => setCountdownMins(m => Math.max(0, Math.min(99, m + delta)));
-    const adjustSecs = (delta: number) => setCountdownSecs(s => Math.max(0, Math.min(59, s + delta)));
+    const openTimerPicker = () => {
+        setShowTimerPicker(true);
+        setTimeout(() => {
+            if (minsScrollRef.current) minsScrollRef.current.scrollTop = countdownMins * ITEM_H;
+            const sIdx = SEC_OPTIONS.indexOf(countdownSecs);
+            if (secsScrollRef.current) secsScrollRef.current.scrollTop = (sIdx >= 0 ? sIdx : 0) * ITEM_H;
+        }, 60);
+    };
+
+    const handleMinsScroll = (e: React.UIEvent<HTMLDivElement>) => {
+        const idx = Math.round(e.currentTarget.scrollTop / ITEM_H);
+        setCountdownMins(MIN_OPTIONS[Math.min(idx, MIN_OPTIONS.length - 1)] ?? 0);
+    };
+
+    const handleSecsScroll = (e: React.UIEvent<HTMLDivElement>) => {
+        const idx = Math.round(e.currentTarget.scrollTop / ITEM_H);
+        setCountdownSecs(SEC_OPTIONS[Math.min(idx, SEC_OPTIONS.length - 1)] ?? 0);
+    };
 
     // --- Voice Synthesis ---
     const speak = useCallback((text: string) => {
@@ -71,6 +92,8 @@ export default function JumpRopeTraining() {
     const intensityHistoryRef = useRef<any[]>([]);
     const cooldownRef = useRef(false);
     const isTimerStartedRef = useRef(false);
+    const isTimerActiveRef = useRef(false); // mirrors isTimerActive state to avoid stale closure
+    const smoothedVelXRef = useRef(0); // EMA of horizontal velocity
 
     const handleVideoLoad = () => {
         setIsLoading(false);
@@ -178,6 +201,9 @@ export default function JumpRopeTraining() {
         lastNoseX.current = noseX;
         lastShoulderWidth.current = shoulderW;
 
+        // Smooth the horizontal velocity to prevent single-frame jitter from blocking jumps
+        smoothedVelXRef.current = smoothedVelXRef.current * 0.6 + frameVelocityX * 0.4;
+
         // --- STABLE PERSISTENCE LOGIC ---
         if (isStableRef.current) {
             // Balanced Approach Guard: Needs 0.6s persistent proximity to reset
@@ -261,12 +287,16 @@ export default function JumpRopeTraining() {
         setMovementPct(Math.round(pct));
 
         // State Machine
+        // LATERAL GUARD: If person is walking left/right, don't count as jump
+        // Walking produces high horizontal velocity while jumps produce minimal X movement
+        const isWalkingLaterally = smoothedVelXRef.current > 120;
+
         if (jumpStatusRef.current === 'standing') {
             // Ankle check is a BONUS signal, not a blocker — nose alone can still trigger
             const ankleBonusOk = !isFullBody || isAnkleUp;
             const jumpTriggered = displacement > jumpMinThreshold && (ankleBonusOk || displacement > jumpMinThreshold * 1.5);
             
-            if (jumpTriggered && velocityRef.current > 35) {
+            if (jumpTriggered && velocityRef.current > 35 && !isWalkingLaterally) {
                 jumpStatusRef.current = 'jumping';
                 peakY.current = displacement;
             } else if (Math.abs(velocityRef.current) < 15 && baselineY.current !== null) {
@@ -279,8 +309,8 @@ export default function JumpRopeTraining() {
             const landed = (velocityRef.current < -25 || displacement < jumpMinThreshold * 0.5);
 
             if (landed && !cooldownRef.current) {
-                // Success! Block if user is already pushing forward for real
-                if (peakY.current > jumpMinThreshold && scaleVelocity < 100) {
+                // Success! Block if person was walking laterally at peak OR moving toward camera
+                if (peakY.current > jumpMinThreshold && scaleVelocity < 100 && !isWalkingLaterally) {
                     jumpCountRef.current += 1;
                     setJumps(jumpCountRef.current);
                     if ('vibrate' in navigator) navigator.vibrate(50);
@@ -289,6 +319,7 @@ export default function JumpRopeTraining() {
                     const now = Date.now();
                     if (timerRemainingRef.current !== null && !isTimerStartedRef.current) {
                         isTimerStartedRef.current = true;
+                        isTimerActiveRef.current = true;
                         setIsTimerActive(true);
                         speak("Session started. Good luck!");
                     }
@@ -354,7 +385,7 @@ export default function JumpRopeTraining() {
                 setRpm(Math.round(jumpCountRef.current / ((workTimeRef.current || 1) / 60)) || 0);
             }
 
-            if (timerRemainingRef.current !== null && isTimerActive) {
+            if (timerRemainingRef.current !== null && isTimerActiveRef.current) {
                 const nextValue = Math.max(0, timerRemainingRef.current - 1);
                 timerRemainingRef.current = nextValue;
                 setTimerRemaining(nextValue);
@@ -390,6 +421,7 @@ export default function JumpRopeTraining() {
         }
         setIsTracking(true);
         setIsTimerActive(false);
+        isTimerActiveRef.current = false;
         isTimerStartedRef.current = false;
         jumpCountRef.current = 0;
         setJumps(0);
@@ -417,24 +449,64 @@ export default function JumpRopeTraining() {
                     <ArrowLeft size={16} />
                 </button>
 
-                {/* Centered Countdown Picker: Antigravity Pill Spinner */}
-                {!isTracking && (
-                    <div className="flex items-center gap-1 border backdrop-blur-3xl rounded-full px-2 py-0.5" style={{ background: 'var(--jr-surface, rgba(255,255,255,0.01))', borderColor: 'var(--jr-text-low, rgba(255,255,255,0.1))' }}>
-                        {/* Minutes */}
-                        <div className="flex flex-col items-center">
-                            <button onClick={() => adjustMins(1)} className="w-5 h-4 flex items-center justify-center text-white/20 hover:text-primary transition-colors text-[9px] leading-none active:scale-90">▲</button>
-                            <span className="font-mono font-black text-xs w-6 text-center leading-none py-0.5" style={{ color: 'var(--color-text-base)' }}>{String(countdownMins).padStart(2, '0')}</span>
-                            <button onClick={() => adjustMins(-1)} className="w-5 h-4 flex items-center justify-center text-white/20 hover:text-primary transition-colors text-[9px] leading-none active:scale-90">▼</button>
+                {/* Tap-to-Open Timer Pill */}
+                {!isTracking && (() => {
+                    const hasTimer = countdownMins > 0 || countdownSecs > 0;
+                    return (
+                        <button onClick={openTimerPicker} className="flex items-center gap-1.5 border backdrop-blur-3xl rounded-full px-3 py-1.5 transition-all active:scale-95" style={{ background: 'var(--jr-surface, rgba(255,255,255,0.02))', borderColor: hasTimer ? 'rgba(255,59,48,0.35)' : 'rgba(255,255,255,0.08)' }}>
+                            <Clock size={9} style={{ color: hasTimer ? '#ff3b30' : 'rgba(255,255,255,0.2)' }} />
+                            <span className="font-mono font-black text-[11px] tracking-wider" style={{ color: hasTimer ? 'var(--color-text-base)' : 'rgba(255,255,255,0.3)' }}>
+                                {String(countdownMins).padStart(2,'0')}:{String(countdownSecs).padStart(2,'0')}
+                            </span>
+                        </button>
+                    );
+                })()}
+
+                {/* iOS-Style Scroll Wheel Picker */}
+                {showTimerPicker && (
+                    <div className="fixed inset-0 z-[200] flex items-center justify-center" onClick={() => setShowTimerPicker(false)}>
+                        <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+                        <div className="relative z-10 rounded-3xl border overflow-hidden" style={{ background: 'rgba(10,10,12,0.98)', borderColor: 'rgba(255,255,255,0.08)', width: 220 }} onClick={e => e.stopPropagation()}>
+                            <div className="px-5 pt-5 pb-1 text-center">
+                                <span className="text-[9px] font-black uppercase tracking-[0.3em] opacity-25" style={{ color: 'var(--color-text-base)' }}>SET TIMER</span>
+                            </div>
+                            <div className="flex items-center justify-center gap-2 px-5 py-3">
+                                {/* Minutes */}
+                                <div className="flex flex-col items-center flex-1">
+                                    <span className="text-[7px] font-black uppercase tracking-widest opacity-20 mb-1" style={{ color: 'var(--color-text-base)' }}>MIN</span>
+                                    <div className="relative rounded-xl overflow-hidden" style={{ height: ITEM_H * 3 }}>
+                                        <div className="absolute inset-x-0 pointer-events-none z-10" style={{ top: ITEM_H, height: ITEM_H, background: 'rgba(255,59,48,0.07)', borderTop: '1px solid rgba(255,59,48,0.2)', borderBottom: '1px solid rgba(255,59,48,0.2)' }} />
+                                        <div ref={minsScrollRef} onScroll={handleMinsScroll} className="h-full overflow-y-scroll" style={{ scrollSnapType: 'y mandatory', scrollbarWidth: 'none' }}>
+                                            <div style={{ height: ITEM_H }} />
+                                            {MIN_OPTIONS.map(m => (
+                                                <div key={m} style={{ height: ITEM_H, scrollSnapAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }} onClick={() => { setCountdownMins(m); if (minsScrollRef.current) minsScrollRef.current.scrollTop = m * ITEM_H; }}>
+                                                    <span className="font-mono font-black text-2xl transition-all" style={{ color: m === countdownMins ? '#fff' : 'rgba(255,255,255,0.15)' }}>{String(m).padStart(2,'0')}</span>
+                                                </div>
+                                            ))}
+                                            <div style={{ height: ITEM_H }} />
+                                        </div>
+                                    </div>
+                                </div>
+                                <span className="font-black text-2xl pb-1 opacity-20" style={{ color: 'var(--color-text-base)' }}>:</span>
+                                {/* Seconds */}
+                                <div className="flex flex-col items-center flex-1">
+                                    <span className="text-[7px] font-black uppercase tracking-widest opacity-20 mb-1" style={{ color: 'var(--color-text-base)' }}>SEC</span>
+                                    <div className="relative rounded-xl overflow-hidden" style={{ height: ITEM_H * 3 }}>
+                                        <div className="absolute inset-x-0 pointer-events-none z-10" style={{ top: ITEM_H, height: ITEM_H, background: 'rgba(255,59,48,0.07)', borderTop: '1px solid rgba(255,59,48,0.2)', borderBottom: '1px solid rgba(255,59,48,0.2)' }} />
+                                        <div ref={secsScrollRef} onScroll={handleSecsScroll} className="h-full overflow-y-scroll" style={{ scrollSnapType: 'y mandatory', scrollbarWidth: 'none' }}>
+                                            <div style={{ height: ITEM_H }} />
+                                            {SEC_OPTIONS.map(s => (
+                                                <div key={s} style={{ height: ITEM_H, scrollSnapAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }} onClick={() => { setCountdownSecs(s); if (secsScrollRef.current) secsScrollRef.current.scrollTop = (s/5) * ITEM_H; }}>
+                                                    <span className="font-mono font-black text-2xl transition-all" style={{ color: s === countdownSecs ? '#fff' : 'rgba(255,255,255,0.15)' }}>{String(s).padStart(2,'0')}</span>
+                                                </div>
+                                            ))}
+                                            <div style={{ height: ITEM_H }} />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <button onClick={() => setShowTimerPicker(false)} className="w-full py-4 text-[11px] font-black uppercase tracking-[0.3em] transition-all active:opacity-70" style={{ borderTop: '1px solid rgba(255,255,255,0.06)', color: '#ff3b30' }}>DONE</button>
                         </div>
-                        <span className="font-black text-xs mx-0.5" style={{ color: 'var(--jr-text-low, rgba(255,255,255,0.2))' }}>:</span>
-                        {/* Seconds */}
-                        <div className="flex flex-col items-center">
-                            <button onClick={() => adjustSecs(5)} className="w-5 h-4 flex items-center justify-center text-white/20 hover:text-primary transition-colors text-[9px] leading-none active:scale-90">▲</button>
-                            <span className="font-mono font-black text-xs w-6 text-center leading-none py-0.5" style={{ color: 'var(--color-text-base)' }}>{String(countdownSecs).padStart(2, '0')}</span>
-                            <button onClick={() => adjustSecs(-5)} className="w-5 h-4 flex items-center justify-center text-white/20 hover:text-primary transition-colors text-[9px] leading-none active:scale-90">▼</button>
-                        </div>
-                        <div className="w-[1px] h-4 ml-1" style={{ background: 'var(--jr-text-low, rgba(255,255,255,0.05))' }} />
-                        <Clock size={10} className="ml-1" style={{ color: 'var(--jr-text-low, rgba(255,255,255,0.2))' }} />
                     </div>
                 )}
                 
@@ -547,8 +619,8 @@ export default function JumpRopeTraining() {
                                 <span className="text-[7px] font-bold uppercase tracking-[0.2em]" style={{ color: 'var(--jr-text-low, rgba(255,255,255,0.2))' }}>Avg RPM</span>
                             </div>
                             <div className="border backdrop-blur-3xl rounded-2xl p-4 flex flex-col items-center text-center" style={{ background: 'var(--jr-surface, rgba(255,255,255,0.03))', borderColor: 'var(--jr-text-low, rgba(255,255,255,0.1))' }}>
-                                <span className="text-xs font-black mb-0.5 pt-2" style={{ color: 'var(--color-text-base)' }}>{Math.floor(activeSeconds/60)}m {activeSeconds%60}s</span>
-                                <span className="text-[7px] font-bold uppercase tracking-[0.2em] mt-1" style={{ color: 'var(--jr-text-low, rgba(255,255,255,0.2))' }}>Duration</span>
+                                <span className="text-xs font-black mb-0.5 pt-2" style={{ color: 'var(--color-text-base)' }}>{Math.floor(totalSeconds/60)}m {totalSeconds%60}s</span>
+                                <span className="text-[7px] font-bold uppercase tracking-[0.2em] mt-1" style={{ color: 'var(--jr-text-low, rgba(255,255,255,0.2))' }}>Total</span>
                             </div>
                         </div>
 

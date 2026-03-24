@@ -194,14 +194,33 @@ export default function JumpRopeTraining() {
         const hipMidY = lHip2 && rHip2 ? ((lHip2.y + rHip2.y) / 2) * H : (lHip2?.y ?? rHip2?.y ?? nose.y) * H;
         const hipMidX = lHip2 && rHip2 ? ((lHip2.x + rHip2.x) / 2) * W : (lHip2?.x ?? rHip2?.x ?? nose.x) * W;
 
-        // Visual Indicator: Highlight the nose tracking point
-        canvasCtx.beginPath();
-        canvasCtx.arc(noseX, noseY, 4, 0, 2 * Math.PI);
-        canvasCtx.fillStyle = '#ff3b30';
-        canvasCtx.shadowBlur = 10;
-        canvasCtx.shadowColor = '#ff3b30';
-        canvasCtx.fill();
-        canvasCtx.shadowBlur = 0;
+        // --- 1. VISUAL FEEDBACK: SMART TRACKING DOTS ---
+        if (canvasCtx) {
+            canvasCtx.clearRect(0, 0, 640, 480);
+            
+            // Red Nose Dot (Primary Measurement)
+            canvasCtx.globalAlpha = 0.8;
+            canvasCtx.fillStyle = '#ff3b30'; // Jump IQ Red
+            canvasCtx.beginPath();
+            canvasCtx.arc(noseX, noseY, 6, 0, Math.PI * 2);
+            canvasCtx.fill();
+            
+            // Green Hip Sync Dot (Validates Body Movement)
+            if (lHip2 && rHip2) {
+                canvasCtx.fillStyle = '#10b981'; // Emerald Green
+                canvasCtx.beginPath();
+                canvasCtx.arc(hipMidX, hipMidY, 6, 0, Math.PI * 2);
+                canvasCtx.fill();
+                
+                // Pulse sync ring
+                canvasCtx.strokeStyle = '#10b981'; 
+                canvasCtx.lineWidth = 1;
+                canvasCtx.beginPath();
+                canvasCtx.arc(hipMidX, hipMidY, 10 + (Math.sin(Date.now() / 150) * 3), 0, Math.PI * 2);
+                canvasCtx.stroke();
+            }
+            canvasCtx.globalAlpha = 1.0;
+        }
 
         // --- STABILITY & PROXIMITY GUARD ---
         const isFullBody = !!(lAnkle2 && rAnkle2);
@@ -281,8 +300,8 @@ export default function JumpRopeTraining() {
         // Displacement in Pixels
         const displacement = (baselineY.current - smoothY) * H;
         
-        // Final Sensitivity: 1.5% of body height (Ultra Sensitive for Hops)
-        const jumpMinThreshold = Math.max(8, bodyHeightRef.current * 0.015);
+        // Smart Sensitivity: 3.5% of body height (Filters nodes, catches hops)
+        const jumpMinThreshold = Math.max(12, bodyHeightRef.current * 0.035);
         
         // Standard Velocity: Pixels Per Second
         const rawVelPxPerSec = ((displacement - lastDisplacementRef.current) / Math.max(1, deltaTime)) * 1000;
@@ -291,13 +310,17 @@ export default function JumpRopeTraining() {
         const pct = Math.max(0, Math.min(100, (displacement / (bodyHeightRef.current * 0.12)) * 100));
         setMovementPct(Math.round(pct));
 
-        // EMERGENCY RELAXATION: Only Vertical Nose Movement
+        // --- SMART SYNC LAYER: Filters Head Nodes ---
+        const hipDisplacement = ((baselineHipY.current ?? hipMidY) - hipMidY) * H;
+        // Require hips to rise by at least 30% of the head's rise to be a 'Jump'
+        const isBodySync = hipDisplacement > Math.max(4, displacement * 0.3);
+
         if (jumpStatusRef.current === 'standing') {
-            // Very sensitive: Any upward velocity over 20px/sec + small displacement
-            if (displacement > jumpMinThreshold && velocityRef.current > 20) {
+            // Must have displacement (px) + upward velocity (px/sec) + body sync (hip movement)
+            if (displacement > jumpMinThreshold && velocityRef.current > 40 && isBodySync) {
                 jumpStatusRef.current = 'jumping';
                 peakY.current = displacement;
-            } else if (Math.abs(velocityRef.current) < 20) {
+            } else if (Math.abs(velocityRef.current) < 30) {
                 baselineY.current = (baselineY.current ?? smoothY) * 0.95 + smoothY * 0.05;
                 if (baselineHipY.current !== null) {
                     baselineHipY.current = baselineHipY.current * 0.95 + hipMidY * 0.05;

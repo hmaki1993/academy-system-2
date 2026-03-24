@@ -286,15 +286,6 @@ export default function JumpRopeTraining() {
                 jumpStatusRef.current = 'jumping';
                 peakY.current = displacement;
                 isJumpingRef.current = true;
-
-                // INSTANT TRIGGER: Start the timer on the FIRST jump IMPULSE for best UX
-                if (!isTimerStartedRef.current && isSessionActiveRef.current) {
-                    isTimerStartedRef.current = true;
-                    isTimerActiveRef.current = true;
-                    setIsTimerActive(true);
-                    speak("Session started! Let's go!");
-                    lastActivityTimeRef.current = now;
-                }
             } else if (Math.abs(velocityRef.current) < 25 && baselineY.current !== null) {
                 baselineY.current = (baselineY.current + (smoothY / H)) / 2;
             }
@@ -306,7 +297,12 @@ export default function JumpRopeTraining() {
                 if (peakY.current > jumpMinThreshold && isSessionActiveRef.current) {
                     jumpCountRef.current++;
                     setJumps(jumpCountRef.current);
-                    speak(jumpCountRef.current.toString());
+                    
+                    // Voice Announcement only every 10 jumps
+                    if (jumpCountRef.current % 10 === 0) {
+                        speak(jumpCountRef.current.toString());
+                    }
+                    
                     if ('vibrate' in navigator) navigator.vibrate(50);
                     lastActivityTimeRef.current = now;
                 }
@@ -411,9 +407,10 @@ export default function JumpRopeTraining() {
         setIsTracking(true); // Camera must be on
         setIsSessionActive(true);
         isSessionActiveRef.current = true;
-        setIsTimerActive(false);
-        isTimerActiveRef.current = false;
-        isTimerStartedRef.current = false;
+        setIsTimerActive(true); // Explicitly start timer now as requested
+        isTimerActiveRef.current = true;
+        isTimerStartedRef.current = true; // Use the manual start as the trigger
+        speak("Session ready. Start jumping now!");
         jumpCountRef.current = 0;
         setJumps(0);
         setRpm(0);

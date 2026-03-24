@@ -1,5 +1,5 @@
 import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
-import { Play, Square, RefreshCcw, Activity, Pause, Camera, Volume2, VolumeX, TrendingUp, Trophy, Clock, Zap, ArrowLeft, X, Loader2 } from 'lucide-react';
+import { Play, Square, RefreshCcw, Activity, Pause, Camera, Volume2, VolumeX, TrendingUp, Trophy, Clock, Zap, ArrowLeft, X, Loader2, AlertTriangle } from 'lucide-react';
 import Webcam from 'react-webcam';
 import { useAddJumpRopeSession } from '../hooks/useData';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
@@ -158,10 +158,14 @@ export default function JumpRopeTraining() {
         const isTooClose = shoulderW > (W * 0.38);
         const isApproaching = scaleVelocity > 180;
         const isCurrentlyMoving = frameVelocityY > 400 || frameVelocityX > 200 || isApproaching;
-
+        
         lastCenterY.current = noseY;
         lastCenterX.current = noseX;
         lastShoulderWidth.current = shoulderW;
+
+        // --- HIP STABILITY & TRACKING ---
+        const hMidX = lHip && rHip ? ((lHip.x + rHip.x) / 2) * W : null;
+        const hMidY = lHip && rHip ? ((lHip.y + rHip.y) / 2) * H : null;
 
         // --- STABLE PERSISTENCE LOGIC ---
         if (isStableRef.current) {
@@ -179,7 +183,7 @@ export default function JumpRopeTraining() {
                 setSetupStatus('READY');
             }
 
-            const essentialTrackingLost = !hasAura || (!lAnkle && !rAnkle);
+            const essentialTrackingLost = !hasAura || (!lAnkle && !rAnkle) || !hMidY;
             if (essentialTrackingLost) {
                 if (trackingLossStartRef.current === null) {
                     trackingLossStartRef.current = now;
@@ -195,6 +199,7 @@ export default function JumpRopeTraining() {
                 stabilityStartRef.current = null;
                 setSetupStatus(isTooClose ? 'TOO_CLOSE' : !isFullBody ? 'STEP_BACK' : 'MOVING');
                 baselineY.current = nose.y;
+                baselineHipY.current = hMidY !== null ? hMidY / H : null;
                 setMovementPct(0);
                 return;
             }
@@ -206,11 +211,13 @@ export default function JumpRopeTraining() {
                 setSetupStatus('READY');
             }
             baselineY.current = nose.y;
+            baselineHipY.current = hMidY !== null ? hMidY / H : null;
             return;
         }
 
-        if (baselineY.current === null) {
+        if (baselineY.current === null || baselineHipY.current === null) {
             baselineY.current = nose.y;
+            baselineHipY.current = hMidY !== null ? hMidY / H : null;
             return;
         }
 
@@ -226,6 +233,11 @@ export default function JumpRopeTraining() {
 
         // Relative Movement
         const displacement = (bY * H) - smoothY;
+        
+        // Hip Displacement (Supresses Head Tilts)
+        const bHipY = baselineHipY.current ?? (hMidY ? hMidY / H : 0);
+        const hipDisplacement = hMidY !== null ? (bHipY * H) - hMidY : 0;
+
         velocityRef.current = (velocityRef.current * 0.3) + ((displacement - lastDisplacementRef.current) / deltaTime * 0.7);
         lastDisplacementRef.current = displacement;
 
@@ -241,9 +253,7 @@ export default function JumpRopeTraining() {
         canvasCtx.arc(noseX, noseY, 6, 0, Math.PI * 2);
         canvasCtx.fill();
         // Green Hip Sync Dot
-        if (lHip && rHip) {
-            const hMidX = ((lHip.x + rHip.x) / 2) * W;
-            const hMidY = ((lHip.y + rHip.y) / 2) * H;
+        if (hMidX !== null && hMidY !== null) {
             canvasCtx.fillStyle = '#10b981';
             canvasCtx.beginPath();
             canvasCtx.arc(hMidX, hMidY, 6, 0, Math.PI * 2);
@@ -256,7 +266,7 @@ export default function JumpRopeTraining() {
             canvasCtx.beginPath();
             canvasCtx.moveTo(0, bYLine - jumpMinThreshold);
             canvasCtx.lineTo(W, bYLine - jumpMinThreshold);
-            canvasCtx.strokeStyle = jumpStatusRef.current === 'jumping' ? 'rgba(255, 59, 48, 0.4)' : 'rgba(255, 255, 255, 0.15)';
+            canvasCtx.strokeStyle = jumpStatusRef.current === 'jumping' ? 'rgba(96, 165, 250, 0.4)' : 'rgba(255, 255, 255, 0.15)';
             canvasCtx.setLineDash([8, 4]);
             canvasCtx.stroke();
             canvasCtx.setLineDash([]);
@@ -264,12 +274,17 @@ export default function JumpRopeTraining() {
 
         // State Machine
         if (jumpStatusRef.current === 'standing') {
-            // Block if user is too close or approaching
-            if (displacement > jumpMinThreshold && velocityRef.current > 40 && !isTooClose && !isApproaching) {
+            // BLOCK HEAD TILTS: A real jump requires at least 40% of the movement from the hips
+            const isBodyMoving = hipDisplacement > (jumpMinThreshold * 0.4);
+            
+            if (displacement > jumpMinThreshold && velocityRef.current > 40 && !isTooClose && !isApproaching && isBodyMoving) {
                 jumpStatusRef.current = 'jumping';
                 peakY.current = displacement;
             } else if (Math.abs(velocityRef.current) < 25 && baselineY.current !== null) {
                 baselineY.current = (baselineY.current ?? nose.y) * 0.95 + (smoothY / H) * 0.05;
+                if (hMidY !== null) {
+                    baselineHipY.current = (baselineHipY.current ?? hMidY / H) * 0.95 + (hMidY / H) * 0.05;
+                }
             }
         } else {
             if (displacement > peakY.current) peakY.current = displacement;
@@ -653,6 +668,28 @@ export default function JumpRopeTraining() {
                         <button onClick={() => setShowSummary(false)} className="w-full py-4 border font-black uppercase text-[10px] tracking-[0.3em] rounded-2xl transition-all backdrop-blur-3xl bg-white/5 border-white/10 text-white">
                             Dismiss Report
                         </button>
+                    </div>
+                </div>
+            )}
+            {/* 6. FULLSCREEN PROXIMITY OVERLAY (The Requested Blocker) */}
+            {setupStatus === 'TOO_CLOSE' && (
+                <div className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-[25px] flex flex-col items-center justify-center p-12 text-center animate-in fade-in duration-700">
+                    <div className="w-24 h-24 rounded-full bg-red-500/20 border border-red-500/30 flex items-center justify-center mb-10 share-shadow-[0_0_50px_rgba(239,68,68,0.3)] animate-pulse">
+                        <AlertTriangle size={48} className="text-red-500" />
+                    </div>
+                    <h2 className="text-4xl md:text-5xl font-black uppercase tracking-tighter text-white mb-4">
+                        Too Close
+                    </h2>
+                    <p className="text-sm font-black uppercase tracking-[0.4em] text-red-500/60 mb-12">
+                        Please Step Back
+                    </p>
+                    <div className="flex flex-col items-center gap-3">
+                        <div className="w-1.5 h-1.5 rounded-full bg-white opacity-20" />
+                        <div className="w-1.5 h-1.5 rounded-full bg-white opacity-40" />
+                        <div className="w-1.5 h-1.5 rounded-full bg-white opacity-60" />
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-white/30 max-w-[200px] leading-relaxed">
+                            Stand 2-3 meters away until your full body is visible
+                        </p>
                     </div>
                 </div>
             )}

@@ -23,7 +23,7 @@ export default function JumpRopeTraining() {
     const [showSummary, setShowSummary] = useState(false);
     const [activeSeconds, setActiveSeconds] = useState(0);
     const [totalSeconds, setTotalSeconds] = useState(0);
-    const [intensityStatus, setIntensityStatus] = useState<'WORKING' | 'RESTING'>('RESTING');
+    const [intensityStatus, setIntensityStatus] = useState<'WORKING' | 'RESTING' | 'READY'>('READY');
     const [voiceEnabled, setVoiceEnabled] = useState(true);
     const [rpm, setRpm] = useState(0);
     const [finalRestSecs, setFinalRestSecs] = useState(0);
@@ -321,7 +321,7 @@ export default function JumpRopeTraining() {
                     if ('vibrate' in navigator) navigator.vibrate(50);
 
                     const now = Date.now();
-                    if (timerRemainingRef.current !== null && !isTimerStartedRef.current) {
+                    if (!isTimerStartedRef.current) {
                         isTimerStartedRef.current = true;
                         isTimerActiveRef.current = true;
                         setIsTimerActive(true);
@@ -364,8 +364,8 @@ export default function JumpRopeTraining() {
         if (!isSessionActive) return;
         const interval = setInterval(() => {
             const now = Date.now();
-            setTotalSeconds(s => s + 1);
             if (!isTimerActiveRef.current) return;
+            setTotalSeconds(s => s + 1);
             
             const isWorking = lastActivityTimeRef.current > 0 && (now - lastActivityTimeRef.current) < 4000;
             if (isWorking) {
@@ -432,6 +432,8 @@ export default function JumpRopeTraining() {
         restTimeRef.current = 0;
         lastActivityTimeRef.current = 0;
         intensityHistoryRef.current = [];
+        setIntensityStatus('READY');
+        setCurrentRestSecs(0);
     };
 
     return (
@@ -460,8 +462,8 @@ export default function JumpRopeTraining() {
                             onClick={openTimerPicker} 
                             className="flex items-center gap-2 border backdrop-blur-3xl rounded-full px-4 py-2 shadow-[0_8px_32px_rgba(0,0,0,0.5)] transition-all active:scale-95" 
                             style={{ 
-                                background: 'var(--jr-surface, rgba(255,255,255,0.12))', 
-                                borderColor: hasTimer ? 'rgba(255,59,48,0.35)' : 'var(--jr-text-low, rgba(255,255,255,0.2))' 
+                                background: 'var(--jr-surface, rgba(15,15,18,0.65))', 
+                                borderColor: hasTimer ? 'rgba(255,59,48,0.35)' : 'var(--jr-text-low, rgba(255,255,255,0.12))' 
                             }}
                         >
                             <Clock size={12} style={{ color: hasTimer ? '#ff3b30' : 'rgba(255,255,255,0.4)' }} />
@@ -523,7 +525,7 @@ export default function JumpRopeTraining() {
                 {isSessionActive && (
                    <div className="flex items-center gap-3">
                        {/* Main Session Timer */}
-                       <div className="flex items-center gap-2 border backdrop-blur-3xl rounded-full px-4 py-2 shadow-[0_8px_32px_rgba(0,0,0,0.5)]" style={{ background: 'var(--jr-surface, rgba(255,255,255,0.12))', borderColor: 'var(--jr-text-low, rgba(255,255,255,0.2))' }}>
+                       <div className="flex items-center gap-2 border backdrop-blur-3xl rounded-full px-4 py-2 shadow-[0_8px_32px_rgba(0,0,0,0.5)]" style={{ background: 'var(--jr-surface, rgba(15,15,18,0.65))', borderColor: 'var(--jr-text-low, rgba(255,255,255,0.12))' }}>
                            <div className="flex flex-col items-center leading-none min-w-0">
                                <span className="text-primary text-[8px] font-black uppercase tracking-[0.2em] mb-1 opacity-100 truncate">{intensityStatus}</span>
                                <span className="font-mono text-sm font-black tracking-wider truncate" style={{ color: 'var(--color-text-base, #fff)' }}>{timerRemaining !== null ? `${Math.floor(timerRemaining/60)}:${String(timerRemaining%60).padStart(2,'0')}` : `${Math.floor(totalSeconds/60)}:${String(totalSeconds%60).padStart(2,'0')}`}</span>

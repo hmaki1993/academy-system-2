@@ -26,6 +26,7 @@ export default function JumpRopeTraining() {
     const [intensityStatus, setIntensityStatus] = useState<'WORKING' | 'RESTING'>('RESTING');
     const [voiceEnabled, setVoiceEnabled] = useState(true);
     const [rpm, setRpm] = useState(0);
+    const [finalRestSecs, setFinalRestSecs] = useState(0);
     
     // Countdown Timer State
     const [countdownMins, setCountdownMins] = useState(0);
@@ -179,34 +180,37 @@ export default function JumpRopeTraining() {
         const lAnkle2 = LM[27];
         const rAnkle2 = LM[28];
 
-        if (!nose || !lShoulder2 || !rShoulder2) return;
+        if (!lShoulder2 || !rShoulder2) return;
+
+        // === CORE TRACKING: Use HIP MIDPOINT (true center of mass) ===
+        // Hip mid is NOT affected by head raise/tilt, unlike nose landmark.
+        const hipMidX = lHip2 && rHip2 ? ((lHip2.x + rHip2.x) / 2) * W : (lHip2?.x ?? rHip2?.x ?? 0.5) * W;
+        const hipMidY = lHip2 && rHip2 ? ((lHip2.y + rHip2.y) / 2) * H : (lHip2?.y ?? rHip2?.y ?? 0.5) * H;
+        const hasHips = !!(lHip2 || rHip2);
+
+        if (!hasHips) return;
 
         // --- STABILITY & FULL BODY & PROXIMITY GUARD ---
         const isFullBody = !!(lAnkle2 && rAnkle2);
         const hasAura = !!(lShoulder2 || rShoulder2 || lHip2 || rHip2);
-        const noseY = nose.y * H;
-        const noseX = nose.x * W;
         const shoulderW = Math.abs(lShoulder2.x - rShoulder2.x) * W;
 
-        const frameVelocityY = Math.abs(lastNoseY.current - noseY) / deltaTime;
-        const frameVelocityX = Math.abs(lastNoseX.current - noseX) / deltaTime;
+        const frameVelocityY = Math.abs(lastNoseY.current - hipMidY) / deltaTime;
+        const frameVelocityX = Math.abs(lastNoseX.current - hipMidX) / deltaTime;
         const scaleVelocity = (shoulderW - lastShoulderWidth.current) / deltaTime;
 
-        // Balanced Pro-Level thresholds: 38% coverage or 180px/s forward speed
         const isTooClose = shoulderW > (W * 0.38);
         const isApproaching = scaleVelocity > 180;
-        const isCurrentlyMoving = frameVelocityY > 400 || frameVelocityX > 200 || isApproaching;
+        const isCurrentlyMoving = frameVelocityY > 350 || frameVelocityX > 200 || isApproaching;
 
-        lastNoseY.current = noseY;
-        lastNoseX.current = noseX;
+        lastNoseY.current = hipMidY;
+        lastNoseX.current = hipMidX;
         lastShoulderWidth.current = shoulderW;
 
-        // Smooth the horizontal velocity to prevent single-frame jitter from blocking jumps
         smoothedVelXRef.current = smoothedVelXRef.current * 0.6 + frameVelocityX * 0.4;
 
         // --- STABLE PERSISTENCE LOGIC ---
         if (isStableRef.current) {
-            // Balanced Approach Guard: Needs 0.6s persistent proximity to reset
             if (isTooClose || isApproaching) {
                 if (trackingLossStartRef.current === null) {
                     trackingLossStartRef.current = now;
@@ -240,7 +244,7 @@ export default function JumpRopeTraining() {
             if (isCurrentlyMoving || !isFullBody || isTooClose) {
                 stabilityStartRef.current = null;
                 setSetupStatus(isTooClose || !isFullBody ? 'STEP_BACK' : 'MOVING');
-                baselineY.current = noseY;
+                baselineY.current = hipMidY;
                 setMovementPct(0);
                 return;
             }
@@ -251,71 +255,68 @@ export default function JumpRopeTraining() {
                 isStableRef.current = true;
                 setSetupStatus('READY');
             }
-            baselineY.current = noseY;
+            baselineY.current = hipMidY;
             return;
         }
 
         if (baselineY.current === null) {
-            baselineY.current = noseY;
+            baselineY.current = hipMidY;
             return;
         }
 
-        // --- NOSE PEAK DETECTION (The Core) ---
-        const bodyH = Math.abs(((lAnkle2?.y ?? rAnkle2?.y ?? 0) - nose.y) * H);
-        bodyHeightRef.current = Math.max(100, bodyH);
+        // --- HIP MIDPOINT PEAK DETECTION (The New Core) ---
+        // Body height = distance from hip mid to ankle — normalized reference
+        const ankleY = lAnkle2?.y ?? rAnkle2?.y ?? 0;
+        const bodyH = Math.abs((ankleY - (lHip2?.y ?? rHip2?.y ?? ankleY)) * H);
+        bodyHeightRef.current = Math.max(80, bodyH);
 
-        // --- HYBRID ANKLE CHECK (From User Logic) ---
-        // Wider check: ankle just needs to be above a lenient hip-relative threshold
-        const lAnkleUp = lAnkle2 && lHip2 && lAnkle2.y < (lHip2.y + 0.30);
-        const rAnkleUp = rAnkle2 && rHip2 && rAnkle2.y < (rHip2.y + 0.30);
+        // --- ANKLE CHECK: both ankles should lift relative to hip ---
+        const lAnkleUp = lAnkle2 && lHip2 && lAnkle2.y < (lHip2.y + 0.25);
+        const rAnkleUp = rAnkle2 && rHip2 && rAnkle2.y < (rHip2.y + 0.25);
         const isAnkleUp = lAnkleUp || rAnkleUp;
 
-        // EMA Smoothing
-        if (emaSmoothY.current === null) emaSmoothY.current = noseY;
-        emaSmoothY.current = emaSmoothY.current * 0.4 + noseY * 0.6;
+        // EMA Smoothing on hip midpoint
+        if (emaSmoothY.current === null) emaSmoothY.current = hipMidY;
+        emaSmoothY.current = emaSmoothY.current * 0.45 + hipMidY * 0.55;
         const smoothY = emaSmoothY.current;
 
-        // Relative Movement
+        // Displacement = how much hip has risen from baseline (positive = up)
         const displacement = baselineY.current - smoothY;
-        const velocity = (lastDisplacementRef.current - displacement) / deltaTime; // Frame velocity
         velocityRef.current = velocityRef.current * 0.3 + (displacement - lastDisplacementRef.current) / deltaTime * 0.7;
         lastDisplacementRef.current = displacement;
 
-        // Balanced: 3% of body height — not too tight, not too loose
-        const jumpMinThreshold = Math.max(12, bodyHeightRef.current * 0.03);
-        const pct = Math.max(0, Math.min(100, (displacement / (bodyHeightRef.current * 0.10)) * 100));
+        // Threshold: 4% of hip-to-ankle distance (very meaningful biomechanically)
+        const jumpMinThreshold = Math.max(10, bodyHeightRef.current * 0.04);
+        const pct = Math.max(0, Math.min(100, (displacement / (bodyHeightRef.current * 0.12)) * 100));
         setMovementPct(Math.round(pct));
 
-        // State Machine
-        // LATERAL GUARD: If person is walking left/right, don't count as jump
-        // Walking produces high horizontal velocity while jumps produce minimal X movement
-        const isWalkingLaterally = smoothedVelXRef.current > 120;
+        // --- LATERAL GUARD ---
+        const isWalkingLaterally = smoothedVelXRef.current > 130;
 
+        // --- STATE MACHINE ---
         if (jumpStatusRef.current === 'standing') {
-            // Ankle check is a BONUS signal, not a blocker — nose alone can still trigger
+            // Require hip rise + ankle lift (if visible) + upward velocity + no lateral motion
             const ankleBonusOk = !isFullBody || isAnkleUp;
-            const jumpTriggered = displacement > jumpMinThreshold && (ankleBonusOk || displacement > jumpMinThreshold * 1.5);
-            
-            if (jumpTriggered && velocityRef.current > 35 && !isWalkingLaterally) {
+            const jumpTriggered = displacement > jumpMinThreshold && ankleBonusOk;
+
+            if (jumpTriggered && velocityRef.current > 30 && !isWalkingLaterally) {
                 jumpStatusRef.current = 'jumping';
                 peakY.current = displacement;
-            } else if (Math.abs(velocityRef.current) < 15 && baselineY.current !== null) {
-                baselineY.current = baselineY.current * 0.95 + smoothY * 0.05;
+            } else if (Math.abs(velocityRef.current) < 12) {
+                // Slow drift correction — keep baseline updated when standing still
+                baselineY.current = baselineY.current! * 0.97 + smoothY * 0.03;
             }
         } else {
             if (displacement > peakY.current) peakY.current = displacement;
 
-            // Landing: velocity drops OR displacement falls back — ankle optional
-            const landed = (velocityRef.current < -25 || displacement < jumpMinThreshold * 0.5);
+            const landed = velocityRef.current < -20 || displacement < jumpMinThreshold * 0.4;
 
             if (landed && !cooldownRef.current) {
-                // Success! Block if person was walking laterally at peak OR moving toward camera
                 if (peakY.current > jumpMinThreshold && scaleVelocity < 100 && !isWalkingLaterally) {
                     jumpCountRef.current += 1;
                     setJumps(jumpCountRef.current);
                     if ('vibrate' in navigator) navigator.vibrate(50);
 
-                    // Auto-start timer on first jump if duration is set
                     const now = Date.now();
                     if (timerRemainingRef.current !== null && !isTimerStartedRef.current) {
                         isTimerStartedRef.current = true;
@@ -324,17 +325,15 @@ export default function JumpRopeTraining() {
                         speak("Session started. Good luck!");
                     }
                     lastActivityTimeRef.current = now;
-                    // Speak every 10 jumps
                     if (jumpCountRef.current % 10 === 0) {
                         speak(jumpCountRef.current.toString());
                     }
                 }
 
-                // CRITICAL FIX: Reset status ONLY after valid landing detection
                 jumpStatusRef.current = 'standing';
                 peakY.current = 0;
                 cooldownRef.current = true;
-                setTimeout(() => { cooldownRef.current = false; }, 120);
+                setTimeout(() => { cooldownRef.current = false; }, 130);
             }
         }
     }, [speak]);
@@ -397,6 +396,7 @@ export default function JumpRopeTraining() {
 
     const handleFinish = useCallback(() => {
         setIsTracking(false);
+        setFinalRestSecs(restTimeRef.current);
         const finalRpm = Math.round(jumpCountRef.current / ((workTimeRef.current || 1) / 60)) || 0;
         addSession({ jumps: jumpCountRef.current, duration: workTimeRef.current + restTimeRef.current, rpm: finalRpm });
         setShowSummary(true);
@@ -609,7 +609,7 @@ export default function JumpRopeTraining() {
                             </button>
                         </div>
 
-                        <div className="grid grid-cols-3 gap-3 relative z-10">
+                        <div className="grid grid-cols-2 gap-3 relative z-10">
                             <div className="border backdrop-blur-3xl rounded-2xl p-4 flex flex-col items-center" style={{ background: 'var(--jr-surface, rgba(255,255,255,0.03))', borderColor: 'var(--jr-text-low, rgba(255,255,255,0.1))' }}>
                                 <span className="text-xl font-black mb-0.5" style={{ color: 'var(--color-text-base)' }}>{jumps}</span>
                                 <span className="text-[7px] font-bold uppercase tracking-[0.2em]" style={{ color: 'var(--jr-text-low, rgba(255,255,255,0.2))' }}>Jumps</span>
@@ -619,8 +619,12 @@ export default function JumpRopeTraining() {
                                 <span className="text-[7px] font-bold uppercase tracking-[0.2em]" style={{ color: 'var(--jr-text-low, rgba(255,255,255,0.2))' }}>Avg RPM</span>
                             </div>
                             <div className="border backdrop-blur-3xl rounded-2xl p-4 flex flex-col items-center text-center" style={{ background: 'var(--jr-surface, rgba(255,255,255,0.03))', borderColor: 'var(--jr-text-low, rgba(255,255,255,0.1))' }}>
-                                <span className="text-xs font-black mb-0.5 pt-2" style={{ color: 'var(--color-text-base)' }}>{Math.floor(totalSeconds/60)}m {totalSeconds%60}s</span>
+                                <span className="text-sm font-black mb-0.5" style={{ color: 'var(--color-text-base)' }}>{Math.floor(totalSeconds/60)}m {totalSeconds%60}s</span>
                                 <span className="text-[7px] font-bold uppercase tracking-[0.2em] mt-1" style={{ color: 'var(--jr-text-low, rgba(255,255,255,0.2))' }}>Total</span>
+                            </div>
+                            <div className="border backdrop-blur-3xl rounded-2xl p-4 flex flex-col items-center text-center" style={{ background: 'rgba(255,59,48,0.04)', borderColor: 'rgba(255,59,48,0.12)' }}>
+                                <span className="text-sm font-black mb-0.5" style={{ color: '#ff8077' }}>{Math.floor(finalRestSecs/60)}m {finalRestSecs%60}s</span>
+                                <span className="text-[7px] font-bold uppercase tracking-[0.2em] mt-1" style={{ color: 'rgba(255,128,119,0.5)' }}>Rest</span>
                             </div>
                         </div>
 

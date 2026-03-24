@@ -75,8 +75,8 @@ export default function JumpRopeTraining() {
     const baselineY = useRef<number | null>(null);
     const bodyHeightRef = useRef<number>(200);
     const peakY = useRef<number>(0);
-    const lastNoseY = useRef<number>(0);
-    const lastNoseX = useRef<number>(0);
+    const lastCenterX = useRef<number>(0);
+    const lastCenterY = useRef<number>(0);
     const lastShoulderWidth = useRef<number>(0);
     const lastDisplacementRef = useRef<number>(0);
     const emaSmoothY = useRef<number | null>(null);
@@ -195,16 +195,16 @@ export default function JumpRopeTraining() {
         const hasAura = !!(lShoulder2 || rShoulder2 || lHip2 || rHip2);
         const shoulderW = Math.abs(lShoulder2.x - rShoulder2.x) * W;
 
-        const frameVelocityY = Math.abs(lastNoseY.current - hipMidY) / deltaTime;
-        const frameVelocityX = Math.abs(lastNoseX.current - hipMidX) / deltaTime;
+        const frameVelocityY = Math.abs(lastCenterY.current - hipMidY) / deltaTime;
+        const frameVelocityX = Math.abs(lastCenterX.current - hipMidX) / deltaTime;
         const scaleVelocity = (shoulderW - lastShoulderWidth.current) / deltaTime;
 
         const isTooClose = shoulderW > (W * 0.38);
         const isApproaching = scaleVelocity > 180;
         const isCurrentlyMoving = frameVelocityY > 350 || frameVelocityX > 200 || isApproaching;
 
-        lastNoseY.current = hipMidY;
-        lastNoseX.current = hipMidX;
+        lastCenterY.current = hipMidY;
+        lastCenterX.current = hipMidX;
         lastShoulderWidth.current = shoulderW;
 
         smoothedVelXRef.current = smoothedVelXRef.current * 0.6 + frameVelocityX * 0.4;
@@ -270,11 +270,6 @@ export default function JumpRopeTraining() {
         const bodyH = Math.abs((ankleY - (lHip2?.y ?? rHip2?.y ?? ankleY)) * H);
         bodyHeightRef.current = Math.max(80, bodyH);
 
-        // --- ANKLE CHECK: both ankles should lift relative to hip ---
-        const lAnkleUp = lAnkle2 && lHip2 && lAnkle2.y < (lHip2.y + 0.25);
-        const rAnkleUp = rAnkle2 && rHip2 && rAnkle2.y < (rHip2.y + 0.25);
-        const isAnkleUp = lAnkleUp || rAnkleUp;
-
         // EMA Smoothing on hip midpoint
         if (emaSmoothY.current === null) emaSmoothY.current = hipMidY;
         emaSmoothY.current = emaSmoothY.current * 0.45 + hipMidY * 0.55;
@@ -285,21 +280,22 @@ export default function JumpRopeTraining() {
         velocityRef.current = velocityRef.current * 0.3 + (displacement - lastDisplacementRef.current) / deltaTime * 0.7;
         lastDisplacementRef.current = displacement;
 
-        // Threshold: 4% of hip-to-ankle distance (very meaningful biomechanically)
-        const jumpMinThreshold = Math.max(10, bodyHeightRef.current * 0.04);
-        const pct = Math.max(0, Math.min(100, (displacement / (bodyHeightRef.current * 0.12)) * 100));
+        // Threshold: 3% of hip-to-ankle distance
+        // Hip moves LESS than nose per jump, so keep threshold lower
+        const jumpMinThreshold = Math.max(6, bodyHeightRef.current * 0.03);
+        const pct = Math.max(0, Math.min(100, (displacement / (bodyHeightRef.current * 0.10)) * 100));
         setMovementPct(Math.round(pct));
 
         // --- LATERAL GUARD ---
         const isWalkingLaterally = smoothedVelXRef.current > 130;
 
         // --- STATE MACHINE ---
+        // Hip displacement is the ONLY reliable signal for jump rope.
+        // Ankle check removed: in jump rope, feet barely lift so ankle.y never crosses hip.y threshold.
         if (jumpStatusRef.current === 'standing') {
-            // Require hip rise + ankle lift (if visible) + upward velocity + no lateral motion
-            const ankleBonusOk = !isFullBody || isAnkleUp;
-            const jumpTriggered = displacement > jumpMinThreshold && ankleBonusOk;
+            const jumpTriggered = displacement > jumpMinThreshold;
 
-            if (jumpTriggered && velocityRef.current > 30 && !isWalkingLaterally) {
+            if (jumpTriggered && velocityRef.current > 18 && !isWalkingLaterally) {
                 jumpStatusRef.current = 'jumping';
                 peakY.current = displacement;
             } else if (Math.abs(velocityRef.current) < 12) {
@@ -511,10 +507,10 @@ export default function JumpRopeTraining() {
                 )}
                 
                 {isTracking && (
-                   <div className="flex items-center gap-2 border backdrop-blur-3xl rounded-full px-3 py-1.5 overflow-hidden min-w-0 max-w-[140px]" style={{ background: 'var(--jr-surface, rgba(255,255,255,0.02))', borderColor: 'var(--jr-text-low, rgba(255,255,255,0.05))' }}>
+                   <div className="flex items-center gap-2 border backdrop-blur-3xl rounded-full px-4 py-2 overflow-hidden min-w-0 max-w-[150px] shadow-[0_8px_32px_rgba(0,0,0,0.5)]" style={{ background: 'var(--jr-surface, rgba(255,255,255,0.12))', borderColor: 'var(--jr-text-low, rgba(255,255,255,0.2))' }}>
                        <div className="flex flex-col items-center leading-none min-w-0">
-                           <span className="text-primary text-[7px] font-black uppercase tracking-[0.1em] mb-0.5 opacity-80 truncate">{intensityStatus}</span>
-                           <span className="font-mono text-xs font-black tracking-wider truncate" style={{ color: 'var(--color-text-base)' }}>{timerRemaining !== null ? `${Math.floor(timerRemaining/60)}:${String(timerRemaining%60).padStart(2,'0')}` : `${Math.floor(totalSeconds/60)}:${String(totalSeconds%60).padStart(2,'0')}`}</span>
+                           <span className="text-primary text-[8px] font-black uppercase tracking-[0.2em] mb-1 opacity-100 truncate">{intensityStatus}</span>
+                           <span className="font-mono text-sm font-black tracking-wider truncate" style={{ color: 'var(--color-text-base, #fff)' }}>{timerRemaining !== null ? `${Math.floor(timerRemaining/60)}:${String(timerRemaining%60).padStart(2,'0')}` : `${Math.floor(totalSeconds/60)}:${String(totalSeconds%60).padStart(2,'0')}`}</span>
                        </div>
                    </div>
                 )}
@@ -537,8 +533,8 @@ export default function JumpRopeTraining() {
                     <span className="text-primary text-[9px] font-black uppercase tracking-[0.8em] mb-6 drop-shadow-[0_0_10px_rgba(255,59,48,0.4)] relative z-10">JUMPS</span>
                     <span className="text-[200px] font-black leading-none tracking-tighter drop-shadow-[0_20px_50px_rgba(0,0,0,0.8)] relative z-10" style={{ color: 'var(--color-text-base, #fff)' }}>{jumps}</span>
                     
-                    <div className="mt-12 px-5 py-1.5 rounded-full border backdrop-blur-2xl relative z-10" style={{ background: 'var(--jr-surface, rgba(255,255,255,0.02))', borderColor: 'var(--jr-text-low, rgba(255,255,255,0.1))' }}>
-                        <span className="font-bold text-[9px] uppercase tracking-[0.3em]" style={{ color: 'var(--jr-text-low, #fff)' }}>{rpm} RPM</span>
+                    <div className="mt-12 px-6 py-2 rounded-full border backdrop-blur-3xl relative z-10" style={{ background: 'rgba(255,255,255,0.06)', borderColor: 'rgba(255,255,255,0.15)' }}>
+                        <span className="font-bold text-[10px] uppercase tracking-[0.4em]" style={{ color: '#fff' }}>{rpm} RPM</span>
                     </div>
                   </div>
               </div>

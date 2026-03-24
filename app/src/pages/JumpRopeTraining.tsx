@@ -76,6 +76,7 @@ export default function JumpRopeTraining() {
     const jumpCountRef = useRef(0);
     const jumpStatusRef = useRef<'standing' | 'jumping'>('standing');
     const baselineY = useRef<number | null>(null);
+    const baselineHipY = useRef<number | null>(null);
     const bodyHeightRef = useRef<number>(200);
     const peakY = useRef<number>(0);
     const lastCenterX = useRef<number>(0);
@@ -264,6 +265,7 @@ export default function JumpRopeTraining() {
 
         if (baselineY.current === null) {
             baselineY.current = noseY;
+            baselineHipY.current = hipMidY;
             return;
         }
 
@@ -281,16 +283,16 @@ export default function JumpRopeTraining() {
         velocityRef.current = velocityRef.current * 0.3 + (displacement - lastDisplacementRef.current) / deltaTime * 0.7;
         lastDisplacementRef.current = displacement;
 
-        // Threshold: 3.5% of body height
-        const jumpMinThreshold = Math.max(12, bodyHeightRef.current * 0.035);
+        // Threshold: 2.5% of body height (more sensitive for jump rope hops)
+        const jumpMinThreshold = Math.max(10, bodyHeightRef.current * 0.025);
         const pct = Math.max(0, Math.min(100, (displacement / (bodyHeightRef.current * 0.12)) * 100));
         setMovementPct(Math.round(pct));
 
         // --- SYNC GUARD: Validate Nose vs Hip ---
         // When you jump, hips must rise at least 65% of the nose's movement.
         // When you tilt head, hips stay stable while nose moves.
-        const hipDisplacement = baselineY.current - hipMidY;
-        const isBodySync = hipDisplacement > (displacement * 0.65);
+        const hipDisplacement = (baselineHipY.current ?? hipMidY) - hipMidY;
+        const isBodySync = hipDisplacement > (displacement * 0.4);
         const isWalkingLaterally = smoothedVelXRef.current > 130;
 
         if (jumpStatusRef.current === 'standing') {
@@ -299,7 +301,10 @@ export default function JumpRopeTraining() {
                 jumpStatusRef.current = 'jumping';
                 peakY.current = displacement;
             } else if (Math.abs(velocityRef.current) < 15) {
-                baselineY.current = baselineY.current * 0.95 + smoothY * 0.05;
+                baselineY.current = (baselineY.current ?? smoothY) * 0.95 + smoothY * 0.05;
+                if (baselineHipY.current !== null) {
+                    baselineHipY.current = baselineHipY.current * 0.95 + hipMidY * 0.05;
+                }
             }
         } else {
             if (displacement > peakY.current) peakY.current = displacement;

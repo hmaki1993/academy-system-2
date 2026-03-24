@@ -14,7 +14,7 @@ export default function JumpRopeTraining() {
     const { mutate: addSession, isPending: isSaving } = useAddJumpRopeSession();
 
     // --- Core State ---
-    const [isTracking, setIsTracking] = useState(false);
+    const [isTracking, setIsTracking] = useState(true);
     const [jumps, setJumps] = useState(0);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -27,6 +27,8 @@ export default function JumpRopeTraining() {
     const [voiceEnabled, setVoiceEnabled] = useState(true);
     const [rpm, setRpm] = useState(0);
     const [finalRestSecs, setFinalRestSecs] = useState(0);
+    const [isSessionActive, setIsSessionActive] = useState(false);
+    const isSessionActiveRef = useRef(false);
     
     // Countdown Timer State
     const [countdownMins, setCountdownMins] = useState(0);
@@ -180,44 +182,50 @@ export default function JumpRopeTraining() {
         const lAnkle2 = LM[27];
         const rAnkle2 = LM[28];
 
-        if (!lShoulder2 || !rShoulder2) return;
+        if (!nose || !lShoulder2 || !rShoulder2) return;
 
-        // === CORE TRACKING: Use HIP MIDPOINT (true center of mass) ===
-        // Hip mid is NOT affected by head raise/tilt, unlike nose landmark.
-        const hipMidX = lHip2 && rHip2 ? ((lHip2.x + rHip2.x) / 2) * W : (lHip2?.x ?? rHip2?.x ?? 0.5) * W;
-        const hipMidY = lHip2 && rHip2 ? ((lHip2.y + rHip2.y) / 2) * H : (lHip2?.y ?? rHip2?.y ?? 0.5) * H;
-        const hasHips = !!(lHip2 || rHip2);
+        // === SMART NOSE-BASED DETECTION (With Hip Correlation) ===
+        // We track the NOSE (LM[0]) as requested, but we validate it against the HIPs
+        // to distinguish a full body jump from a head tilt or hand movement jitter.
+        const noseY = nose.y * H;
+        const noseX = nose.x * W;
+        const hipMidY = lHip2 && rHip2 ? ((lHip2.y + rHip2.y) / 2) * H : (lHip2?.y ?? rHip2?.y ?? nose.y) * H;
+        const hipMidX = lHip2 && rHip2 ? ((lHip2.x + rHip2.x) / 2) * W : (lHip2?.x ?? rHip2?.x ?? nose.x) * W;
 
-        if (!hasHips) return;
+        // Visual Indicator: Highlight the nose tracking point
+        canvasCtx.beginPath();
+        canvasCtx.arc(noseX, noseY, 4, 0, 2 * Math.PI);
+        canvasCtx.fillStyle = '#ff3b30';
+        canvasCtx.shadowBlur = 10;
+        canvasCtx.shadowColor = '#ff3b30';
+        canvasCtx.fill();
+        canvasCtx.shadowBlur = 0;
 
-        // --- STABILITY & FULL BODY & PROXIMITY GUARD ---
+        // --- STABILITY & PROXIMITY GUARD ---
         const isFullBody = !!(lAnkle2 && rAnkle2);
         const hasAura = !!(lShoulder2 || rShoulder2 || lHip2 || rHip2);
         const shoulderW = Math.abs(lShoulder2.x - rShoulder2.x) * W;
 
-        const frameVelocityY = Math.abs(lastCenterY.current - hipMidY) / deltaTime;
-        const frameVelocityX = Math.abs(lastCenterX.current - hipMidX) / deltaTime;
+        const frameVelocityY = Math.abs(lastCenterY.current - noseY) / deltaTime;
+        const frameVelocityX = Math.abs(lastCenterX.current - noseX) / deltaTime;
         const scaleVelocity = (shoulderW - lastShoulderWidth.current) / deltaTime;
 
         const isTooClose = shoulderW > (W * 0.38);
         const isApproaching = scaleVelocity > 180;
-        const isCurrentlyMoving = frameVelocityY > 350 || frameVelocityX > 200 || isApproaching;
+        const isCurrentlyMoving = frameVelocityY > 380 || frameVelocityX > 200 || isApproaching;
 
-        lastCenterY.current = hipMidY;
-        lastCenterX.current = hipMidX;
+        lastCenterY.current = noseY;
+        lastCenterX.current = noseX;
         lastShoulderWidth.current = shoulderW;
 
         smoothedVelXRef.current = smoothedVelXRef.current * 0.6 + frameVelocityX * 0.4;
 
-        // --- STABLE PERSISTENCE LOGIC ---
         if (isStableRef.current) {
             if (isTooClose || isApproaching) {
                 if (trackingLossStartRef.current === null) {
                     trackingLossStartRef.current = now;
                 } else if (now - trackingLossStartRef.current > 600) {
                     isStableRef.current = false;
-                    stabilityStartRef.current = null;
-                    peakY.current = 0;
                     setSetupStatus('STEP_BACK');
                     return;
                 }
@@ -226,89 +234,79 @@ export default function JumpRopeTraining() {
                 setSetupStatus('READY');
             }
 
-            const essentialTrackingLost = !hasAura || (!lAnkle2 && !rAnkle2);
-            const massiveLateralMovement = frameVelocityX > 500;
-
-            if (essentialTrackingLost || massiveLateralMovement) {
+            if (!hasAura || (!lAnkle2 && !rAnkle2)) {
                 if (trackingLossStartRef.current === null) {
                     trackingLossStartRef.current = now;
                 } else if (now - trackingLossStartRef.current > 1200) {
                     isStableRef.current = false;
-                    stabilityStartRef.current = null;
-                    setSetupStatus(!isFullBody ? 'STEP_BACK' : 'MOVING');
+                    setSetupStatus('STEP_BACK');
                     return;
                 }
             }
         } else {
-            // Setup Mode
             if (isCurrentlyMoving || !isFullBody || isTooClose) {
                 stabilityStartRef.current = null;
                 setSetupStatus(isTooClose || !isFullBody ? 'STEP_BACK' : 'MOVING');
-                baselineY.current = hipMidY;
+                baselineY.current = noseY;
                 setMovementPct(0);
                 return;
             }
-
             if (stabilityStartRef.current === null) {
                 stabilityStartRef.current = now;
             } else if (now - stabilityStartRef.current > 1500) {
                 isStableRef.current = true;
                 setSetupStatus('READY');
             }
-            baselineY.current = hipMidY;
+            baselineY.current = noseY;
             return;
         }
 
         if (baselineY.current === null) {
-            baselineY.current = hipMidY;
+            baselineY.current = noseY;
             return;
         }
 
-        // --- HIP MIDPOINT PEAK DETECTION (The New Core) ---
-        // Body height = distance from hip mid to ankle — normalized reference
-        const ankleY = lAnkle2?.y ?? rAnkle2?.y ?? 0;
-        const bodyH = Math.abs((ankleY - (lHip2?.y ?? rHip2?.y ?? ankleY)) * H);
-        bodyHeightRef.current = Math.max(80, bodyH);
+        // --- THE CORE: NOSE TRACKING WITH HIP SYNC ---
+        const bodyH = Math.abs(((lAnkle2?.y ?? rAnkle2?.y ?? 0) - nose.y) * H);
+        bodyHeightRef.current = Math.max(100, bodyH);
 
-        // EMA Smoothing on hip midpoint
-        if (emaSmoothY.current === null) emaSmoothY.current = hipMidY;
-        emaSmoothY.current = emaSmoothY.current * 0.45 + hipMidY * 0.55;
+        // EMA Smoothing on Nose
+        if (emaSmoothY.current === null) emaSmoothY.current = noseY;
+        emaSmoothY.current = emaSmoothY.current * 0.4 + noseY * 0.6;
         const smoothY = emaSmoothY.current;
 
-        // Displacement = how much hip has risen from baseline (positive = up)
+        // Displacement
         const displacement = baselineY.current - smoothY;
         velocityRef.current = velocityRef.current * 0.3 + (displacement - lastDisplacementRef.current) / deltaTime * 0.7;
         lastDisplacementRef.current = displacement;
 
-        // Threshold: 3% of hip-to-ankle distance
-        // Hip moves LESS than nose per jump, so keep threshold lower
-        const jumpMinThreshold = Math.max(6, bodyHeightRef.current * 0.03);
-        const pct = Math.max(0, Math.min(100, (displacement / (bodyHeightRef.current * 0.10)) * 100));
+        // Threshold: 3.5% of body height
+        const jumpMinThreshold = Math.max(12, bodyHeightRef.current * 0.035);
+        const pct = Math.max(0, Math.min(100, (displacement / (bodyHeightRef.current * 0.12)) * 100));
         setMovementPct(Math.round(pct));
 
-        // --- LATERAL GUARD ---
+        // --- SYNC GUARD: Validate Nose vs Hip ---
+        // When you jump, hips must rise at least 65% of the nose's movement.
+        // When you tilt head, hips stay stable while nose moves.
+        const hipDisplacement = baselineY.current - hipMidY;
+        const isBodySync = hipDisplacement > (displacement * 0.65);
         const isWalkingLaterally = smoothedVelXRef.current > 130;
 
-        // --- STATE MACHINE ---
-        // Hip displacement is the ONLY reliable signal for jump rope.
-        // Ankle check removed: in jump rope, feet barely lift so ankle.y never crosses hip.y threshold.
         if (jumpStatusRef.current === 'standing') {
-            const jumpTriggered = displacement > jumpMinThreshold;
-
-            if (jumpTriggered && velocityRef.current > 18 && !isWalkingLaterally) {
+            // Must have displacement + upward velocity + body sync (hips moving too)
+            if (displacement > jumpMinThreshold && velocityRef.current > 30 && isBodySync && !isWalkingLaterally) {
                 jumpStatusRef.current = 'jumping';
                 peakY.current = displacement;
-            } else if (Math.abs(velocityRef.current) < 12) {
-                // Slow drift correction — keep baseline updated when standing still
-                baselineY.current = baselineY.current! * 0.97 + smoothY * 0.03;
+            } else if (Math.abs(velocityRef.current) < 15) {
+                baselineY.current = baselineY.current * 0.95 + smoothY * 0.05;
             }
         } else {
             if (displacement > peakY.current) peakY.current = displacement;
 
-            const landed = velocityRef.current < -20 || displacement < jumpMinThreshold * 0.4;
+            const landed = velocityRef.current < -20 || displacement < jumpMinThreshold * 0.5;
 
             if (landed && !cooldownRef.current) {
-                if (peakY.current > jumpMinThreshold && scaleVelocity < 100 && !isWalkingLaterally) {
+                if (peakY.current > jumpMinThreshold && !isWalkingLaterally && isSessionActiveRef.current) {
                     jumpCountRef.current += 1;
                     setJumps(jumpCountRef.current);
                     if ('vibrate' in navigator) navigator.vibrate(50);
@@ -321,15 +319,13 @@ export default function JumpRopeTraining() {
                         speak("Session started. Good luck!");
                     }
                     lastActivityTimeRef.current = now;
-                    if (jumpCountRef.current % 10 === 0) {
-                        speak(jumpCountRef.current.toString());
-                    }
+                    if (jumpCountRef.current % 10 === 0) speak(jumpCountRef.current.toString());
                 }
 
                 jumpStatusRef.current = 'standing';
                 peakY.current = 0;
                 cooldownRef.current = true;
-                setTimeout(() => { cooldownRef.current = false; }, 130);
+                setTimeout(() => { cooldownRef.current = false; }, 120);
             }
         }
     }, [speak]);
@@ -356,7 +352,7 @@ export default function JumpRopeTraining() {
     }, [onResults]);
 
     useEffect(() => {
-        if (!isTracking) return;
+        if (!isSessionActive) return;
         const interval = setInterval(() => {
             const now = Date.now();
             setTotalSeconds(s => s + 1);
@@ -391,19 +387,13 @@ export default function JumpRopeTraining() {
     }, [isTracking]);
 
     const handleFinish = useCallback(() => {
-        setIsTracking(false);
+        setIsSessionActive(false);
+        isSessionActiveRef.current = false;
         setFinalRestSecs(restTimeRef.current);
         const finalRpm = Math.round(jumpCountRef.current / ((workTimeRef.current || 1) / 60)) || 0;
         addSession({ jumps: jumpCountRef.current, duration: workTimeRef.current + restTimeRef.current, rpm: finalRpm });
         setShowSummary(true);
-        const j = jumpCountRef.current;
-        const msg = j === 0 ? 'Session ended with no jumps detected.'
-            : j < 10 ? `Session ended. ${j} jumps.`
-            : j < 50 ? `Good effort! ${j} jumps completed.`
-            : j < 100 ? `Nice work! ${j} jumps completed.`
-            : j < 200 ? `Great session! ${j} jumps. Keep it up!`
-            : `Excellent! ${j} jumps. Outstanding performance!`;
-        speak(msg);
+        speak(`${jumpCountRef.current} jumps completed.`);
     }, [addSession, speak]);
 
     const handleStart = () => {
@@ -415,15 +405,19 @@ export default function JumpRopeTraining() {
             setTimerRemaining(null);
             timerRemainingRef.current = null;
         }
-        setIsTracking(true);
+        setIsTracking(true); // Camera must be on
+        setIsSessionActive(true);
+        isSessionActiveRef.current = true;
         setIsTimerActive(false);
         isTimerActiveRef.current = false;
         isTimerStartedRef.current = false;
         jumpCountRef.current = 0;
         setJumps(0);
+        setRpm(0);
+        setTotalSeconds(0);
         workTimeRef.current = 0;
         restTimeRef.current = 0;
-        lastActivityTimeRef.current = Date.now();
+        lastActivityTimeRef.current = 0;
         intensityHistoryRef.current = [];
     };
 
@@ -523,61 +517,56 @@ export default function JumpRopeTraining() {
                 </button>
             </div>
 
-            {/* 3. Primary Stats HUD (Numeric Centered) */}
-            {isTracking ? (
-              <div className="absolute inset-0 z-40 flex flex-col items-center justify-center pointer-events-none">
-                  <div className="relative flex flex-col items-center">
-                    {/* Soft background glow */}
-                    <div className="absolute inset-0 bg-primary/5 blur-[120px] rounded-full scale-150" />
-                    
-                    <span className="text-primary text-[9px] font-black uppercase tracking-[0.8em] mb-6 drop-shadow-[0_0_10px_rgba(255,59,48,0.4)] relative z-10">JUMPS</span>
-                    <span className="text-[200px] font-black leading-none tracking-tighter drop-shadow-[0_20px_50px_rgba(0,0,0,0.8)] relative z-10" style={{ color: 'var(--color-text-base, #fff)' }}>{jumps}</span>
-                    
-                    <div className="mt-12 px-6 py-2 rounded-full border backdrop-blur-3xl relative z-10" style={{ background: 'rgba(255,255,255,0.06)', borderColor: 'rgba(255,255,255,0.15)' }}>
-                        <span className="font-bold text-[10px] uppercase tracking-[0.4em]" style={{ color: '#fff' }}>{rpm} RPM</span>
+            {/* 3. Primary HUD Layer (Always visible when not in summary) */}
+            {!showSummary && (
+                <div className="absolute inset-0 z-40 flex flex-col items-center justify-center pointer-events-none">
+                    <div className="relative flex flex-col items-center pt-8">
+                        {/* Soft background glow */}
+                        <div className="absolute inset-0 bg-primary/10 blur-[140px] rounded-full scale-150" />
+                        
+                        <span className="text-primary text-[10px] font-black uppercase tracking-[0.8em] mb-4 drop-shadow-[0_0_12px_rgba(255,59,48,0.5)] relative z-10">JUMPS</span>
+                        <span className="text-[220px] font-black leading-none tracking-tighter drop-shadow-[0_20px_60px_rgba(0,0,0,0.9)] relative z-10 select-none" style={{ color: 'var(--color-text-base, #fff)' }}>{jumps}</span>
+                        
+                        <div className="mt-8 px-8 py-2.5 rounded-full border backdrop-blur-3xl relative z-10 flex flex-col items-center gap-1" style={{ background: 'rgba(255,255,255,0.06)', borderColor: 'rgba(255,255,255,0.15)' }}>
+                            <span className="font-black text-xs tracking-[0.1em]" style={{ color: '#fff' }}>{rpm} RPM</span>
+                            {/* Setup Status Badge - smaller/integrated */}
+                            {!isSessionActive && (
+                                <span className={`text-[7px] font-bold uppercase tracking-[0.2em] transition-all ${setupStatus === 'READY' ? 'text-emerald-400 opacity-60' : 'opacity-40'}`}>
+                                    {setupStatus === 'READY' ? 'STEALTH READY' : setupStatus}
+                                </span>
+                            )}
+                        </div>
                     </div>
-                  </div>
-              </div>
-            ) : (
-                <div className="absolute inset-0 z-30 flex items-center justify-center pointer-events-none">
-                    {isLoading ? (
-                        <div className="flex flex-col items-center gap-3">
-                            <Loader2 className="w-6 h-6 text-primary/40 animate-spin" />
-                            <span className="text-[8px] font-black uppercase tracking-[0.4em] text-white/20">Syncing Engine</span>
-                        </div>
-                    ) : (
-                        <div className="flex flex-col items-center translate-y-24">
-                             <div className={`px-4 py-1 rounded-full border backdrop-blur-3xl transition-all duration-1000 ${setupStatus === 'READY' ? 'bg-emerald-500/5 border-emerald-500/10 text-emerald-400/60 shadow-[0_0_30px_rgba(52,211,153,0.1)]' : 'bg-primary/5 border-primary/10 text-primary/50'}`}>
-                                <span className="text-[9px] font-black uppercase tracking-[0.2em]">{setupStatus === 'READY' ? 'STEALTH READY' : setupStatus}</span>
-                            </div>
-                        </div>
-                    )}
+
+                    {/* Bottom Action Area (Start/Finish) */}
+                    <div className="absolute bottom-24 inset-x-0 flex flex-col items-center gap-6 px-10 pointer-events-auto">
+                        {!isSessionActive ? (
+                            <button 
+                                onClick={handleStart}
+                                className="w-full max-w-[280px] h-14 rounded-2xl bg-primary text-white font-black uppercase tracking-[0.3em] text-[11px] shadow-[0_20px_40px_rgba(255,59,48,0.3)] transition-all active:scale-95 hover:brightness-110 flex items-center justify-center gap-3"
+                            >
+                                <Play size={14} fill="currentColor" />
+                                START TRAINING
+                            </button>
+                        ) : (
+                            <button 
+                                onClick={handleFinish}
+                                className="w-full max-w-[280px] h-14 rounded-2xl border backdrop-blur-3xl font-black uppercase tracking-[0.3em] text-[11px] transition-all active:scale-95 hover:bg-white/5 flex items-center justify-center gap-3"
+                                style={{ background: 'rgba(255,255,255,0.03)', borderColor: 'rgba(255,255,255,0.1)', color: 'var(--color-text-base)' }}
+                            >
+                                <div className="w-2.5 h-2.5 bg-primary rounded-sm shadow-[0_0_10px_rgba(255,59,48,0.5)]" />
+                                FINISH SESSION
+                            </button>
+                        )}
+                        
+                        {!isSessionActive && (
+                            <p className="text-[9px] font-medium text-center max-w-[200px] leading-relaxed opacity-30 italic" style={{ color: 'var(--color-text-base)' }}>
+                                Set your timer at the top. The countdown will begin once you start jumping.
+                            </p>
+                        )}
+                    </div>
                 </div>
             )}
-
-            {/* 4. Bottom Control Bar */}
-            <div className="absolute bottom-40 lg:bottom-12 pb-safe inset-x-0 z-50 flex flex-col items-center">
-                {isTracking ? (
-                    <button 
-                        onClick={handleFinish} 
-                        className="group flex items-center gap-3 border backdrop-blur-3xl px-7 py-2.5 rounded-full shadow-[0_20px_40px_rgba(0,0,0,0.5)] transition-all duration-500"
-                        style={{ background: 'var(--jr-surface, rgba(255,255,255,0.02))', borderColor: 'var(--jr-text-low, rgba(255,255,255,0.2))' }}
-                    >
-                        <Square className="w-3 h-3 text-primary fill-primary" />
-                        <span className="text-[9px] font-black uppercase tracking-[0.2em]" style={{ color: 'var(--color-text-base)' }}>Finish Session</span>
-                    </button>
-                ) : (
-                    <button 
-                        onClick={handleStart} 
-                        className="group relative flex items-center gap-4 border backdrop-blur-3xl px-7 py-3.5 rounded-full shadow-[0_10px_30px_rgba(0,0,0,0.4)] transition-all duration-500 hover:scale-105 active:scale-95 overflow-hidden"
-                        style={{ background: 'var(--jr-surface, rgba(255,255,255,0.01))', borderColor: 'var(--jr-text-low, rgba(255,255,255,0.3))' }}
-                    >
-                        <div className="absolute inset-0 bg-primary/[0.02] pointer-events-none" />
-                        <Play className="w-3.5 h-3.5 text-primary fill-primary relative z-10" />
-                        <span className="text-[10px] font-black text-white uppercase tracking-[0.3em] relative z-10" style={{ color: 'var(--color-text-base)' }}>Start Training</span>
-                    </button>
-                )}
-            </div>
 
             {/* 5. Antigravity Summary Modal */}
             {showSummary && (

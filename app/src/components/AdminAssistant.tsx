@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Send, X, Maximize2, Minimize2, Loader2, AlertCircle, Sparkles } from 'lucide-react';
-import { handleAIError, AIErrorResponse } from '../utils/aiUtils';
+import { handleSmartError, SmartErrorResponse } from '../utils/smartUtils';
 
 interface Message {
     role: 'user' | 'assistant';
@@ -96,8 +96,8 @@ export default function AdminAssistant({ onClose }: AdminAssistantProps) {
 
             setMessages(prev => [...prev, assistantMessage]);
         } catch (err: any) {
-            console.error('AdminAssistant AI Error:', err);
-            const parsedError = handleAIError(err);
+            console.error('AdminAssistant Smart Error:', err);
+            const parsedError = handleSmartError(err);
             setError(parsedError.message);
 
             if (parsedError.retryAfterSeconds) {
@@ -137,7 +137,7 @@ export default function AdminAssistant({ onClose }: AdminAssistantProps) {
                         <span className="text-xl">🤖</span>
                     </div>
                     <div>
-                        <h3 className="font-bold text-white text-lg">Admin AI Assistant</h3>
+                        <h3 className="font-bold text-white text-lg">Smart Admin Assistant</h3>
                         <p className="text-xs text-purple-300">مساعدك الذكي</p>
                     </div>
                 </div>

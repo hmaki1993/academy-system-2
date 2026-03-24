@@ -59,13 +59,6 @@ export default function JumpRopeLanding() {
             {/* Mobile Header */}
             <header className={`relative z-10 w-full px-6 py-5 flex items-center justify-between transition-all duration-1000 shrink-0 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-4'}`}>
                 <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-2xl bg-white/5 border border-white/10 flex flex-col items-center justify-center shadow-lg backdrop-blur-xl shrink-0 overflow-hidden">
-                        {settings.logoDataUrl ? (
-                            <img src={settings.logoDataUrl} alt="Logo" className="w-full h-full object-cover" />
-                        ) : (
-                            <Activity className="w-5 h-5 text-blue-400" />
-                        )}
-                    </div>
                     <img 
                         src="/logo-jumprope.png"
                         alt="JUMP ROPE PRO"
@@ -142,7 +135,10 @@ export default function JumpRopeLanding() {
                     <div className={`w-full flex justify-center transition-all duration-1000 delay-700 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}>
                         <div className="w-full">
                             <button 
-                                onClick={() => navigate('/jump-rope')}
+                                onClick={() => {
+                                    localStorage.setItem('jr_onboarded', 'true');
+                                    navigate('/jump-rope');
+                                }}
                                 className="w-full relative group overflow-hidden flex items-center justify-center gap-3 py-3.5 rounded-full bg-white text-black transition-all duration-500 hover:scale-[0.98] active:scale-95 shadow-[0_10px_30px_rgba(255,255,255,0.1)]"
                             >
                                 <div className="absolute inset-0 bg-gradient-to-r from-black/0 via-black/5 to-black/0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-in-out" />

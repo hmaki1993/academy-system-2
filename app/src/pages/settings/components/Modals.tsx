@@ -314,9 +314,9 @@ export function LogoEditorModal({ isOpen, onClose, logo, onSave }: any) {
     const offscreenCanvasRef = useRef<HTMLCanvasElement | null>(null);
     const processedCanvasRef = useRef<HTMLCanvasElement | null>(null);
     const originalImgRef = useRef<HTMLImageElement | null>(null);
-    const aiResultRef = useRef<HTMLImageElement | null>(null); // Stores the AI-removed result
+    const smartResultRef = useRef<HTMLImageElement | null>(null); // Stores the Smart-removed result
     const [isProcessing, setIsProcessing] = useState(false);
-    const [isAIRemoving, setIsAIRemoving] = useState(false);
+    const [isSmartRemoving, setIsSmartRemoving] = useState(false);
     const [isDragging, setIsDragging] = useState(false);
     const [drawTick, setDrawTick] = useState(0);
     const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
@@ -324,8 +324,8 @@ export function LogoEditorModal({ isOpen, onClose, logo, onSave }: any) {
 
     useEffect(() => {
         if (!isOpen || !logo) return;
-        // Reset AI result when new logo is loaded
-        aiResultRef.current = null;
+        // Reset Smart result when new logo is loaded
+        smartResultRef.current = null;
         const img = new Image();
         img.crossOrigin = "anonymous";
         img.src = logo.url;
@@ -336,9 +336,9 @@ export function LogoEditorModal({ isOpen, onClose, logo, onSave }: any) {
     }, [isOpen, logo?.url]);
 
     const updateProcessedImage = () => {
-        // Use AI result if available, otherwise use the original image
-        const sourceImg = aiResultRef.current ?? originalImgRef.current;
-        if (!sourceImg) return;
+        // Use Smart result if available, otherwise use the original image
+        const sourceImage = smartResultRef.current ?? originalImgRef.current;
+        if (!sourceImage) return;
 
         if (!offscreenCanvasRef.current) offscreenCanvasRef.current = document.createElement('canvas');
         if (!processedCanvasRef.current) processedCanvasRef.current = document.createElement('canvas');
@@ -350,13 +350,13 @@ export function LogoEditorModal({ isOpen, onClose, logo, onSave }: any) {
         buffer.height = 1200;
         ctx.clearRect(0, 0, buffer.width, buffer.height);
 
-        const imgAspect = sourceImg.height / sourceImg.width;
+        const imgAspect = sourceImage.height / sourceImage.width;
         const drawWidth = 800;
         const drawHeight = drawWidth * imgAspect;
-        ctx.drawImage(sourceImg, (buffer.width - drawWidth) / 2, (buffer.height - drawHeight) / 2, drawWidth, drawHeight);
+        ctx.drawImage(sourceImage, (buffer.width - drawWidth) / 2, (buffer.height - drawHeight) / 2, drawWidth, drawHeight);
 
-        if (canvasState.isRemovingBg && !aiResultRef.current) {
-            // Only do manual removal if there's no AI result
+        if (canvasState.isRemovingBg && !smartResultRef.current) {
+            // Only do manual removal if there's no Smart result
             const imageData = ctx.getImageData(0, 0, buffer.width, buffer.height);
             const data = imageData.data;
             const w = imageData.width;
@@ -468,11 +468,11 @@ export function LogoEditorModal({ isOpen, onClose, logo, onSave }: any) {
         draw();
     };
 
-    const handleAIRemove = async () => {
-        if (!originalImgRef.current || isAIRemoving) return;
+    const handleSmartRemove = async () => {
+        if (!originalImgRef.current || isSmartRemoving) return;
 
-        setIsAIRemoving(true);
-        const loadingToast = toast.loading('✨ Removing background with remove.bg AI...', {
+        setIsSmartRemoving(true);
+        const loadingToast = toast.loading('✨ Background removal in progress...', {
             style: {
                 background: '#1e1e2f',
                 color: '#fff',
@@ -512,17 +512,17 @@ export function LogoEditorModal({ isOpen, onClose, logo, onSave }: any) {
 
             // Load the result blob as an image
             const url = URL.createObjectURL(resultBlob);
-            const aiImg = new Image();
-            aiImg.src = url;
+            const resultImg = new Image();
+            resultImg.src = url;
             await new Promise<void>((resolve, reject) => {
-                aiImg.onload = () => resolve();
-                aiImg.onerror = reject;
+                resultImg.onload = () => resolve();
+                resultImg.onerror = reject;
             });
 
-            // Store the AI result separately — do NOT overwrite the original
-            aiResultRef.current = aiImg;
+            // Store the Smart result separately — do NOT overwrite the original
+            smartResultRef.current = resultImg;
 
-            // Now directly render the AI result to processedCanvasRef
+            // Now directly render the Smart result to processedCanvasRef
             if (!processedCanvasRef.current) processedCanvasRef.current = document.createElement('canvas');
             const pc = processedCanvasRef.current;
             const pCtx = pc.getContext('2d', { willReadFrequently: true });
@@ -531,13 +531,13 @@ export function LogoEditorModal({ isOpen, onClose, logo, onSave }: any) {
                 pc.height = 1200;
                 pCtx.clearRect(0, 0, pc.width, pc.height);
 
-                // Center the AI result
-                const aspect = aiImg.height / aiImg.width;
+                // Center the Smart result
+                const aspect = resultImg.height / resultImg.width;
                 const drawW = 800;
                 const drawH = drawW * aspect;
-                pCtx.drawImage(aiImg, (pc.width - drawW) / 2, (pc.height - drawH) / 2, drawW, drawH);
+                pCtx.drawImage(resultImg, (pc.width - drawW) / 2, (pc.height - drawH) / 2, drawW, drawH);
 
-                // === POST-AI CLEANUP PASSES ===
+                // === POST-SMART CLEANUP PASSES ===
                 const imageData = pCtx.getImageData(0, 0, pc.width, pc.height);
                 const data = imageData.data;
                 const w = pc.width;
@@ -549,7 +549,7 @@ export function LogoEditorModal({ isOpen, onClose, logo, onSave }: any) {
                 }
 
                 // PASS 2: White Matte Despill (Professional Defringe)
-                // The AI model composites the logo over a white background internally.
+                // The Smart model composites the logo over a white background internally.
                 // This means edge pixels are contaminated with white: pixel = logo + white*(1-a)
                 // We REVERSE this: logo_color = (pixel - white*(1-alpha)) / alpha
                 for (let i = 0; i < data.length; i += 4) {
@@ -599,12 +599,12 @@ export function LogoEditorModal({ isOpen, onClose, logo, onSave }: any) {
             draw();
             setDrawTick(t => t + 1);
 
-            toast.success('✨ Background removed by AI!', { id: loadingToast });
+            toast.success('✨ Background removed successfully!', { id: loadingToast });
         } catch (error) {
-            console.error('[AI Remove Error]', error);
-            toast.error('AI removal failed. Please try manual mode.', { id: loadingToast });
+            console.error('[Smart Remove Error]', error);
+            toast.error('Removal failed. Please try manual mode.', { id: loadingToast });
         } finally {
-            setIsAIRemoving(false);
+            setIsSmartRemoving(false);
         }
     };
 
@@ -663,8 +663,8 @@ export function LogoEditorModal({ isOpen, onClose, logo, onSave }: any) {
 
     useEffect(() => {
         if (isOpen && originalImgRef.current) {
-            // Reset AI result on setting changes so manual controls work
-            aiResultRef.current = null;
+            // Reset Smart result on setting changes so manual controls work
+            smartResultRef.current = null;
             updateProcessedImage();
         }
     }, [canvasState.isRemovingBg, canvasState.sensitivity, canvasState.feathering, canvasState.targetColor, canvasState.isContiguous, canvasState.erosion, canvasState.showMask]);
@@ -810,7 +810,7 @@ export function LogoEditorModal({ isOpen, onClose, logo, onSave }: any) {
                                 <div>
                                     <h4 className="text-[10px] font-black text-white/40 uppercase tracking-[0.3em] mb-4 flex items-center gap-2">
                                         <Sparkles className="w-3 h-3 text-primary animate-pulse" />
-                                        AI-Enhanced Cleaning
+                                        Smart-Enhanced Cleaning
                                     </h4>
                                     <div className="space-y-3">
                                         <button onClick={() => setCanvasState(prev => ({ ...prev, isRemovingBg: !prev.isRemovingBg, sensitivity: prev.isRemovingBg ? 30 : prev.sensitivity, feathering: prev.isRemovingBg ? 0 : prev.feathering, targetColor: prev.isRemovingBg ? null : prev.targetColor }))} className={`w-full p-4 rounded-2xl border transition-all duration-300 flex items-center justify-between group ${canvasState.isRemovingBg ? 'bg-primary border-primary shadow-lg shadow-primary/20' : 'bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20'}`}>
@@ -843,23 +843,23 @@ export function LogoEditorModal({ isOpen, onClose, logo, onSave }: any) {
                                                 </div>
                                                 <div className="space-y-4">
                                                     <button
-                                                        onClick={handleAIRemove}
-                                                        disabled={isAIRemoving}
-                                                        className={`w-full p-4 rounded-2xl border transition-all flex items-center justify-between group relative overflow-hidden ${isAIRemoving ? 'bg-indigo-500/10 border-indigo-500/20' : 'bg-gradient-to-br from-indigo-500/20 to-purple-500/20 border-indigo-500/30 hover:border-indigo-400 hover:scale-[1.02]'}`}
+                                                        onClick={handleSmartRemove}
+                                                        disabled={isSmartRemoving}
+                                                        className={`w-full p-4 rounded-2xl border transition-all flex items-center justify-between group relative overflow-hidden ${isSmartRemoving ? 'bg-indigo-500/10 border-indigo-500/20' : 'bg-gradient-to-br from-indigo-500/20 to-purple-500/20 border-indigo-500/30 hover:border-indigo-400 hover:scale-[1.02]'}`}
                                                     >
-                                                        {isAIRemoving && (
+                                                        {isSmartRemoving && (
                                                             <div className="absolute inset-0 bg-indigo-500/10 animate-pulse pointer-events-none" />
                                                         )}
                                                         <div className="flex items-center gap-3 relative z-10">
-                                                            <div className={`p-2 rounded-xl ${isAIRemoving ? 'bg-indigo-500/40 animate-spin' : 'bg-gradient-to-br from-indigo-500 to-purple-500 shadow-lg shadow-indigo-500/20'}`}>
-                                                                {isAIRemoving ? <Loader2 className="w-4 h-4 text-white" /> : <Sparkle className="w-4 h-4 text-white" />}
+                                                            <div className={`p-2 rounded-xl ${isSmartRemoving ? 'bg-indigo-500/40 animate-spin' : 'bg-gradient-to-br from-indigo-500 to-purple-500 shadow-lg shadow-indigo-500/20'}`}>
+                                                                {isSmartRemoving ? <Loader2 className="w-4 h-4 text-white" /> : <Sparkle className="w-4 h-4 text-white" />}
                                                             </div>
                                                             <div className="text-left">
-                                                                <span className="block text-[10px] font-black uppercase tracking-widest text-white">✨ Magic AI Remove</span>
+                                                                <span className="block text-[10px] font-black uppercase tracking-widest text-white">✨ Magic Smart Remove</span>
                                                                 <span className="block text-[7px] font-bold text-white/40 uppercase tracking-wider">World-Class (remove.bg quality)</span>
                                                             </div>
                                                         </div>
-                                                        {!isAIRemoving && <Check className="w-4 h-4 text-indigo-400 opacity-0 group-hover:opacity-100 transition-all transform translate-x-2 group-hover:translate-x-0" />}
+                                                        {!isSmartRemoving && <Check className="w-4 h-4 text-indigo-400 opacity-0 group-hover:opacity-100 transition-all transform translate-x-2 group-hover:translate-x-0" />}
                                                     </button>
 
                                                     <div className="h-px bg-white/5 my-2" />

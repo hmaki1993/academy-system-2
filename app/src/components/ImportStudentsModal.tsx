@@ -5,8 +5,8 @@ import { supabase } from '../lib/supabase';
 import toast from 'react-hot-toast';
 import { addMonths, format } from 'date-fns';
 import { formatDynamicPhone } from '../utils/phoneUtils';
-import { processImageWithGemini } from '../services/aiService';
-import { handleAIError } from '../utils/aiUtils';
+import { processImageWithSmartEngine } from '../services/smartService';
+import { handleSmartError } from '../utils/smartUtils';
 
 interface ImportStudentsModalProps {
     isOpen: boolean;
@@ -198,10 +198,10 @@ export default function ImportStudentsModal({ isOpen, onClose, onSuccess }: Impo
         reader.onload = async (event) => {
             try {
                 const base64Image = event.target?.result as string;
-                const extractedStudents = await processImageWithGemini(base64Image);
+                const extractedStudents = await processImageWithSmartEngine(base64Image);
 
                 if (extractedStudents && extractedStudents.length > 0) {
-                    console.log("Raw AI Extracted Data:", extractedStudents);
+                    console.log("Raw Smart Extracted Data:", extractedStudents);
 
                     const formattedRows: ParsedStudent[] = extractedStudents.map(student => {
                         const { code, number } = formatDynamicPhone(student.phone || '', '+965');
@@ -286,7 +286,7 @@ export default function ImportStudentsModal({ isOpen, onClose, onSuccess }: Impo
                     toast.error('No student data found in the image.');
                 }
             } catch (error: any) {
-                const parsedError = handleAIError(error);
+                const parsedError = handleSmartError(error);
                 toast.error(parsedError.message);
                 
                 if (parsedError.retryAfterSeconds) {
@@ -580,6 +580,7 @@ export default function ImportStudentsModal({ isOpen, onClose, onSuccess }: Impo
 
             // Show results
             if (successCount > 0) {
+                toast.success("Premium Smart Analytics Generated!");
                 toast.success(`Successfully imported ${successCount} student(s)`);
             }
             if (duplicateCount > 0) {
@@ -675,7 +676,7 @@ export default function ImportStudentsModal({ isOpen, onClose, onSuccess }: Impo
                                     onClick={() => setImportMode('scan')}
                                     className={`flex-1 sm:flex-none px-2 sm:px-8 py-2 rounded-xl text-[8px] sm:text-[9px] font-black uppercase tracking-widest transition-all ${importMode === 'scan' ? 'bg-primary text-white shadow-lg' : 'text-white/40 hover:text-white hover:bg-white/5'}`}
                                 >
-                                    Scan AI
+                                    Smart Scan
                                 </button>
                             </div>
 
@@ -799,7 +800,7 @@ export default function ImportStudentsModal({ isOpen, onClose, onSuccess }: Impo
                                     <div className="p-6 rounded-3xl bg-white/[0.02] border border-white/5 space-y-4">
                                         <div className="flex items-center gap-3 text-primary/60">
                                             <AlertCircle className="w-3.5 h-3.5" />
-                                            <h3 className="text-[9px] font-black uppercase tracking-[0.3em]">AI Scanner Beta</h3>
+                                            <h3 className="text-[9px] font-black uppercase tracking-[0.3em]">Smart Scanner Beta</h3>
                                         </div>
                                         <p className="text-[10px] font-medium text-white/40 leading-relaxed max-w-xl">
                                             Take a clear photo of a handwritten or printed list containing student names, phone numbers, and even birth dates or gender.

@@ -410,7 +410,7 @@ export default function DashboardLayout() {
         { to: '/app/my-work', icon: UserCircle, label: t('dashboard.myWork', 'My Work'), roles: ['head_coach'] },
         { to: '/app/communications', icon: MessageSquare, label: t('common.communications', 'Chats'), roles: ['admin', 'head_coach', 'coach', 'reception', 'cleaner', 'student'] },
         { to: '/app/admin/cameras', icon: Video, label: t('common.cameras'), roles: ['admin'] },
-        { to: '/app/ai-training', icon: Activity, label: t('common.performanceTracker'), roles: ['admin', 'head_coach', 'coach', 'student'] },
+        { to: '/app/smart-training', icon: Activity, label: t('common.performanceTracker'), roles: ['admin', 'head_coach', 'coach', 'student'] },
         { to: '/app/settings', icon: Settings, label: t('common.settings'), roles: ['admin', 'head_coach', 'coach', 'reception', 'cleaner', 'student'] },
     ];
 
@@ -777,7 +777,7 @@ export default function DashboardLayout() {
             {/* Main Content Area */}
             <div className={`flex-1 flex flex-col min-w-0 h-full transition-all duration-500 ${isChatView && !isHoveringSidebar ? 'lg:m-0' : (isRtl ? 'lg:mr-20' : 'lg:ml-20')}`}>
                 {/* Header - Branding */}
-                {!location.pathname.includes('/communications') && !location.pathname.includes('/ai-training') && (
+                {!location.pathname.includes('/communications') && !location.pathname.includes('/smart-training') && (
                     <header className={`premium-header-strip relative z-20 w-full pt-4 lg:pt-0 px-4 sm:px-6 lg:px-0 flex flex-col items-center lg:items-center`}>
                         <div className="w-full max-w-7xl lg:max-w-none h-18 lg:h-12 flex items-center justify-between px-2 sm:px-6 relative">
                             {/* Left Side Section - Clock & Mobile Toggle */}

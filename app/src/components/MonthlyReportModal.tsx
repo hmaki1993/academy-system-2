@@ -4,8 +4,8 @@ import { useTranslation } from 'react-i18next';
 import { X, Send, FileText, CheckCircle2, AlertCircle, Loader2, Calendar, Sparkles } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth } from 'date-fns';
 import { useTheme } from '../context/ThemeContext';
-import { handleAIError } from '../utils/aiUtils';
-import { generateMonthlyReportSummary } from '../services/aiService';
+import { handleSmartError } from '../utils/smartUtils';
+import { generateMonthlyReportSummary } from '../services/smartService';
 import toast from 'react-hot-toast';
 
 interface MonthlyReportModalProps {
@@ -36,11 +36,11 @@ export default function MonthlyReportModal({ isOpen, onClose, student, currentUs
         behavior: '',
         notes: ''
     });
-    const [generatingAI, setGeneratingAI] = useState(false);
+    const [generatingSmart, setGeneratingSmart] = useState(false);
     const [retryTimer, setRetryTimer] = useState<number | null>(null);
     const [reportLanguage, setReportLanguage] = useState<'Arabic' | 'English'>('Arabic');
 
-    const generateAISummary = async () => {
+    const generateSmartSummary = async () => {
         if (!settings.api_keys?.gemini) {
             toast.error("Gemini API Key missing in Settings!");
             return;
@@ -51,7 +51,7 @@ export default function MonthlyReportModal({ isOpen, onClose, student, currentUs
             return;
         }
 
-        setGeneratingAI(true);
+        setGeneratingSmart(true);
         try {
             const data = await generateMonthlyReportSummary({
                 fullName: student.full_name,
@@ -74,10 +74,11 @@ export default function MonthlyReportModal({ isOpen, onClose, student, currentUs
                 behavior: data.behavior,
                 notes: `${actionPlanLabel}\n` + data.action_plan + `\n\n${strengthsLabel}\n- ` + data.strengths.join('\n- ') + `\n\n${focusAreasLabel}\n- ` + data.weaknesses.join('\n- ')
             });
-            toast.success("Premium AI Analytics Generated!");
+            toast.success("Premium Smart Analytics Generated!");
         } catch (error: any) {
-            console.error("MonthlyReport AI Error Full Object:", error);
-            const parsedError = handleAIError(error);
+            console.error("MonthlyReport Smart Error Full Object:", error);
+            const parsedError = handleSmartError(error);
+            toast.error(parsedError.message);
             
             if (parsedError.retryAfterSeconds) {
                 console.log(`[MonthlyReport] Quota Error Detected! Delay: ${parsedError.retryAfterSeconds}s`);
@@ -87,7 +88,7 @@ export default function MonthlyReportModal({ isOpen, onClose, student, currentUs
                 toast.error(parsedError.message);
             }
         } finally {
-            setGeneratingAI(false);
+            setGeneratingSmart(false);
         }
     };
 
@@ -215,7 +216,7 @@ ${monthlyAssessments.map(a => {
 ${evaluations.behavior || 'Great attitude and focus!'}
 
 ${evaluations.notes ? `
-🤖 *AI Performance Analytics:*
+✨ *Smart Performance Analytics:*
 ${evaluations.notes}
 ` : ''}
 
@@ -257,7 +258,7 @@ ${evaluations.notes}
             toast.success('Report saved & WhatsApp opened!');
             onClose();
 
-        } catch (error) {
+        } catch (error: any) {
             console.error('Error sending report:', error);
             toast.error('Failed to save report');
         } finally {
@@ -461,24 +462,23 @@ ${evaluations.notes}
                                 </div>
 
                                 <button
-                                    onClick={generateAISummary}
-                                    disabled={generatingAI || calculating || (retryTimer !== null && retryTimer > 0)}
-                                    className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-primary/20 hover:bg-primary/30 text-primary border border-primary/20 text-[8px] font-black uppercase tracking-widest transition-all disabled:opacity-50 h-8"
+                                    onClick={generateSmartSummary}
+                                    disabled={generatingSmart || calculating || (retryTimer !== null && retryTimer > 0)}
+                                    className={`relative group px-5 py-2.5 rounded-xl border flex items-center justify-center gap-2.5 transition-all active:scale-[0.98] ${generatingSmart ? 'bg-indigo-500/10 border-indigo-500/20' : 'bg-indigo-500/20 border-indigo-500/30 hover:bg-indigo-500/30 hover:border-indigo-500/50 shadow-[0_0_20px_rgba(99,102,241,0.2)]'}`}
                                 >
                                     {retryTimer !== null && retryTimer > 0 ? (
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-[10px] font-black uppercase tracking-widest text-indigo-400">Wait {retryTimer}s</span>
+                                        </div>
+                                    ) : generatingSmart ? (
                                         <>
-                                            <Loader2 className="w-3 h-3 animate-spin" />
-                                            Wait {retryTimer}s
-                                        </>
-                                    ) : generatingAI ? (
-                                        <>
-                                            <Loader2 className="w-3 h-3 animate-spin" />
-                                            Analyzing...
+                                            <Loader2 className="w-4 h-4 animate-spin text-indigo-400" />
+                                            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-400">Processing...</span>
                                         </>
                                     ) : (
                                         <>
-                                            <Sparkles className="w-3 h-3 shadow-[0_0_8px_rgba(var(--color-primary-rgb),0.5)]" />
-                                            AI Assist
+                                            <Sparkles className="w-4 h-4 text-indigo-400 group-hover:scale-110 transition-transform" />
+                                            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-400">Smart Assist</span>
                                         </>
                                     )}
                                 </button>
@@ -501,7 +501,7 @@ ${evaluations.notes}
                             />
                         </div>
 
-                        {/* Premium AI Analytics (Action Plan, Strengths, Weaknesses) */}
+                        {/* Premium Smart Analytics (Action Plan, Strengths, Weaknesses) */}
                         <div className="space-y-4">
                             <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-purple-500/30 ml-1 flex items-center gap-2">
                                 <Sparkles className="w-3 h-3 text-purple-500/60" />

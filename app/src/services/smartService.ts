@@ -1,6 +1,6 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
-export interface AIExtractedStudent {
+export interface SmartExtractedStudent {
     full_name: string;
     phone: string;
     date_of_birth?: string; // YYYY-MM-DD
@@ -9,18 +9,18 @@ export interface AIExtractedStudent {
     plan_name?: string;
 }
 
-export const processImageWithGemini = async (base64Image: string): Promise<AIExtractedStudent[]> => {
+export const processImageWithSmartEngine = async (base64Image: string): Promise<SmartExtractedStudent[]> => {
     const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
 
     if (!apiKey) {
-        throw new Error("VITE_GEMINI_API_KEY is missing from your .env file. Please add it to use the AI Scanner.");
+        throw new Error("VITE_GEMINI_API_KEY is missing from your .env file. Please add it to use the Smart Scanner.");
     }
 
     // Remove the data URL prefix if present (e.g., "data:image/jpeg;base64,")
     const base64Data = base64Image.split(',')[1] || base64Image;
 
     const prompt = `
-    You are an AI assistant designed to extract student data from images of printed or handwritten lists.
+    You are a Smart Assistant designed to extract student data from images of printed or handwritten lists.
     Extract the names, phone numbers, birth dates, gender, coach name, and subscription plan from the provided image.
     Return ONLY a raw JSON array of objects. Do NOT use markdown code blocks (like \`\`\`json). Just the raw array.
     Each object must have these keys:
@@ -73,11 +73,11 @@ export const processImageWithGemini = async (base64Image: string): Promise<AIExt
             cleanedText = cleanedText.substring(0, cleanedText.length - 3);
         }
 
-        const parsedData = JSON.parse(cleanedText) as AIExtractedStudent[];
+        const parsedData = JSON.parse(cleanedText) as SmartExtractedStudent[];
         return parsedData;
 
     } catch (error) {
-        console.error("Failed to process image with AI:", error);
+        console.error("Failed to process image with Smart Engine:", error);
         throw error;
     }
 };
@@ -160,7 +160,7 @@ export const generateTrainingPlan = async (params: {
 
         return JSON.parse(cleanedText);
     } catch (error) {
-        console.error("Failed to generate training plan with AI:", error);
+        console.error("Failed to generate training plan with Smart Engine:", error);
         throw error;
     }
 };
@@ -232,7 +232,7 @@ export const generateMonthlyReportSummary = async (params: {
         
         return JSON.parse(cleanText);
     } catch (error) {
-        console.error("Failed to generate monthly report with AI:", error);
+        console.error("Failed to generate monthly report with Smart Engine:", error);
         throw error;
     }
 };

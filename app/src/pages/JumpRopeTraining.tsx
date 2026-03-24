@@ -347,7 +347,7 @@ export default function JumpRopeTraining() {
                     if (active) requestAnimationFrame(loop);
                 };
                 loop();
-            } catch (err) { setError("AI Engine failed."); setIsLoading(false); }
+            } catch (err) { setError("Motion Engine failed."); setIsLoading(false); }
         };
         setupPose();
         return () => { active = false; pose?.close?.(); };

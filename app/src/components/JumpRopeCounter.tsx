@@ -78,7 +78,7 @@ const JumpRopeCounter = () => {
     const [jumpCount, setJumpCount] = useState(0);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [aiStatus, setAiStatus] = useState<'initializing' | 'live' | 'error'>('initializing');
+    const [engineStatus, setEngineStatus] = useState<'initializing' | 'live' | 'error'>('initializing');
     const [displayStatus, setDisplayStatus] = useState<'READY' | 'JUMPING'>('READY');
     const [movementPct, setMovementPct] = useState(0);
     const [timerRemaining, setTimerRemaining] = useState<number | null>(null);
@@ -140,7 +140,7 @@ const JumpRopeCounter = () => {
     const handleVideoLoad = () => {
         setIsLoading(false);
         setError(null);
-        setAiStatus('live');
+        setEngineStatus('live');
     };
 
     const handleCameraError = (err: any) => {
@@ -154,7 +154,7 @@ const JumpRopeCounter = () => {
         setError(msg);
         speak("Camera error. Please check permissions.");
         setIsLoading(false);
-        setAiStatus('error');
+        setEngineStatus('error');
     };
 
     const onResults = useCallback((results: any) => {
@@ -377,9 +377,9 @@ const JumpRopeCounter = () => {
                 loop();
             } catch (err: any) {
                 console.error("Pose Setup Error:", err);
-                setError(`AI Engine failed: ${err.message || 'Unknown error'}`);
+                setError(`Motion Engine failed: ${err.message || 'Unknown error'}`);
                 setIsLoading(false);
-                setAiStatus('error');
+                setEngineStatus('error');
             }
         };
 

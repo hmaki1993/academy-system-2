@@ -18,7 +18,7 @@ import FinancialProgressChart from '../components/FinancialProgressChart';
 import PerformanceAnalyticsCard from '../components/PerformanceAnalyticsCard';
 import { useFinancialTrends } from '../hooks/useData';
 import PageHeader from '../components/PageHeader';
-import AICoachAssistantModal from '../components/AICoachAssistantModal';
+import EliteCoachAssistantModal from '../components/EliteCoachAssistantModal';
 
 export default function HeadCoachDashboard() {
     const { t, i18n } = useTranslation();
@@ -36,7 +36,7 @@ export default function HeadCoachDashboard() {
     const [coachId, setCoachId] = useState<string | null>(null);
     const [savedSessions, setSavedSessions] = useState<any[]>([]);
     const { data: financialTrends } = useFinancialTrends();
-    const [isAIAssistantOpen, setIsAIAssistantOpen] = useState(false);
+    const [isEliteAssistantOpen, setIsEliteAssistantOpen] = useState(false);
 
     // Modals
     const [showGroupModal, setShowGroupModal] = useState(false);
@@ -376,13 +376,13 @@ export default function HeadCoachDashboard() {
                     </div>
                     <div className="grid grid-cols-2 gap-3 relative z-10 flex-1">
                         <button
-                            onClick={() => setIsAIAssistantOpen(true)}
+                            onClick={() => setIsEliteAssistantOpen(true)}
                             className="p-3 bg-white/5 hover:bg-white/10 border border-white/5 rounded-xl flex flex-col items-center justify-center gap-2 group transition-all"
                         >
                             <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-400 group-hover:scale-110 transition-transform">
                                 <BrainCircuit className="w-4 h-4" />
                             </div>
-                            <span className="text-[8px] font-black text-white/20 uppercase tracking-widest group-hover:text-white transition-colors">AI Coach</span>
+                            <span className="text-[8px] font-black text-white/20 uppercase tracking-widest group-hover:text-white transition-colors">Elite Assistant</span>
                         </button>
                         <button
                             onClick={() => setShowStudentModal(true)}

@@ -17,9 +17,9 @@ import {
     ChevronDown
 } from 'lucide-react';
 import { createPortal } from 'react-dom';
-import { generateTrainingPlan } from '../services/aiService';
+import { generateTrainingPlan } from '../services/smartService';
 import { useTheme } from '../context/ThemeContext';
-import { handleAIError } from '../utils/aiUtils';
+import { handleSmartError } from '../utils/smartUtils';
 import toast from 'react-hot-toast';
 
 interface AICoachAssistantModalProps {
@@ -260,7 +260,7 @@ export default function AICoachAssistantModal({ isOpen, onClose }: AICoachAssist
             setResult(plan);
             toast.success("Training Plan Generated Successfully!");
         } catch (error: any) {
-            const parsedError = handleAIError(error);
+            const parsedError = handleSmartError(error);
             toast.error(parsedError.message);
             
             if (parsedError.retryAfterSeconds) {
@@ -373,7 +373,7 @@ export default function AICoachAssistantModal({ isOpen, onClose }: AICoachAssist
                             </div>
                             <div>
                                 <h2 className="text-base font-black text-white uppercase tracking-widest flex items-center gap-2">
-                                    AI Assist
+                                    Smart Assist
                                     <span className="px-2 py-0.5 rounded-full bg-primary/20 text-primary text-[7px] tracking-[0.2em]">PRO</span>
                                 </h2>
                             </div>

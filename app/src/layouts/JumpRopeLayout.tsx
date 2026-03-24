@@ -176,22 +176,13 @@ export default function JumpRopeLayout() {
 
                     {/* Logo + Name */}
                     <div className="flex items-center gap-2">
-                        {/* Logo container area ... */}
-                        {!settings.logoDataUrl ? (
-                            <img 
-                                src="/logo-jumprope.png"
-                                alt="JUMP ROPE PRO"
-                                className="w-20 h-20 object-contain shrink-0"
-                                style={{ filter: 'brightness(1.2) contrast(1.1) drop-shadow(0 0 12px rgba(129,140,248,0.4))' }}
-                            />
-                        ) : (
-                            <img 
-                                src={settings.logoDataUrl} 
-                                alt="logo" 
-                                className="w-20 h-20 object-contain shrink-0"
-                                style={{ filter: 'brightness(1.1) drop-shadow(0 0 10px rgba(129,140,248,0.3))' }} 
-                            />
-                        )}
+                        {/* Always use the main Jump Rope Pro logo for branding consistency */}
+                        <img 
+                            src="/logo-jumprope.png"
+                            alt="JUMP ROPE PRO"
+                            className="w-20 h-20 object-contain shrink-0"
+                            style={{ filter: 'brightness(1.2) contrast(1.1) drop-shadow(0 0 12px rgba(129,140,248,0.4))' }}
+                        />
  
                         <div className="flex flex-col justify-center -ml-1">
                             <h1 

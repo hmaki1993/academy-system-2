@@ -1,19 +1,19 @@
 /**
- * Centralized AI Error Handling Utility
- * Parses Gemini API errors and returns human-readable messages and retry delays.
+ * Centralized Smart Error Handling Utility
+ * Parses Smart Engine errors and returns human-readable messages and retry delays.
  */
 
-export interface AIErrorResponse {
+export interface SmartErrorResponse {
     message: string;
     retryAfterSeconds?: number;
     isQuotaError: boolean;
 }
 
-export const handleAIError = (error: any): AIErrorResponse => {
-    console.error("AI Service Error:", error);
+export const handleSmartError = (error: any): SmartErrorResponse => {
+    console.error("Smart Service Error:", error);
 
-    const result: AIErrorResponse = {
-        message: "An unexpected AI error occurred. Please try again later.",
+    const result: SmartErrorResponse = {
+        message: "An unexpected error occurred. Please try again later.",
         isQuotaError: false
     };
 
@@ -30,7 +30,7 @@ export const handleAIError = (error: any): AIErrorResponse => {
     // Detect Quota Exceeded (429)
     if (errorStatus === 429 || errorMessage.includes("429") || errorMessage.toLowerCase().includes("quota exceeded")) {
         result.isQuotaError = true;
-        result.message = "Daily AI limit reached (Free Tier). Please wait before trying again.";
+        result.message = "Daily limit reached. Please wait before trying again.";
         
         // Attempt to extract retry delay from error details if available
         try {
@@ -69,13 +69,13 @@ export const handleAIError = (error: any): AIErrorResponse => {
 
     // Detect API Key issues
     if (errorMessage.toLowerCase().includes("api key") || errorStatus === 401 || errorStatus === 403) {
-        result.message = "Invalid or missing AI API Key. Please check your settings.";
+        result.message = "Invalid or missing Smart API Key. Please check your settings.";
         return result;
     }
 
     // Detect API Configuration issues (404)
     if (errorStatus === 404 || errorMessage.toLowerCase().includes("not found")) {
-        result.message = "AI Model configuration error (404). Please contact support or check API version.";
+        result.message = "Smart Engine configuration error (404). Please contact support or check API version.";
         return result;
     }
 
@@ -83,7 +83,7 @@ export const handleAIError = (error: any): AIErrorResponse => {
     if (!result.isQuotaError && errorMessage && errorMessage.length < 150) {
         result.message = errorMessage;
     } else if (result.isQuotaError && result.retryAfterSeconds) {
-        result.message = `Daily AI limit reached. Please wait ${result.retryAfterSeconds}s before trying again. ⏳`;
+        result.message = `Daily limit reached. Please wait ${result.retryAfterSeconds}s before trying again. ⏳`;
     }
 
     return result;

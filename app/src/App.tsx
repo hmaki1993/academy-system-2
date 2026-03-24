@@ -27,7 +27,7 @@ const PTAttendance = lazy(() => import('./pages/PTAttendance'));
 const Evaluations = lazy(() => import('./pages/Evaluations'));
 const LandingPage = lazy(() => import('./pages/LandingPage'));
 const Communications = lazy(() => import('./pages/Communications'));
-const AITraining = lazy(() => import('./pages/AITraining'));
+const SmartTraining = lazy(() => import('./pages/SmartTraining'));
 
 // Jump Rope Independent Layout & App
 const JumpRopeLayout = lazy(() => import('./layouts/JumpRopeLayout'));
@@ -169,7 +169,7 @@ function AppContent() {
                   <p className="text-white/20 font-black tracking-[0.4em] text-[10px] uppercase">Jump Rope Pro</p>
                 </div>
               }>
-                <JumpRopeLayout />
+                {localStorage.getItem('jr_onboarded') ? <JumpRopeLayout /> : <Navigate to="/jump-rope/welcome" replace />}
               </Suspense>
             }>
               <Route index element={<JumpRopeHub />} />
@@ -202,7 +202,7 @@ function AppContent() {
                 <Route path="attendance/pt" element={<PTAttendance />} />
                 <Route path="evaluations" element={<Evaluations />} />
                 <Route path="communications" element={<Communications />} />
-                <Route path="ai-training" element={<AITraining />} />
+                <Route path="smart-training" element={<SmartTraining />} />
               </Route>
             </Route>
 

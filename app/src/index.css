@@ -169,10 +169,16 @@ body {
 
 .glass-card:hover {
   border-color: rgba(139, 92, 246, 0.35) !important;
-  transform: translateY(-3px);
+  transform: translateY(-4px) scale(1.02) !important;
   box-shadow:
-    var(--shadow-glass),
-    0 0 40px rgba(99, 102, 241, 0.12) !important;
+    0 20px 40px -10px rgba(0, 0, 0, 0.5),
+    0 0 20px rgba(99, 102, 241, 0.15) !important;
+  background-color: var(--color-hover) !important;
+}
+
+.glass-card:active {
+  transform: scale(0.98) !important;
+  transition-duration: 0.1s !important;
 }
 
 /* ───────────────────────────────────────────────────────────────
@@ -273,9 +279,14 @@ body {
 }
 
 .pastel-card:hover {
-  transform: translateY(-6px) rotate(0.5deg);
-  filter: brightness(1.02);
-  box-shadow: 0 0 35px 8px color-mix(in srgb, var(--color-primary), transparent 80%) !important;
+  transform: translateY(-6px) scale(1.02) rotate(0.5deg) !important;
+  filter: brightness(1.05);
+  box-shadow: 0 20px 40px -10px color-mix(in srgb, var(--color-primary), transparent 70%) !important;
+}
+
+.pastel-card:active {
+  transform: scale(0.95) !important;
+  transition-duration: 0.1s !important;
 }
 
 .pastel-card::before {
@@ -694,8 +705,12 @@ aside .nav-footer-icon {
   }
 
   .glass-card:hover {
-    transform: none !important;
+    transform: scale(0.99) !important;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3) !important;
+  }
+
+  .glass-card:active {
+    transform: scale(0.96) !important;
   }
 
   .sidebar-3d-item:hover { transform: none !important; filter: none !important; }

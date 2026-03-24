@@ -144,7 +144,7 @@ export default function Dashboard() {
                         <button
                             onClick={() => setShowBatchTest(true)}
                             onMouseEnter={playHoverSound}
-                            className="group relative px-3 py-1.5 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 transition-all duration-300"
+                            className="group relative px-3 py-1.5 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 hover:scale-105 hover:border-white/20 transition-all duration-300 active:scale-95 shadow-none hover:shadow-[0_10px_20px_-5px_rgba(0,0,0,0.3)]"
                         >
                             <div className="flex items-center gap-1.5 text-[9px] font-black text-white uppercase tracking-widest relative z-10">
                                 <ClipboardCheck className="w-3 h-3 text-primary" />
@@ -162,7 +162,7 @@ export default function Dashboard() {
                         key={index}
                         onClick={() => stat.path && navigate(stat.path)}
                         onMouseEnter={playHoverSound}
-                        className="glass-card p-3 md:p-4 group relative overflow-hidden bg-[#0a0c10]/40 backdrop-blur-xl border-white/5 hover:border-white/20 transition-all duration-300"
+                        className="glass-card p-3 md:p-4 group relative overflow-hidden active:scale-95 cursor-pointer shadow-none"
                     >
                         <div className="flex items-start justify-between mb-3 relative z-10">
                             <div className="flex flex-col gap-0.5">
@@ -201,7 +201,8 @@ export default function Dashboard() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 <div
                     onClick={() => navigate('/app/finance')}
-                    className="glass-card p-4 cursor-pointer hover:bg-white/5 transition-colors"
+                    onMouseEnter={playHoverSound}
+                    className="glass-card p-4 cursor-pointer active:scale-[0.98] shadow-none"
                 >
                     <div className="flex items-center gap-3 mb-6">
                         <TrendingUp className="w-5 h-5 text-primary" />
@@ -215,7 +216,8 @@ export default function Dashboard() {
 
                 <div
                     onClick={() => navigate('/app/students')}
-                    className="cursor-pointer"
+                    onMouseEnter={playHoverSound}
+                    className="cursor-pointer active:scale-[0.98]"
                 >
                     <PerformanceAnalyticsCard
                         title="Student Performance"
@@ -242,7 +244,7 @@ export default function Dashboard() {
                 </div>
 
                 {/* Recent Activity */}
-                <div className="lg:col-span-1 glass-card rounded-[2rem] overflow-hidden flex flex-col">
+                <div className="lg:col-span-1 glass-card rounded-[2rem] overflow-hidden flex flex-col shadow-none">
                     <div className="p-4 border-b border-surface-border flex items-center justify-between">
                         <h3 className="text-lg font-black text-base uppercase tracking-tight flex items-center gap-3">
                             <span className="w-1.5 h-6 bg-primary rounded-full"></span>
@@ -263,7 +265,12 @@ export default function Dashboard() {
                             <p className="text-muted text-sm font-black uppercase tracking-widest text-center py-6">{t('dashboard.noRecentActivity')}</p>
                         ) : (
                             displayStats.recentActivity.map((student: any) => (
-                                <div key={student.id} className="flex items-center gap-4 p-4 bg-white/[0.03] rounded-2xl border border-white/[0.05] hover:bg-white/[0.08] hover:border-white/10 transition-all duration-500 group cursor-pointer relative overflow-hidden">
+                                <div 
+                                    key={student.id} 
+                                    onClick={() => navigate(`/app/students?id=${student.id}`)}
+                                    onMouseEnter={playHoverSound}
+                                    className="flex items-center gap-4 p-4 bg-white/[0.03] rounded-2xl border border-white/[0.05] hover:bg-white/[0.08] hover:border-white/10 transition-all duration-500 group cursor-pointer relative overflow-hidden active:scale-95 shadow-none"
+                                >
                                      {/* Background Decorative Gradient */}
                                     <div className="absolute inset-0 bg-gradient-to-r from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
 

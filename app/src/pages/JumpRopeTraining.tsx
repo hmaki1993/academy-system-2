@@ -31,6 +31,7 @@ export default function JumpRopeTraining() {
     const [countdownMins, setCountdownMins] = useState(0);
     const [countdownSecs, setCountdownSecs] = useState(0);
     const [timerRemaining, setTimerRemaining] = useState<number | null>(null);
+    const [isTimerActive, setIsTimerActive] = useState(false);
 
     // Timer Adjust Helpers
     const adjustMins = (delta: number) => setCountdownMins(m => Math.max(0, Math.min(99, m + delta)));
@@ -69,6 +70,7 @@ export default function JumpRopeTraining() {
     const timerRemainingRef = useRef<number | null>(null);
     const intensityHistoryRef = useRef<any[]>([]);
     const cooldownRef = useRef(false);
+    const isTimerStartedRef = useRef(false);
 
     const handleVideoLoad = () => {
         setIsLoading(false);
@@ -147,7 +149,6 @@ export default function JumpRopeTraining() {
         // EXACT ORIGINAL ENGINE (from JumpRopeCounter.tsx)
         // =====================================================
 
-        const nose = LM[0];
         const lShoulder2 = LM[11];
         const rShoulder2 = LM[12];
         const lHip2 = LM[23];
@@ -237,6 +238,12 @@ export default function JumpRopeTraining() {
         const bodyH = Math.abs(((lAnkle2?.y ?? rAnkle2?.y ?? 0) - nose.y) * H);
         bodyHeightRef.current = Math.max(100, bodyH);
 
+        // --- HYBRID ANKLE CHECK (From User Logic) ---
+        // Normalized check: Ankle should be within 20% of hip height to be "up"
+        const lAnkleUp = lAnkle2 && lHip2 && lAnkle2.y < (lHip2.y + 0.18);
+        const rAnkleUp = rAnkle2 && rHip2 && rAnkle2.y < (rHip2.y + 0.18);
+        const isAnkleUp = lAnkleUp || rAnkleUp;
+
         // EMA Smoothing
         if (emaSmoothY.current === null) emaSmoothY.current = noseY;
         emaSmoothY.current = emaSmoothY.current * 0.4 + noseY * 0.6;
@@ -248,13 +255,17 @@ export default function JumpRopeTraining() {
         velocityRef.current = velocityRef.current * 0.3 + (displacement - lastDisplacementRef.current) / deltaTime * 0.7;
         lastDisplacementRef.current = displacement;
 
-        const jumpMinThreshold = Math.max(12, bodyHeightRef.current * 0.025);
+        // Tune: 4% of body height is much more stable than 2.5%
+        const jumpMinThreshold = Math.max(18, bodyHeightRef.current * 0.04);
         const pct = Math.max(0, Math.min(100, (displacement / (bodyHeightRef.current * 0.10)) * 100));
         setMovementPct(Math.round(pct));
 
         // State Machine
         if (jumpStatusRef.current === 'standing') {
-            if (displacement > jumpMinThreshold && velocityRef.current > 40) {
+            // Require BOTH nose displacement AND ankle movement (if visible) to start a jump
+            const jumpTriggered = isFullBody ? (displacement > jumpMinThreshold && isAnkleUp) : (displacement > jumpMinThreshold * 1.2);
+            
+            if (jumpTriggered && velocityRef.current > 40) {
                 jumpStatusRef.current = 'jumping';
                 peakY.current = displacement;
             } else if (Math.abs(velocityRef.current) < 15 && baselineY.current !== null) {
@@ -263,7 +274,10 @@ export default function JumpRopeTraining() {
         } else {
             if (displacement > peakY.current) peakY.current = displacement;
 
-            if ((velocityRef.current < -30 || displacement < jumpMinThreshold * 0.5) && !cooldownRef.current) {
+            // Landing detected if displacement drops significantly OR ankles touch down
+            const landed = isFullBody ? (displacement < jumpMinThreshold * 0.4 || !isAnkleUp) : (displacement < jumpMinThreshold * 0.4);
+
+            if (landed && !cooldownRef.current) {
                 // Success! Block if user is already pushing forward for real
                 if (peakY.current > jumpMinThreshold && scaleVelocity < 100) {
                     jumpCountRef.current += 1;
@@ -339,7 +353,7 @@ export default function JumpRopeTraining() {
                 setRpm(Math.round(jumpCountRef.current / ((workTimeRef.current || 1) / 60)) || 0);
             }
 
-            if (timerRemainingRef.current !== null) {
+            if (timerRemainingRef.current !== null && isTimerActive) {
                 const nextValue = Math.max(0, timerRemainingRef.current - 1);
                 timerRemainingRef.current = nextValue;
                 setTimerRemaining(nextValue);
@@ -374,6 +388,8 @@ export default function JumpRopeTraining() {
             timerRemainingRef.current = null;
         }
         setIsTracking(true);
+        setIsTimerActive(false);
+        isTimerStartedRef.current = false;
         jumpCountRef.current = 0;
         setJumps(0);
         workTimeRef.current = 0;

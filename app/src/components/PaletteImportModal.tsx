@@ -206,7 +206,7 @@ function ColorEditor({ colors, assignments, onAssign, activeRole, onSetActive, p
         setIsCursorGrabbing(false);
     };
 
-    const [previewUrl, setPreviewUrl] = useState('/app');
+    const [previewUrl, setPreviewUrl] = useState('#/app');
 
     // Apply palette colors to the real app's CSS variables in real-time via the iframe
     useEffect(() => {
@@ -414,8 +414,8 @@ function ColorEditor({ colors, assignments, onAssign, activeRole, onSetActive, p
                             : 'Live Preview'}
                         <div className="ml-auto flex items-center gap-1.5 p-0.5 bg-black/40 rounded-lg border border-white/5">
                             {[
-                                { id: '/app', label: 'Home' },
-                                { id: '/app/communications', label: 'Chat' }
+                                { id: '#/app', label: 'Home' },
+                                { id: '#/app/communications', label: 'Chat' }
                             ].map(site => (
                                 <button
                                     key={site.id}

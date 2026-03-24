@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { supabase } from '../lib/supabase';
 import toast from 'react-hot-toast';
@@ -362,6 +362,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     const [isLoading, setIsLoading] = useState(true);
     const [hasLoaded, setHasLoaded] = useState(false);
     const [userProfile, setUserProfile] = useState<ThemeContextType['userProfile']>(null);
+    const isUpdatingRef = useRef(false);
 
     const { i18n } = useTranslation();
 
@@ -673,7 +674,13 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     };
 
     const updateSettings = async (newSettings: Partial<GymSettings>): Promise<{ success: boolean; partial: boolean; }> => {
+        if (isUpdatingRef.current) {
+            console.warn('💾 ThemeContext: Update already in progress, skipping duplicate call.');
+            return { success: true, partial: false };
+        }
+
         let isPartial = false;
+        isUpdatingRef.current = true;
         // Optimistic update
         setSettings(prev => ({ ...prev, ...newSettings }));
 
@@ -812,9 +819,10 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
             }
 
             return { success: true, partial: isPartial };
-        } catch (error: any) {
-            console.error('Error updating theme:', error);
-            throw error; // Rethrow to let caller handle if needed
+        } finally {
+            isUpdatingRef.current = false;
+            setIsLoading(false);
+            setHasLoaded(true);
         }
     };
 

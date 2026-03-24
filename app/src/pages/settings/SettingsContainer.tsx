@@ -1161,11 +1161,21 @@ export default function Settings() {
                             <div className="flex flex-col sm:flex-row justify-center gap-4 mt-8 bg-black/20 p-6 rounded-[2.5rem] border border-white/5 backdrop-blur-sm">
                                 <button
                                     onClick={handleSaveTheme}
-                                    className="relative group overflow-hidden bg-gradient-to-r from-primary via-accent to-primary bg-size-200 bg-pos-0 hover:bg-pos-100 text-white px-6 py-3 rounded-xl font-black uppercase tracking-[0.2em] text-[10px] flex items-center justify-center gap-2 transition-all duration-500 shadow-[0_0_20px_rgba(var(--color-primary),0.2)] hover:shadow-[0_0_40px_rgba(var(--color-primary),0.4)] hover:scale-105 active:scale-95 border border-white/20 min-w-[140px]"
+                                    disabled={isPublishing}
+                                    className={`relative group overflow-hidden bg-gradient-to-r from-primary via-accent to-primary bg-size-200 bg-pos-0 hover:bg-pos-100 text-white px-6 py-3 rounded-xl font-black uppercase tracking-[0.2em] text-[10px] flex items-center justify-center gap-2 transition-all duration-500 shadow-[0_0_20px_rgba(var(--color-primary),0.2)] hover:shadow-[0_0_40px_rgba(var(--color-primary),0.4)] hover:scale-105 active:scale-95 border border-white/20 min-w-[140px] ${isPublishing ? 'opacity-50 cursor-not-allowed' : ''}`}
                                 >
                                     <div className="absolute inset-0 bg-white/10 translate-y-full group-hover:translate-y-0 transition-transform duration-500"></div>
-                                    <Save className="w-4 h-4 relative z-10 drop-shadow-md" />
-                                    <span className="relative z-10 drop-shadow-md">SAVE</span>
+                                    {isPublishing ? (
+                                        <>
+                                            <Loader2 className="w-4 h-4 relative z-10 animate-spin" />
+                                            <span className="relative z-10">SAVING...</span>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Save className="w-4 h-4 relative z-10 drop-shadow-md" />
+                                            <span className="relative z-10 drop-shadow-md">SAVE</span>
+                                        </>
+                                    )}
                                 </button>
                                 <button
                                     onClick={() => setDraftSettings(defaultSettings)}

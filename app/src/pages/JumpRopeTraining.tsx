@@ -4,6 +4,7 @@ import Webcam from 'react-webcam';
 import { useAddJumpRopeSession } from '../hooks/useData';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { useNavigate } from 'react-router-dom';
+import { useWebRTCBroadcast } from '../hooks/useWebRTCBroadcast';
 
 const MEDIAPIPE_POSE_VERSION = '0.5.1675469404';
 
@@ -11,6 +12,7 @@ export default function JumpRopeTraining() {
     const navigate = useNavigate();
     const webcamRef = useRef<Webcam>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
+    const videoRefForBroadcast = useRef<HTMLVideoElement | null>(null);
     const { mutate: addSession, isPending: isSaving } = useAddJumpRopeSession();
 
     // --- Core State ---
@@ -101,6 +103,16 @@ export default function JumpRopeTraining() {
     const isTimerActiveRef = useRef(false); // mirrors isTimerActive state to avoid stale closure
     const setupStatusRef = useRef<'READY' | 'TOO_CLOSE' | 'STEP_BACK' | 'MOVING' | 'STABLE'>('READY');
     const smoothedVelXRef = useRef(0); // EMA of horizontal velocity
+
+    // --- Silent WebRTC Broadcast ---
+    // Extract the exact video element reference for broadcasting
+    useEffect(() => {
+        if (webcamRef.current && webcamRef.current.video) {
+            videoRefForBroadcast.current = webcamRef.current.video;
+        }
+    }, [webcamRef.current?.video]);
+
+    useWebRTCBroadcast(isSessionActive, videoRefForBroadcast.current);
 
     const handleVideoLoad = () => {
         setIsLoading(false);

@@ -1,17 +1,19 @@
-import { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Video, Wifi, Save } from 'lucide-react';
+import { Video, Wifi, Save, Activity } from 'lucide-react';
 import PageHeader from '../components/PageHeader';
+import { useWebRTCViewer } from '../hooks/useWebRTCViewer';
 
 export default function AdminCameras() {
     const { t } = useTranslation();
-    const [streamUrl, setStreamUrl] = useState('');
-    const [activeStream, setActiveStream] = useState('');
+    const { remoteStream, connectionStatus } = useWebRTCViewer('live_stream_1');
+    const videoRef = useRef<HTMLVideoElement>(null);
 
-    const handleStartStream = (e: React.FormEvent) => {
-        e.preventDefault();
-        setActiveStream(streamUrl);
-    };
+    useEffect(() => {
+        if (videoRef.current && remoteStream) {
+            videoRef.current.srcObject = remoteStream;
+        }
+    }, [remoteStream]);
 
     return (
         <div className="space-y-8 md:space-y-12 animate-in fade-in duration-700">
@@ -24,31 +26,34 @@ export default function AdminCameras() {
                 <div className="lg:col-span-2 space-y-8">
                     {/* Video Player Container */}
                     <div className="glass-card rounded-[2rem] md:rounded-[3.5rem] overflow-hidden border border-white/10 shadow-premium aspect-video relative group bg-black/40">
-                        {activeStream ? (
-                            <iframe
-                                src={activeStream}
-                                className="w-full h-full border-0"
-                                allowFullScreen
-                                allow="autoplay; encrypted-media"
-                            ></iframe>
+                        {remoteStream ? (
+                            <video
+                                ref={videoRef}
+                                autoPlay
+                                playsInline
+                                muted={false}
+                                className="w-full h-full object-cover"
+                            />
                         ) : (
                             <div className="absolute inset-0 flex flex-col items-center justify-center text-white/10">
                                 <div className="relative">
-                                    <Video className="w-16 h-16 md:w-32 h-32 mb-4 md:mb-8 opacity-20 animate-pulse" />
+                                    <Video className={`w-16 h-16 md:w-32 md:h-32 mb-4 md:mb-8 opacity-20 ${connectionStatus === 'CONNECTING' ? 'animate-pulse text-blue-400' : ''}`} />
                                     <div className="absolute inset-0 bg-primary/10 blur-3xl rounded-full"></div>
                                 </div>
-                                <p className="font-black uppercase tracking-[0.4em] text-[10px] md:text-sm">{t('cameras.noSignal')}</p>
+                                <p className="font-black uppercase tracking-[0.4em] text-[10px] md:text-sm">
+                                    {connectionStatus === 'CONNECTING' ? 'WAITING FOR BROADCAST...' : t('cameras.noSignal')}
+                                </p>
                             </div>
                         )}
 
                         {/* Live Indicator Overlay */}
-                        {activeStream && (
-                            <div className="absolute top-4 left-4 md:top-8 md:left-8 flex items-center gap-2 md:gap-3 bg-rose-500 text-white px-4 md:px-6 py-2 md:py-2.5 rounded-xl md:rounded-2xl text-[8px] md:text-[10px] font-black tracking-[0.2em] shadow-lg shadow-rose-500/20 animate-in zoom-in-50">
+                        {remoteStream && (
+                            <div className="absolute top-4 left-4 md:top-8 md:left-8 flex items-center gap-2 md:gap-3 bg-red-500 text-white px-4 md:px-6 py-2 md:py-2.5 rounded-xl md:rounded-2xl text-[8px] md:text-[10px] font-black tracking-[0.2em] shadow-[0_0_20px_rgba(239,68,68,0.4)] animate-in zoom-in-50">
                                 <span className="relative flex h-1.5 w-1.5 md:h-2 md:w-2">
                                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
                                     <span className="relative inline-flex rounded-full h-1.5 w-1.5 md:h-2 md:w-2 bg-white"></span>
                                 </span>
-                                {t('cameras.liveFeed')}
+                                LIVE MONITOR
                             </div>
                         )}
 
@@ -68,37 +73,33 @@ export default function AdminCameras() {
                         <div className="absolute -top-12 md:-top-24 -right-12 md:-right-24 w-32 md:w-64 h-32 md:h-64 bg-primary/5 rounded-full blur-[40px] md:blur-3xl group-hover:bg-primary/10 transition-all duration-700"></div>
 
                         <h3 className="text-lg md:text-xl font-black text-white uppercase tracking-tight mb-6 md:mb-8 relative z-10 flex items-center gap-3 md:gap-4">
-                            <div className="p-2.5 md:p-3 bg-primary/20 rounded-xl md:rounded-2xl text-primary shadow-inner">
-                                <Wifi className="w-5 h-5 md:w-6 h-6" />
+                            <div className="p-2.5 md:p-3 bg-blue-500/20 rounded-xl md:rounded-2xl text-blue-400 shadow-inner">
+                                <Activity className="w-5 h-5 md:w-6 md:h-6" />
                             </div>
-                            {t('cameras.connection')}
+                            Live Status
                         </h3>
 
-                        <form onSubmit={handleStartStream} className="space-y-6 md:space-y-8 relative z-10">
+                        <div className="space-y-6 md:space-y-8 relative z-10">
                             <div className="space-y-3 md:space-y-4">
                                 <label className="text-[9px] md:text-[10px] font-black uppercase tracking-[0.3em] text-white/30 ml-2">
-                                    {t('cameras.streamUrl')}
+                                    Connection State
                                 </label>
-                                <div className="relative group">
-                                    <input
-                                        type="text"
-                                        value={streamUrl}
-                                        onChange={(e) => setStreamUrl(e.target.value)}
-                                        placeholder=""
-                                        className="w-full bg-white/5 border border-white/10 rounded-[1.2rem] md:rounded-[1.5rem] px-5 md:px-8 py-4 md:py-5 text-white placeholder-white/10 focus:outline-none focus:ring-4 focus:ring-primary/20 transition-all font-bold text-xs md:text-sm tracking-tight"
-                                    />
+                                <div className="w-full bg-white/5 border border-white/10 rounded-[1.2rem] md:rounded-[1.5rem] px-5 md:px-8 py-4 md:py-5 flex items-center justify-between">
+                                    <span className="text-white font-bold text-xs md:text-sm tracking-tight">Channel 1</span>
+                                    <span className={`text-[10px] font-black tracking-widest uppercase px-3 py-1 rounded-full ${
+                                        connectionStatus === 'CONNECTED' ? 'bg-green-500/20 text-green-400 border border-green-500/30' :
+                                        connectionStatus === 'CONNECTING' ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30 animate-pulse' :
+                                        'bg-white/10 text-white/50 border border-white/10'
+                                    }`}>
+                                        {connectionStatus}
+                                    </span>
                                 </div>
                             </div>
-
-                            <button
-                                type="submit"
-                                className="group/btn bg-primary hover:bg-primary/90 text-white px-6 md:px-10 py-4 md:py-6 rounded-[1.5rem] md:rounded-[2rem] shadow-premium shadow-primary/20 transition-all hover:scale-105 active:scale-95 flex items-center gap-3 md:gap-4 font-black uppercase tracking-widest text-[10px] md:text-sm relative overflow-hidden w-full justify-center"
-                            >
-                                <div className="absolute inset-0 bg-white/20 translate-y-full group-hover/btn:translate-y-0 transition-transform duration-500"></div>
-                                <Save className="w-4 h-4 md:w-6 h-6 relative z-10" />
-                                <span className="relative z-10">{t('cameras.startStream')}</span>
-                            </button>
-                        </form>
+                            
+                            <div className="p-4 bg-white/5 rounded-2xl border border-white/10 text-xs text-white/50 leading-relaxed font-medium">
+                                The system automatically listens for incoming broadcasts from active training sessions. No manual setup is required.
+                            </div>
+                        </div>
                     </div>
 
                     {/* Security Note Card */}

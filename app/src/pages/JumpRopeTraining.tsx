@@ -99,6 +99,7 @@ export default function JumpRopeTraining() {
     const cooldownRef = useRef(false);
     const isTimerStartedRef = useRef(false);
     const isTimerActiveRef = useRef(false); // mirrors isTimerActive state to avoid stale closure
+    const setupStatusRef = useRef<'READY' | 'TOO_CLOSE' | 'STEP_BACK' | 'MOVING' | 'STABLE'>('READY');
     const smoothedVelXRef = useRef(0); // EMA of horizontal velocity
 
     const handleVideoLoad = () => {
@@ -157,7 +158,7 @@ export default function JumpRopeTraining() {
 
         // --- Proximity Hysteresis & Stabilization ---
         // Enter at 0.38, Exit at 0.34 to prevent flickering
-        const wasTooClose = setupStatus === 'TOO_CLOSE';
+        const wasTooClose = setupStatusRef.current === 'TOO_CLOSE';
         const isTooClose = wasTooClose ? (shoulderW > W * 0.34) : (shoulderW > W * 0.38);
         const isApproaching = scaleVelocity > 180;
         const isCurrentlyMoving = frameVelocityY > 400 || frameVelocityX > 200 || isApproaching;
@@ -178,12 +179,15 @@ export default function JumpRopeTraining() {
                     trackingLossStartRef.current = now;
                 } else if (now - trackingLossStartRef.current > 600) {
                     isStableRef.current = false;
-                    setSetupStatus(isTooClose ? 'TOO_CLOSE' : 'STEP_BACK');
+                    const nextS = isTooClose ? 'TOO_CLOSE' : 'STEP_BACK';
+                    setSetupStatus(nextS);
+                    setupStatusRef.current = nextS;
                     return;
                 }
             } else {
                 trackingLossStartRef.current = null;
                 setSetupStatus('READY');
+                setupStatusRef.current = 'READY';
             }
 
             const essentialTrackingLost = !hasAura || (!lAnkle && !rAnkle) || !hMidY;
@@ -192,18 +196,21 @@ export default function JumpRopeTraining() {
                     trackingLossStartRef.current = now;
                 } else if (now - trackingLossStartRef.current > 1200) {
                     isStableRef.current = false;
-                    setSetupStatus(!isFullBody ? 'STEP_BACK' : 'MOVING');
+                    const nextS = !isFullBody ? 'STEP_BACK' : 'MOVING';
+                    setSetupStatus(nextS);
+                    setupStatusRef.current = nextS;
                     return;
                 }
             }
         } else {
             if (isCurrentlyMoving || !isFullBody || isTooClose) {
                 stabilityStartRef.current = null;
-                const nextStatus = (isTooClose && isSessionActive) ? 'TOO_CLOSE' : !isFullBody ? 'STEP_BACK' : 'MOVING';
+                const nextStatus = (isTooClose && isSessionActiveRef.current) ? 'TOO_CLOSE' : !isFullBody ? 'STEP_BACK' : 'MOVING';
                 
                 // Direct status update for Setup mode
-                if (setupStatus !== nextStatus) {
+                if (setupStatusRef.current !== nextStatus) {
                     setSetupStatus(nextStatus);
+                    setupStatusRef.current = nextStatus;
                 }
                 
                 baselineY.current = nose.y;
@@ -217,6 +224,7 @@ export default function JumpRopeTraining() {
             } else if (now - stabilityStartRef.current > 1500) {
                 isStableRef.current = true;
                 setSetupStatus('READY');
+                setupStatusRef.current = 'READY';
             }
             baselineY.current = nose.y;
             baselineHipY.current = hMidY !== null ? hMidY / H : null;

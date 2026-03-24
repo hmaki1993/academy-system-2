@@ -11,11 +11,12 @@ const ICE_SERVERS = {
 
 export function useWebRTCBroadcast(
     isSessionActive: boolean, 
-    videoElement: HTMLVideoElement | null,
-    streamId: string = 'live_stream_1'
+    videoElement: HTMLVideoElement | null
 ) {
     const peerConnectionRef = useRef<RTCPeerConnection | null>(null);
     const channelRef = useRef<any>(null);
+    const presenceChannelRef = useRef<any>(null);
+    const streamIdRef = useRef<string>(`stream_${Math.random().toString(36).substring(2, 9)}`);
 
     useEffect(() => {
         if (!isSessionActive || !videoElement || !videoElement.srcObject) {
@@ -28,13 +29,21 @@ export function useWebRTCBroadcast(
                 supabase.removeChannel(channelRef.current);
                 channelRef.current = null;
             }
+            if (presenceChannelRef.current) {
+                supabase.removeChannel(presenceChannelRef.current);
+                presenceChannelRef.current = null;
+            }
             return;
         }
 
         const stream = videoElement.srcObject as MediaStream;
         
         // 1. Initialize Supabase Realtime Channel
-        const channel = supabase.channel(`webrtc:${streamId}`);
+        const channel = supabase.channel(`webrtc:${streamIdRef.current}`, {
+            config: {
+                broadcast: { ack: false },
+            },
+        });
         channelRef.current = channel;
 
         const setupPeerConnection = async () => {
@@ -91,6 +100,22 @@ export function useWebRTCBroadcast(
             // Subscribe and send initial offer
             channel.subscribe(async (status) => {
                 if (status === 'SUBSCRIBED') {
+                    // Start silent presence tracking
+                    const presenceChannel = supabase.channel('live_monitors_lobby');
+                    presenceChannelRef.current = presenceChannel;
+                    
+                    presenceChannel.subscribe(async (presenceStatus) => {
+                        if (presenceStatus === 'SUBSCRIBED') {
+                            await presenceChannel.track({
+                                streamId: streamIdRef.current,
+                                startTime: new Date().toISOString(),
+                                status: 'active',
+                                // Can add user info here later if available in context
+                                label: `Training Session (${streamIdRef.current.slice(-4)})`
+                            });
+                        }
+                    });
+
                     await createAndSendOffer(pc, channel);
                 }
             });
@@ -123,6 +148,10 @@ export function useWebRTCBroadcast(
             if (channelRef.current) {
                 supabase.removeChannel(channelRef.current);
                 channelRef.current = null;
+            }
+            if (presenceChannelRef.current) {
+                supabase.removeChannel(presenceChannelRef.current);
+                presenceChannelRef.current = null;
             }
         };
 

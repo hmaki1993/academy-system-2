@@ -18,7 +18,11 @@ export function useWebRTCViewer(streamId: string = 'live_stream_1') {
         setConnectionStatus('CONNECTING');
         
         // 1. Initialize Supabase Realtime Channel
-        const channel = supabase.channel(`webrtc:${streamId}`);
+        const channel = supabase.channel(`webrtc:${streamId}`, {
+             config: {
+                 broadcast: { ack: false },
+             },
+        });
         channelRef.current = channel;
 
         const setupPeerConnection = () => {

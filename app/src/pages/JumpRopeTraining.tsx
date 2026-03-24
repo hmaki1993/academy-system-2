@@ -456,7 +456,7 @@ export default function JumpRopeTraining() {
         <div className="flex-1 flex flex-col relative w-full bg-black overflow-hidden font-sans selection:bg-blue-400/30 antialiased" style={{ background: 'var(--jr-bg, #000)' }}>
             {/* 1. Immersive Camera Base */}
             <div className="absolute inset-0 z-10 flex flex-col items-center justify-center pointer-events-none" style={{ background: 'var(--jr-bg, #080808)' }}>
-                <Webcam ref={webcamRef} className="w-full h-full object-cover opacity-60 grayscale-[0.5] contrast-[1.2]" mirrored={true} onUserMedia={handleVideoLoad} onUserMediaError={handleCameraError} />
+                <Webcam audio={true} ref={webcamRef} className="w-full h-full object-cover opacity-60 grayscale-[0.5] contrast-[1.2]" mirrored={true} onUserMedia={handleVideoLoad} onUserMediaError={handleCameraError} />
                 <canvas ref={canvasRef} className="absolute inset-0 w-full h-full z-10 pointer-events-none opacity-50" width={640} height={480} />
             </div>
 

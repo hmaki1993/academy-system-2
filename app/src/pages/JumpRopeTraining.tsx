@@ -197,13 +197,11 @@ export default function JumpRopeTraining() {
                 }
             }
         } else {
-            // Setup Mode with Persistence
-            const currentlyTooClose = isTooClose && isSessionActive;
-            if (isCurrentlyMoving || !isFullBody || currentlyTooClose) {
+            if (isCurrentlyMoving || !isFullBody || isTooClose) {
                 stabilityStartRef.current = null;
-                const nextStatus = currentlyTooClose ? 'TOO_CLOSE' : !isFullBody ? 'STEP_BACK' : 'MOVING';
+                const nextStatus = (isTooClose && isSessionActive) ? 'TOO_CLOSE' : !isFullBody ? 'STEP_BACK' : 'MOVING';
                 
-                // Only update if status is different to prevent unnecessary renders
+                // Direct status update for Setup mode
                 if (setupStatus !== nextStatus) {
                     setSetupStatus(nextStatus);
                 }

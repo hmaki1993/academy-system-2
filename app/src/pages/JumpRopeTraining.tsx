@@ -176,7 +176,7 @@ export default function JumpRopeTraining() {
                     trackingLossStartRef.current = now;
                 } else if (now - trackingLossStartRef.current > 600) {
                     isStableRef.current = false;
-                    setSetupStatus('STEP_BACK');
+                    setSetupStatus(isTooClose ? 'TOO_CLOSE' : 'STEP_BACK');
                     return;
                 }
             } else {
@@ -373,7 +373,7 @@ export default function JumpRopeTraining() {
             }
         }, 1000);
         return () => clearInterval(interval);
-    }, [isTracking]);
+    }, [isSessionActive, isTracking]);
 
     const handleFinish = useCallback(() => {
         setIsSessionActive(false);

@@ -17,11 +17,11 @@ const MobileBottomNav = () => (
         <div
             className="relative flex items-center justify-around h-12 rounded-[1.75rem] overflow-hidden"
             style={{
-                background: 'rgba(6,6,18,0.75)',
+                background: 'var(--nav-bg, rgba(6,6,18,0.75))',
                 backdropFilter: 'blur(40px) saturate(180%)',
                 WebkitBackdropFilter: 'blur(40px) saturate(180%)',
-                border: '1px solid rgba(255,255,255,0.07)',
-                boxShadow: '0 20px 60px -10px rgba(0,0,0,0.8), inset 0 1px 0 rgba(255,255,255,0.06)',
+                border: '1px solid var(--jr-border)',
+                boxShadow: '0 20px 60px -10px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.06)',
             }}
         >
             {/* Ambient glow strip at the top */}
@@ -37,7 +37,7 @@ const MobileBottomNav = () => (
                     end={end}
                     className={({ isActive }) =>
                         `relative flex flex-col items-center justify-center flex-1 h-full gap-0.5 transition-all duration-300 group ${
-                            isActive ? 'text-[var(--color-primary,#ff3b30)]' : 'text-white/35 hover:text-white/60'
+                            isActive ? 'text-[var(--color-primary,#ff3b30)]' : 'text-[var(--jr-text-soft)] hover:text-[var(--jr-text-main)]'
                         }`
                     }
                 >
@@ -59,14 +59,19 @@ const MobileBottomNav = () => (
                                 size={17}
                                 className={`relative z-10 transition-all duration-300 ${
                                     isActive
-                                        ? 'scale-115 drop-shadow-[0_0_10px_var(--color-primary,#ff3b30)]'
+                                        ? 'scale-115'
                                         : 'group-hover:scale-110'
                                 } ${spin && isActive ? 'animate-[spin_4s_linear_infinite]' : ''}`}
+                                style={{ 
+                                    color: isActive ? 'var(--color-primary)' : 'var(--jr-text-soft)',
+                                    filter: isActive ? 'drop-shadow(0 0 10px var(--jr-glow))' : 'none'
+                                }}
                             />
                             <span
                                 className={`relative z-10 text-[9px] font-black uppercase tracking-[0.12em] transition-all duration-300 ${
                                     isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-50'
                                 }`}
+                                style={{ color: 'var(--jr-text-main)' }}
                             >
                                 {label}
                             </span>
@@ -88,8 +93,8 @@ export default function JumpRopeLayout() {
         { id: 'ember',   name: 'Ember',   primary: '#ff3b30', glow: 'rgba(255,59,48,0.15)',   bg: '#0d0302', surface: 'rgba(255,59,48,0.04)', text: '#ffffff' },
         { id: 'ocean',   name: 'Ocean',   primary: '#0ea5e9', glow: 'rgba(14,165,233,0.15)',  bg: '#01090f', surface: 'rgba(14,165,233,0.04)', text: '#ffffff' },
         { id: 'aurora',  name: 'Aurora',  primary: '#a78bfa', glow: 'rgba(167,139,250,0.15)', bg: '#06020f', surface: 'rgba(167,139,250,0.04)', text: '#ffffff' },
-        { id: 'pure-black', name: 'Black', primary: '#ffffff', glow: 'rgba(255,255,255,0.1)', bg: '#000000', surface: 'rgba(255,255,255,0.05)', text: '#ffffff' },
-        { id: 'pure-white', name: 'White', primary: '#000000', glow: 'rgba(0,0,0,0.1)',       bg: '#ffffff', surface: 'rgba(0,0,0,0.05)',       text: '#000000' },
+        { id: 'lavender', name: 'Lavender', primary: '#c084fc', glow: 'rgba(192,132,252,0.15)', bg: '#0c0312', surface: 'rgba(192,132,252,0.04)', text: '#ffffff' },
+        { id: 'mint',     name: 'Mint',     primary: '#4ade80', glow: 'rgba(74,222,128,0.15)',   bg: '#020d08', surface: 'rgba(74,222,128,0.04)', text: '#ffffff' },
         { id: 'rose',    name: 'Rose',    primary: '#f43f5e', glow: 'rgba(244,63,94,0.15)',   bg: '#0f0207', surface: 'rgba(244,63,94,0.04)', text: '#ffffff' },
     ];
 
@@ -124,12 +129,15 @@ export default function JumpRopeLayout() {
             className="h-screen w-full flex flex-col font-sans antialiased overflow-hidden relative transition-colors duration-700"
             style={{ 
                 background: 'var(--jr-bg, #050505)', 
-                color: 'var(--color-text-base, #ffffff)',
-                // ENFORCE THEME LOCALLY TO PREVENT ROOT CONFLICTS
+                color: '#ffffff',
                 '--color-primary': THEMES.find(t => t.id === settings.themeId)?.primary || '#ff3b30',
                 '--jr-glow': THEMES.find(t => t.id === settings.themeId)?.glow || 'rgba(255,59,48,0.15)',
                 '--jr-bg': THEMES.find(t => t.id === settings.themeId)?.bg || '#0d0302',
                 '--jr-surface': THEMES.find(t => t.id === settings.themeId)?.surface || 'rgba(255,59,48,0.04)',
+                '--jr-text-main': '#ffffff',
+                '--jr-text-soft': 'rgba(255,255,255,0.45)',
+                '--jr-border': 'rgba(255,255,255,0.08)',
+                '--nav-bg': 'rgba(6,6,18,0.75)',
             } as React.CSSProperties}
         >
             {/* ── Animated Ambient Orbs ────────────────────────────────── */}
@@ -156,8 +164,8 @@ export default function JumpRopeLayout() {
                 <header
                     className="relative z-40 shrink-0 flex items-center justify-between px-5 py-3"
                     style={{
-                        background: 'linear-gradient(180deg, rgba(0,0,0,0.4) 0%, transparent 100%)',
-                        borderBottom: '1px solid rgba(255,255,255,0.04)',
+                        background: 'linear-gradient(180deg, rgba(0,0,0,0.1) 0%, transparent 100%)',
+                        borderBottom: '1px solid var(--jr-border)',
                     }}
                 >
                     {/* Top shimmer line */}
@@ -192,7 +200,7 @@ export default function JumpRopeLayout() {
                             <h1 
                                 className="font-black text-[15px] tracking-widest leading-none uppercase" 
                                 style={{ 
-                                    background: 'linear-gradient(to right, #ffffff, rgba(255,255,255,0.7))',
+                                    background: 'linear-gradient(to right, #ffffff, var(--jr-text-soft))',
                                     WebkitBackgroundClip: 'text',
                                     WebkitTextFillColor: 'transparent',
                                     filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.5))'
@@ -214,7 +222,7 @@ export default function JumpRopeLayout() {
                                     </>
                                 )}
                             </h1>
-                            <p className="text-[8px] font-black uppercase tracking-[0.3em] mt-1" style={{ color: 'var(--color-primary, #ff3b30)', opacity: 0.8 }}>
+                            <p className="text-[8px] font-black uppercase tracking-[0.3em] mt-1" style={{ color: 'var(--color-primary, #ff3b30)', opacity: settings.themeId === 'pure-white' ? 1 : 0.8 }}>
                                 Performance Tracker
                             </p>
                         </div>

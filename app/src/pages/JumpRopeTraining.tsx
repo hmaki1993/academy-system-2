@@ -451,33 +451,31 @@ export default function JumpRopeTraining() {
                 <div className="flex items-start justify-between pointer-events-auto">
                     {/* Compact Athletic Identification */}
                     <div className="flex flex-col">
-                        <h1 className="text-3xl md:text-4xl font-black uppercase tracking-tighter text-blue-400 drop-shadow-[0_0_20px_rgba(96,165,250,0.4)]">
+                        <h1 className="text-2xl font-black uppercase tracking-tighter text-blue-400 drop-shadow-[0_0_20px_rgba(96,165,250,0.4)]">
                             TRAIN
                         </h1>
-                        <div className="flex items-center gap-2 mt-2">
-                            <div className="w-6 h-[2px] bg-blue-400" />
-                            <p className="text-[10px] font-black uppercase tracking-[0.4em] text-white/50">
-                                Pro Performance Tracker
-                            </p>
-                        </div>
+                        <p className="text-[9px] font-black uppercase tracking-[0.4em] text-white/30 mt-0.5">
+                            Pro Tracker
+                        </p>
                     </div>
 
-                    <div className="flex flex-col items-end gap-2 shrink-0">
-                        {/* Parity Action Buttons from Reference */}
+                    <div className="flex items-center gap-2 shrink-0">
+                        {/* Parity Action Buttons — Standardized Circular/Pill */}
                         <button 
                             onClick={() => setVoiceEnabled(!voiceEnabled)} 
-                            className={`min-w-[100px] h-9 rounded-2xl border backdrop-blur-3xl flex items-center justify-center gap-2 transition-all active:scale-95 mb-1 ${voiceEnabled ? 'bg-blue-400 text-black border-blue-400 shadow-[0_0_20px_rgba(96,165,250,0.3)]' : 'bg-white/5 border-white/10 text-white/40'}`}
+                            className={`w-10 h-10 rounded-full border backdrop-blur-3xl flex items-center justify-center transition-all active:scale-90 ${voiceEnabled ? 'bg-blue-400 text-black border-blue-400 shadow-[0_0_20px_rgba(96,165,250,0.3)]' : 'bg-white/5 border-white/10 text-white/40'}`}
+                            title={voiceEnabled ? 'VOICE ON' : 'VOICE OFF'}
                         >
-                            {voiceEnabled ? <Volume2 size={12} className="fill-current" /> : <VolumeX size={12} />}
-                            <span className="text-[10px] font-black uppercase tracking-widest">{voiceEnabled ? 'VOICE ON' : 'VOICE OFF'}</span>
+                            {voiceEnabled ? <Volume2 size={16} className="fill-current" /> : <VolumeX size={16} />}
                         </button>
                         
                         {!isSessionActive && (
                             <button 
                                 onClick={() => navigate('/jump-rope/history')} 
-                                className="min-w-[100px] h-8 rounded-xl border border-white/10 bg-white/5 backdrop-blur-3xl text-white/40 text-[8px] font-black uppercase tracking-widest active:scale-95"
+                                className="w-10 h-10 rounded-full border border-white/10 bg-white/5 backdrop-blur-3xl text-white/40 flex items-center justify-center active:scale-90"
+                                title="SHOW HISTORY"
                             >
-                                SHOW HISTORY
+                                <Activity size={16} />
                             </button>
                         )}
                     </div>
@@ -587,27 +585,31 @@ export default function JumpRopeTraining() {
             {/* 3. Primary HUD Layer (Main Count) */}
             {!showSummary && (
                 <div className="absolute inset-0 z-40 flex flex-col items-center justify-center pointer-events-none">
-                    <div className="relative flex flex-col items-center pt-4">
+                    <div className="relative flex flex-col items-center pt-8">
                         <div className="absolute inset-0 bg-blue-400/10 blur-[130px] rounded-full scale-150" />
-                        <span className="text-blue-400 text-[8px] font-black uppercase tracking-[0.8em] mb-3 drop-shadow-[0_0_12px_rgba(96,165,250,0.5)] relative z-10">JUMPS</span>
-                        <span className="text-[160px] font-black leading-none tracking-tighter drop-shadow-[0_20px_60px_rgba(0,0,0,0.9)] relative z-10 select-none text-white">{jumps}</span>
+                        <span className="text-blue-400 text-[10px] font-black uppercase tracking-[0.8em] mb-1 drop-shadow-[0_0_12px_rgba(96,165,250,0.5)] relative z-10">JUMPS</span>
+                        <span className="text-[180px] font-black leading-none tracking-tighter drop-shadow-[0_20px_60px_rgba(0,0,0,0.9)] relative z-10 select-none text-white">{jumps}</span>
                         
-                        <div className="mt-6 px-6 py-1.5 rounded-full border backdrop-blur-3xl relative z-10 flex flex-col items-center gap-0.5" style={{ background: 'rgba(255,255,255,0.06)', borderColor: 'rgba(255,255,255,0.15)' }}>
-                            <span className="font-black text-[10px] tracking-[0.1em] text-white">{rpm} RPM</span>
-                            {!isSessionActive && (
-                                <span className={`text-[6px] font-bold uppercase tracking-[0.2em] transition-all ${setupStatus === 'READY' ? 'text-emerald-400 opacity-60' : 'text-red-400 opacity-60'}`}>
-                                    {setupStatus === 'READY' ? 'STEALTH READY' : setupStatus}
-                                </span>
+                        <div className="mt-4 flex items-center gap-3 relative z-10">
+                            <div className="px-5 py-1.5 rounded-full border backdrop-blur-3xl flex items-center gap-2" style={{ background: 'rgba(255,255,255,0.06)', borderColor: 'rgba(255,255,255,0.15)' }}>
+                                <Activity size={10} className="text-blue-400" />
+                                <span className="font-black text-[11px] tracking-[0.1em] text-white">{rpm} RPM</span>
+                            </div>
+                            {!isSessionActive && setupStatus !== 'READY' && (
+                                <div className="px-5 py-1.5 rounded-full border border-red-500/30 bg-red-500/10 backdrop-blur-3xl flex items-center gap-2">
+                                    <AlertTriangle size={10} className="text-red-400" />
+                                    <span className="text-[8px] font-black uppercase tracking-[0.2em] text-red-400">{setupStatus}</span>
+                                </div>
                             )}
                         </div>
                     </div>
 
                     {/* Bottom Action Area (Start/Finish) */}
-                    <div className="absolute bottom-32 pb-safe inset-x-0 flex flex-col items-center gap-5 px-10 pointer-events-auto">
+                    <div className="absolute bottom-28 pb-safe inset-x-0 flex flex-col items-center gap-5 px-10 pointer-events-auto">
                         {!isSessionActive ? (
                             <button 
                                 onClick={handleStart}
-                                className="w-full max-w-[260px] h-12 rounded-xl bg-blue-400 text-black font-black uppercase tracking-[0.3em] text-[10px] shadow-[0_20px_40px_rgba(96,165,250,0.3)] transition-all active:scale-95 hover:brightness-110 flex items-center justify-center gap-3"
+                                className="w-full max-w-[240px] h-11 rounded-xl bg-blue-400 text-black font-black uppercase tracking-[0.3em] text-[10px] shadow-[0_20px_40px_rgba(96,165,250,0.3)] transition-all active:scale-95 hover:brightness-110 flex items-center justify-center gap-3"
                             >
                                 <Play size={12} fill="currentColor" />
                                 START TRAINING
@@ -615,7 +617,7 @@ export default function JumpRopeTraining() {
                         ) : (
                             <button 
                                 onClick={handleFinish}
-                                className="w-full max-w-[260px] h-12 rounded-xl border backdrop-blur-3xl font-black uppercase tracking-[0.3em] text-[10px] transition-all active:scale-95 hover:bg-white/5 flex items-center justify-center gap-3 text-white"
+                                className="w-full max-w-[240px] h-11 rounded-xl border backdrop-blur-3xl font-black uppercase tracking-[0.3em] text-[10px] transition-all active:scale-95 hover:bg-white/5 flex items-center justify-center gap-3 text-white"
                                 style={{ background: 'rgba(255,255,255,0.03)', borderColor: 'rgba(255,255,255,0.1)' }}
                             >
                                 <div className="w-2 h-2 bg-blue-400 rounded-sm shadow-[0_0_10px_rgba(96,165,250,0.5)]" />
@@ -634,66 +636,68 @@ export default function JumpRopeTraining() {
 
             {/* 5. Summary Modal Overlay */}
             {showSummary && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/60 backdrop-blur-2xl animate-in fade-in duration-500">
-                    <div className="w-full max-w-md border rounded-[2.5rem] p-8 shadow-[0_40px_100px_rgba(0,0,0,0.6)] relative overflow-hidden flex flex-col gap-6" style={{ background: 'rgba(10,10,10,0.95)', borderColor: 'rgba(255,255,255,0.1)' }}>
-                        <div className="absolute top-0 right-0 w-48 h-48 bg-blue-400/10 rounded-full blur-[80px] -translate-y-1/3 translate-x-1/3" />
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/80 backdrop-blur-xl animate-in fade-in duration-500">
+                    <div className="w-full max-w-[340px] border rounded-[2rem] p-6 shadow-[0_40px_100px_rgba(0,0,0,0.8)] relative overflow-hidden flex flex-col gap-5" style={{ background: 'rgba(10,10,10,0.98)', borderColor: 'rgba(255,255,255,0.08)' }}>
+                        <div className="absolute top-0 right-0 w-48 h-48 bg-blue-400/5 rounded-full blur-[80px] -translate-y-1/3 translate-x-1/3" />
                         
                         <div className="flex items-center justify-between relative z-10">
                             <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-2xl bg-blue-400/10 border border-blue-400/20 flex items-center justify-center">
-                                    <Trophy className="w-5 h-5 text-blue-400" />
+                                <div className="w-9 h-9 rounded-xl bg-blue-400/10 border border-blue-400/20 flex items-center justify-center">
+                                    <Trophy className="w-4 h-4 text-blue-400" />
                                 </div>
                                 <div className="flex flex-col">
-                                    <h2 className="text-xl font-black leading-none mb-1 text-white">Workout Report</h2>
-                                    <p className="text-[8px] font-black uppercase tracking-[0.2em] italic text-white/30">Pure Performance</p>
+                                    <h2 className="text-lg font-black leading-none mb-1 text-white">Workout Report</h2>
+                                    <p className="text-[7px] font-black uppercase tracking-[0.2em] italic text-white/20">Pure Performance</p>
                                 </div>
                             </div>
-                            <button onClick={() => setShowSummary(false)} className="w-8 h-8 rounded-full transition-all bg-white/5 text-white/40 border border-white/5 flex items-center justify-center">
-                                <X size={16} />
+                            <button onClick={() => setShowSummary(false)} className="w-7 h-7 rounded-full transition-all bg-white/5 text-white/30 border border-white/5 flex items-center justify-center active:scale-90">
+                                <X size={14} />
                             </button>
                         </div>
 
-                        <div className="grid grid-cols-2 gap-3 relative z-10">
-                            <div className="border backdrop-blur-3xl rounded-2xl p-4 flex flex-col items-center bg-white/[0.03] border-white/10">
-                                <span className="text-xl font-black mb-0.5 text-white">{jumps}</span>
-                                <span className="text-[7px] font-bold uppercase tracking-[0.2em] text-white/20">Jumps</span>
+                        <div className="grid grid-cols-2 gap-2 relative z-10">
+                            <div className="border backdrop-blur-3xl rounded-xl p-3 flex flex-col items-center bg-white/[0.02] border-white/5">
+                                <span className="text-lg font-black mb-0.5 text-white">{jumps}</span>
+                                <span className="text-[6px] font-bold uppercase tracking-[0.2em] text-white/20">Jumps</span>
                             </div>
-                            <div className="border backdrop-blur-3xl rounded-2xl p-4 flex flex-col items-center bg-white/[0.03] border-white/10">
-                                <span className="text-xl font-black text-blue-400 mb-0.5">{rpm}</span>
-                                <span className="text-[7px] font-bold uppercase tracking-[0.2em] text-white/20">Avg RPM</span>
+                            <div className="border backdrop-blur-3xl rounded-xl p-3 flex flex-col items-center bg-white/[0.02] border-white/5">
+                                <span className="text-lg font-black text-blue-400 mb-0.5">{rpm}</span>
+                                <span className="text-[6px] font-bold uppercase tracking-[0.2em] text-white/20">Avg RPM</span>
                             </div>
-                            <div className="border backdrop-blur-3xl rounded-2xl p-4 flex flex-col items-center text-center bg-white/[0.03] border-white/10">
-                                <span className="text-sm font-black mb-0.5 text-white">{Math.floor(totalSeconds/60)}m {totalSeconds%60}s</span>
-                                <span className="text-[7px] font-bold uppercase tracking-[0.2em] mt-1 text-white/20">Total</span>
+                            <div className="border backdrop-blur-3xl rounded-xl p-3 flex flex-col items-center text-center bg-white/[0.02] border-white/5">
+                                <span className="text-xs font-black mb-0.5 text-white">{Math.floor(totalSeconds/60)}m {totalSeconds%60}s</span>
+                                <span className="text-[6px] font-bold uppercase tracking-[0.2em] mt-1 text-white/20">Total</span>
                             </div>
-                            <div className="border backdrop-blur-3xl rounded-2xl p-4 flex flex-col items-center text-center bg-red-500/5 border-red-500/20">
-                                <span className="text-sm font-black mb-0.5 text-red-500">{Math.floor(finalRestSecs/60)}m {finalRestSecs%60}s</span>
-                                <span className="text-[7px] font-bold uppercase tracking-[0.2em] mt-1 text-red-500/40">Rest</span>
+                            <div className="border backdrop-blur-3xl rounded-xl p-3 flex flex-col items-center text-center bg-red-500/5 border-red-500/10">
+                                <span className="text-xs font-black mb-0.5 text-red-500">{Math.floor(finalRestSecs/60)}m {finalRestSecs%60}s</span>
+                                <span className="text-[6px] font-bold uppercase tracking-[0.2em] mt-1 text-red-500/30">Rest</span>
                             </div>
                         </div>
 
-                        <div className="w-full relative z-10" style={{ height: 128 }}>
-                            <ResponsiveContainer width="100%" height={128} debounce={50}>
-                                <AreaChart data={intensityHistoryRef.current}>
-                                    <defs>
-                                        <linearGradient id="premiumGlow" x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="5%" stopColor="#60a5fa" stopOpacity={0.2}/>
-                                            <stop offset="95%" stopColor="#60a5fa" stopOpacity={0}/>
-                                        </linearGradient>
-                                    </defs>
-                                    <Area type="monotone" dataKey="jpm" stroke="#60a5fa" strokeWidth={1.5} fillOpacity={1} fill="url(#premiumGlow)" />
-                                    <Tooltip contentStyle={{background: 'rgba(10,10,10,0.8)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '10px', fontSize: '9px', backdropFilter: 'blur(10px)'}} labelStyle={{display: 'none'}} itemStyle={{color: '#60a5fa', fontWeight: 'bold'}} />
-                                </AreaChart>
-                            </ResponsiveContainer>
-                        </div>
+                        {intensityHistoryRef.current.length > 5 && (
+                            <div className="w-full relative z-10" style={{ height: 100 }}>
+                                <ResponsiveContainer width="100%" height={100} debounce={50}>
+                                    <AreaChart data={intensityHistoryRef.current}>
+                                        <defs>
+                                            <linearGradient id="premiumGlow" x1="0" y1="0" x2="0" y2="1">
+                                                <stop offset="5%" stopColor="#60a5fa" stopOpacity={0.2}/>
+                                                <stop offset="95%" stopColor="#60a5fa" stopOpacity={0}/>
+                                            </linearGradient>
+                                        </defs>
+                                        <Area type="monotone" dataKey="jpm" stroke="#60a5fa" strokeWidth={1.5} fillOpacity={1} fill="url(#premiumGlow)" />
+                                        <Tooltip contentStyle={{background: 'rgba(10,10,10,0.8)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '10px', fontSize: '9px', backdropFilter: 'blur(10px)'}} labelStyle={{display: 'none'}} itemStyle={{color: '#60a5fa', fontWeight: 'bold'}} />
+                                    </AreaChart>
+                                </ResponsiveContainer>
+                            </div>
+                        )}
 
                         <div className="flex flex-col items-center relative z-10">
-                             <p className="text-[9px] font-bold italic tracking-wide text-center uppercase opacity-60 leading-relaxed text-white/20">
+                             <p className="text-[8px] font-bold italic tracking-wide text-center uppercase opacity-30 leading-relaxed text-white">
                                 "The only bad workout is the one<br/>that didn't happen."
                              </p>
                         </div>
                         
-                        <button onClick={() => setShowSummary(false)} className="w-full py-4 border font-black uppercase text-[10px] tracking-[0.3em] rounded-2xl transition-all backdrop-blur-3xl bg-white/5 border-white/10 text-white">
+                        <button onClick={() => setShowSummary(false)} className="w-full py-4 border font-black uppercase text-[10px] tracking-[0.3em] rounded-2xl transition-all backdrop-blur-3xl bg-white/5 border-white/10 text-white active:scale-95">
                             Dismiss Report
                         </button>
                     </div>

@@ -31,6 +31,7 @@ const AITraining = lazy(() => import('./pages/AITraining'));
 
 // Jump Rope Independent Layout & App
 const JumpRopeLayout = lazy(() => import('./layouts/JumpRopeLayout'));
+const JumpRopeLanding = lazy(() => import('./pages/JumpRopeLanding'));
 const JumpRopeHub = lazy(() => import('./pages/JumpRopeHub'));
 const JumpRopeTraining = lazy(() => import('./pages/JumpRopeTraining'));
 const JumpRopeLeaderboard = lazy(() => import('./pages/JumpRopeLeaderboard'));
@@ -144,6 +145,20 @@ function AppContent() {
             <Route path="/registration" element={<PublicRegistration />} />
 
             {/* Jump Rope Standalone application route — own branded Suspense */}
+            <Route path="/jump-rope/welcome" element={
+              <Suspense fallback={
+                <div className="min-h-[100dvh] bg-[#050510] flex flex-col items-center justify-center gap-4">
+                  <div className="relative w-16 h-16">
+                    <div className="absolute inset-0 border-2 border-blue-500/20 rounded-full" />
+                    <div className="absolute inset-0 border-2 border-blue-500 rounded-full border-t-transparent animate-spin" />
+                  </div>
+                  <p className="text-blue-500/50 font-black tracking-[0.4em] text-[10px] uppercase">Jump Rope Pro</p>
+                </div>
+              }>
+                <JumpRopeLanding />
+              </Suspense>
+            } />
+
             <Route path="/jump-rope" element={
               <Suspense fallback={
                 <div className="min-h-screen bg-[#050505] flex flex-col items-center justify-center gap-4">

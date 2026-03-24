@@ -27,6 +27,7 @@ export default function JumpRopeTraining() {
     const [voiceEnabled, setVoiceEnabled] = useState(true);
     const [rpm, setRpm] = useState(0);
     const [finalRestSecs, setFinalRestSecs] = useState(0);
+    const [currentRestSecs, setCurrentRestSecs] = useState(0);
     const [isSessionActive, setIsSessionActive] = useState(false);
     const isSessionActiveRef = useRef(false);
     
@@ -356,14 +357,18 @@ export default function JumpRopeTraining() {
         const interval = setInterval(() => {
             const now = Date.now();
             setTotalSeconds(s => s + 1);
+            if (!isTimerActiveRef.current) return;
+            
             const isWorking = lastActivityTimeRef.current > 0 && (now - lastActivityTimeRef.current) < 4000;
             if (isWorking) {
                 workTimeRef.current += 1;
                 setActiveSeconds(workTimeRef.current);
                 setIntensityStatus('WORKING');
+                setCurrentRestSecs(0);
             } else {
                 restTimeRef.current += 1;
                 setIntensityStatus('RESTING');
+                setCurrentRestSecs(s => s + 1);
             }
 
             // Record intensity history for chart
@@ -440,12 +445,19 @@ export default function JumpRopeTraining() {
                 </button>
 
                 {/* Tap-to-Open Timer Pill */}
-                {!isTracking && (() => {
+                {!isSessionActive && (() => {
                     const hasTimer = countdownMins > 0 || countdownSecs > 0;
                     return (
-                        <button onClick={openTimerPicker} className="flex items-center gap-1.5 border backdrop-blur-3xl rounded-full px-3 py-1.5 transition-all active:scale-95" style={{ background: 'var(--jr-surface, rgba(255,255,255,0.02))', borderColor: hasTimer ? 'rgba(255,59,48,0.35)' : 'rgba(255,255,255,0.08)' }}>
-                            <Clock size={9} style={{ color: hasTimer ? '#ff3b30' : 'rgba(255,255,255,0.2)' }} />
-                            <span className="font-mono font-black text-[11px] tracking-wider" style={{ color: hasTimer ? 'var(--color-text-base)' : 'rgba(255,255,255,0.3)' }}>
+                        <button 
+                            onClick={openTimerPicker} 
+                            className="flex items-center gap-2 border backdrop-blur-3xl rounded-full px-4 py-2 shadow-[0_8px_32px_rgba(0,0,0,0.5)] transition-all active:scale-95" 
+                            style={{ 
+                                background: 'var(--jr-surface, rgba(255,255,255,0.12))', 
+                                borderColor: hasTimer ? 'rgba(255,59,48,0.35)' : 'var(--jr-text-low, rgba(255,255,255,0.2))' 
+                            }}
+                        >
+                            <Clock size={12} style={{ color: hasTimer ? '#ff3b30' : 'rgba(255,255,255,0.4)' }} />
+                            <span className="font-mono text-sm font-black tracking-wider" style={{ color: hasTimer ? 'var(--color-text-base)' : 'rgba(255,255,255,0.4)' }}>
                                 {String(countdownMins).padStart(2,'0')}:{String(countdownSecs).padStart(2,'0')}
                             </span>
                         </button>
@@ -500,12 +512,25 @@ export default function JumpRopeTraining() {
                     </div>
                 )}
                 
-                {isTracking && (
-                   <div className="flex items-center gap-2 border backdrop-blur-3xl rounded-full px-4 py-2 overflow-hidden min-w-0 max-w-[150px] shadow-[0_8px_32px_rgba(0,0,0,0.5)]" style={{ background: 'var(--jr-surface, rgba(255,255,255,0.12))', borderColor: 'var(--jr-text-low, rgba(255,255,255,0.2))' }}>
-                       <div className="flex flex-col items-center leading-none min-w-0">
-                           <span className="text-primary text-[8px] font-black uppercase tracking-[0.2em] mb-1 opacity-100 truncate">{intensityStatus}</span>
-                           <span className="font-mono text-sm font-black tracking-wider truncate" style={{ color: 'var(--color-text-base, #fff)' }}>{timerRemaining !== null ? `${Math.floor(timerRemaining/60)}:${String(timerRemaining%60).padStart(2,'0')}` : `${Math.floor(totalSeconds/60)}:${String(totalSeconds%60).padStart(2,'0')}`}</span>
+                {isSessionActive && (
+                   <div className="flex items-center gap-3">
+                       {/* Main Session Timer */}
+                       <div className="flex items-center gap-2 border backdrop-blur-3xl rounded-full px-4 py-2 shadow-[0_8px_32px_rgba(0,0,0,0.5)]" style={{ background: 'var(--jr-surface, rgba(255,255,255,0.12))', borderColor: 'var(--jr-text-low, rgba(255,255,255,0.2))' }}>
+                           <div className="flex flex-col items-center leading-none min-w-0">
+                               <span className="text-primary text-[8px] font-black uppercase tracking-[0.2em] mb-1 opacity-100 truncate">{intensityStatus}</span>
+                               <span className="font-mono text-sm font-black tracking-wider truncate" style={{ color: 'var(--color-text-base, #fff)' }}>{timerRemaining !== null ? `${Math.floor(timerRemaining/60)}:${String(timerRemaining%60).padStart(2,'0')}` : `${Math.floor(totalSeconds/60)}:${String(totalSeconds%60).padStart(2,'0')}`}</span>
+                           </div>
                        </div>
+
+                       {/* Red Rest Indicator */}
+                       {intensityStatus === 'RESTING' && currentRestSecs > 0 && (
+                           <div className="flex items-center gap-2 border backdrop-blur-3xl rounded-full px-4 py-2 shadow-[0_8px_32px_rgba(255,59,48,0.2)] animate-in fade-in slide-in-from-right-4 duration-500" style={{ background: 'rgba(255,59,48,0.1)', borderColor: 'rgba(255,59,48,0.3)' }}>
+                               <Zap size={10} className="text-primary fill-primary animate-pulse" />
+                               <span className="font-mono text-sm font-black tracking-wider text-primary">
+                                   {Math.floor(currentRestSecs/60)}:{String(currentRestSecs%60).padStart(2,'0')}
+                               </span>
+                           </div>
+                       )}
                    </div>
                 )}
 
@@ -520,18 +545,18 @@ export default function JumpRopeTraining() {
             {/* 3. Primary HUD Layer (Always visible when not in summary) */}
             {!showSummary && (
                 <div className="absolute inset-0 z-40 flex flex-col items-center justify-center pointer-events-none">
-                    <div className="relative flex flex-col items-center pt-8">
+                    <div className="relative flex flex-col items-center pt-4">
                         {/* Soft background glow */}
-                        <div className="absolute inset-0 bg-primary/10 blur-[140px] rounded-full scale-150" />
+                        <div className="absolute inset-0 bg-primary/10 blur-[130px] rounded-full scale-150" />
                         
-                        <span className="text-primary text-[10px] font-black uppercase tracking-[0.8em] mb-4 drop-shadow-[0_0_12px_rgba(255,59,48,0.5)] relative z-10">JUMPS</span>
-                        <span className="text-[220px] font-black leading-none tracking-tighter drop-shadow-[0_20px_60px_rgba(0,0,0,0.9)] relative z-10 select-none" style={{ color: 'var(--color-text-base, #fff)' }}>{jumps}</span>
+                        <span className="text-primary text-[8px] font-black uppercase tracking-[0.8em] mb-3 drop-shadow-[0_0_12px_rgba(255,59,48,0.5)] relative z-10">JUMPS</span>
+                        <span className="text-[160px] font-black leading-none tracking-tighter drop-shadow-[0_20px_60px_rgba(0,0,0,0.9)] relative z-10 select-none" style={{ color: 'var(--color-text-base, #fff)' }}>{jumps}</span>
                         
-                        <div className="mt-8 px-8 py-2.5 rounded-full border backdrop-blur-3xl relative z-10 flex flex-col items-center gap-1" style={{ background: 'rgba(255,255,255,0.06)', borderColor: 'rgba(255,255,255,0.15)' }}>
-                            <span className="font-black text-xs tracking-[0.1em]" style={{ color: '#fff' }}>{rpm} RPM</span>
-                            {/* Setup Status Badge - smaller/integrated */}
+                        <div className="mt-6 px-6 py-1.5 rounded-full border backdrop-blur-3xl relative z-10 flex flex-col items-center gap-0.5" style={{ background: 'rgba(255,255,255,0.06)', borderColor: 'rgba(255,255,255,0.15)' }}>
+                            <span className="font-black text-[10px] tracking-[0.1em]" style={{ color: '#fff' }}>{rpm} RPM</span>
+                            {/* Setup Status Badge - even smaller */}
                             {!isSessionActive && (
-                                <span className={`text-[7px] font-bold uppercase tracking-[0.2em] transition-all ${setupStatus === 'READY' ? 'text-emerald-400 opacity-60' : 'opacity-40'}`}>
+                                <span className={`text-[6px] font-bold uppercase tracking-[0.2em] transition-all ${setupStatus === 'READY' ? 'text-emerald-400 opacity-60' : 'opacity-40'}`}>
                                     {setupStatus === 'READY' ? 'STEALTH READY' : setupStatus}
                                 </span>
                             )}
@@ -539,28 +564,28 @@ export default function JumpRopeTraining() {
                     </div>
 
                     {/* Bottom Action Area (Start/Finish) */}
-                    <div className="absolute bottom-24 inset-x-0 flex flex-col items-center gap-6 px-10 pointer-events-auto">
+                    <div className="absolute bottom-20 inset-x-0 flex flex-col items-center gap-5 px-10 pointer-events-auto">
                         {!isSessionActive ? (
                             <button 
                                 onClick={handleStart}
-                                className="w-full max-w-[280px] h-14 rounded-2xl bg-primary text-white font-black uppercase tracking-[0.3em] text-[11px] shadow-[0_20px_40px_rgba(255,59,48,0.3)] transition-all active:scale-95 hover:brightness-110 flex items-center justify-center gap-3"
+                                className="w-full max-w-[260px] h-12 rounded-xl bg-primary text-white font-black uppercase tracking-[0.3em] text-[10px] shadow-[0_20px_40px_rgba(255,59,48,0.3)] transition-all active:scale-95 hover:brightness-110 flex items-center justify-center gap-3"
                             >
-                                <Play size={14} fill="currentColor" />
+                                <Play size={12} fill="currentColor" />
                                 START TRAINING
                             </button>
                         ) : (
                             <button 
                                 onClick={handleFinish}
-                                className="w-full max-w-[280px] h-14 rounded-2xl border backdrop-blur-3xl font-black uppercase tracking-[0.3em] text-[11px] transition-all active:scale-95 hover:bg-white/5 flex items-center justify-center gap-3"
+                                className="w-full max-w-[260px] h-12 rounded-xl border backdrop-blur-3xl font-black uppercase tracking-[0.3em] text-[10px] transition-all active:scale-95 hover:bg-white/5 flex items-center justify-center gap-3"
                                 style={{ background: 'rgba(255,255,255,0.03)', borderColor: 'rgba(255,255,255,0.1)', color: 'var(--color-text-base)' }}
                             >
-                                <div className="w-2.5 h-2.5 bg-primary rounded-sm shadow-[0_0_10px_rgba(255,59,48,0.5)]" />
+                                <div className="w-2 h-2 bg-primary rounded-sm shadow-[0_0_10px_rgba(255,59,48,0.5)]" />
                                 FINISH SESSION
                             </button>
                         )}
                         
                         {!isSessionActive && (
-                            <p className="text-[9px] font-medium text-center max-w-[200px] leading-relaxed opacity-30 italic" style={{ color: 'var(--color-text-base)' }}>
+                            <p className="text-[8px] font-medium text-center max-w-[200px] leading-relaxed opacity-20 italic" style={{ color: 'var(--color-text-base)' }}>
                                 Set your timer at the top. The countdown will begin once you start jumping.
                             </p>
                         )}

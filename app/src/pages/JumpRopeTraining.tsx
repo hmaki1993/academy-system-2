@@ -18,7 +18,7 @@ export default function JumpRopeTraining() {
     const [jumps, setJumps] = useState(0);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [setupStatus, setSetupStatus] = useState<'MOVING' | 'STEP_BACK' | 'READY'>('MOVING');
+    const [setupStatus, setSetupStatus] = useState<'MOVING' | 'STEP_BACK' | 'READY' | 'TOO_CLOSE'>('MOVING');
     const [movementPct, setMovementPct] = useState(0);
     const [showSummary, setShowSummary] = useState(false);
     const [activeSeconds, setActiveSeconds] = useState(0);
@@ -170,13 +170,6 @@ export default function JumpRopeTraining() {
         connect(lHip, lKnee); connect(lKnee, lAnkle);
         connect(rHip, rKnee); connect(rKnee, rAnkle);
 
-        // Draw Points
-        [lShoulder, rShoulder, lElbow, rElbow, lWrist, rWrist, lHip, rHip, lKnee, rKnee, lAnkle, rAnkle, nose].forEach(p => drawPoint(p));
-
-        // =====================================================
-        // EXACT ORIGINAL ENGINE (from JumpRopeCounter.tsx)
-        // =====================================================
-
         const lShoulder2 = LM[11];
         const rShoulder2 = LM[12];
         const lHip2 = LM[23];
@@ -186,150 +179,122 @@ export default function JumpRopeTraining() {
 
         if (!nose || !lShoulder2 || !rShoulder2) return;
 
-        // === SMART NOSE-BASED DETECTION (With Hip Correlation) ===
-        // We track the NOSE (LM[0]) as requested, but we validate it against the HIPs
-        // to distinguish a full body jump from a head tilt or hand movement jitter.
-        const noseY = nose.y * H;
         const noseX = nose.x * W;
+        const noseY = nose.y * H;
+        const noseY_raw = nose.y; // For normalized baseline
         const hipMidY = lHip2 && rHip2 ? ((lHip2.y + rHip2.y) / 2) * H : (lHip2?.y ?? rHip2?.y ?? nose.y) * H;
         const hipMidX = lHip2 && rHip2 ? ((lHip2.x + rHip2.x) / 2) * W : (lHip2?.x ?? rHip2?.x ?? nose.x) * W;
 
         // --- 1. VISUAL FEEDBACK: SMART TRACKING DOTS ---
-        if (canvasCtx) {
-            canvasCtx.clearRect(0, 0, 640, 480);
-            
-            // Red Nose Dot (Primary Measurement)
-            canvasCtx.globalAlpha = 0.8;
-            canvasCtx.fillStyle = '#ff3b30'; // Jump IQ Red
+        canvasCtx.globalAlpha = 0.8;
+        // Red Nose Dot (Primary)
+        canvasCtx.fillStyle = '#ff3b30'; 
+        canvasCtx.beginPath();
+        canvasCtx.arc(noseX, noseY, 6, 0, Math.PI * 2);
+        canvasCtx.fill();
+        // Green Hip Sync Dot (Validates Body Movement)
+        if (lHip2 && rHip2) {
+            canvasCtx.fillStyle = '#10b981';
             canvasCtx.beginPath();
-            canvasCtx.arc(noseX, noseY, 6, 0, Math.PI * 2);
+            canvasCtx.arc(hipMidX, hipMidY, 6, 0, Math.PI * 2);
             canvasCtx.fill();
-            
-            // Green Hip Sync Dot (Validates Body Movement)
-            if (lHip2 && rHip2) {
-                canvasCtx.fillStyle = '#10b981'; // Emerald Green
-                canvasCtx.beginPath();
-                canvasCtx.arc(hipMidX, hipMidY, 6, 0, Math.PI * 2);
-                canvasCtx.fill();
-                
-                // Pulse sync ring
-                canvasCtx.strokeStyle = '#10b981'; 
-                canvasCtx.lineWidth = 1;
-                canvasCtx.beginPath();
-                canvasCtx.arc(hipMidX, hipMidY, 10 + (Math.sin(Date.now() / 150) * 3), 0, Math.PI * 2);
-                canvasCtx.stroke();
-            }
-            canvasCtx.globalAlpha = 1.0;
+            // Pulse sync ring
+            canvasCtx.strokeStyle = '#10b981';
+            canvasCtx.lineWidth = 1;
+            canvasCtx.beginPath();
+            canvasCtx.arc(hipMidX, hipMidY, 10 + (Math.sin(now / 150) * 3), 0, Math.PI * 2);
+            canvasCtx.stroke();
         }
+        canvasCtx.globalAlpha = 1.0;
 
-        // --- STABILITY & PROXIMITY GUARD ---
+        // --- 2. MOTION ANALYSIS ---
+        if (!isTracking) return;
+
+        // Proximity & Stability
+        const bodyH = Math.abs(((lAnkle2?.y ?? rAnkle2?.y ?? 0) - nose.y) * H);
+        bodyHeightRef.current = Math.max(100, bodyH);
         const isFullBody = !!(lAnkle2 && rAnkle2);
-        const hasAura = !!(lShoulder2 || rShoulder2 || lHip2 || rHip2);
-        const shoulderW = Math.abs(lShoulder2.x - rShoulder2.x) * W;
+        const isTooClose = bodyH > H * 0.95; 
 
-        const frameVelocityY = Math.abs(lastCenterY.current - noseY) / deltaTime;
-        const frameVelocityX = Math.abs(lastCenterX.current - noseX) / deltaTime;
-        const scaleVelocity = (shoulderW - lastShoulderWidth.current) / deltaTime;
-
-        const isTooClose = shoulderW > (W * 0.38);
-        const isApproaching = scaleVelocity > 180;
-        const isCurrentlyMoving = frameVelocityY > 380 || frameVelocityX > 200 || isApproaching;
-
-        lastCenterY.current = noseY;
+        // Center tracking
+        const frameVelocityX = (noseX - lastCenterX.current) / deltaTime;
         lastCenterX.current = noseX;
-        lastShoulderWidth.current = shoulderW;
 
-        smoothedVelXRef.current = smoothedVelXRef.current * 0.6 + frameVelocityX * 0.4;
-
+        // Stability Check
         if (isStableRef.current) {
-            if (isTooClose || isApproaching) {
+            if (!nose) {
                 if (trackingLossStartRef.current === null) {
                     trackingLossStartRef.current = now;
-                } else if (now - trackingLossStartRef.current > 600) {
+                } else if (now - trackingLossStartRef.current > 1500) {
                     isStableRef.current = false;
                     setSetupStatus('STEP_BACK');
-                    return;
+                    if (!isSessionActiveRef.current) return;
                 }
             } else {
                 trackingLossStartRef.current = null;
                 setSetupStatus('READY');
             }
-
-            if (!hasAura || (!lAnkle2 && !rAnkle2)) {
-                if (trackingLossStartRef.current === null) {
-                    trackingLossStartRef.current = now;
-                } else if (now - trackingLossStartRef.current > 1200) {
-                    isStableRef.current = false;
-                    setSetupStatus('STEP_BACK');
-                    return;
-                }
-            }
         } else {
-            if (isCurrentlyMoving || !isFullBody || isTooClose) {
+            // Setup Phase
+            const isMoving = Math.abs(frameVelocityX) > 150;
+            if (isMoving || !isFullBody || isTooClose) {
                 stabilityStartRef.current = null;
-                setSetupStatus(isTooClose || !isFullBody ? 'STEP_BACK' : 'MOVING');
-                baselineY.current = noseY;
-                setMovementPct(0);
-                return;
+                setSetupStatus(isTooClose ? 'TOO_CLOSE' : !isFullBody ? 'STEP_BACK' : 'MOVING');
+                baselineY.current = noseY_raw;
+                if (!isSessionActiveRef.current) return;
+            } else {
+                if (stabilityStartRef.current === null) {
+                    stabilityStartRef.current = now;
+                } else if (now - stabilityStartRef.current > 1500) {
+                    isStableRef.current = true;
+                    setSetupStatus('READY');
+                }
+                baselineY.current = noseY_raw;
+                if (!isSessionActiveRef.current) return;
             }
-            if (stabilityStartRef.current === null) {
-                stabilityStartRef.current = now;
-            } else if (now - stabilityStartRef.current > 1500) {
-                isStableRef.current = true;
-                setSetupStatus('READY');
-            }
-            baselineY.current = noseY;
-            return;
         }
 
         if (baselineY.current === null) {
-            baselineY.current = noseY;
-            baselineHipY.current = hipMidY;
+            baselineY.current = noseY_raw;
+            baselineHipY.current = hipMidY; // pixel baseline for easier math
             return;
         }
 
-        // --- THE CORE: NOSE TRACKING WITH HIP SYNC ---
-        const bodyH = Math.abs(((lAnkle2?.y ?? rAnkle2?.y ?? 0) - nose.y) * H);
-        bodyHeightRef.current = Math.max(100, bodyH);
-
-        // EMA Smoothing on Nose
-        if (emaSmoothY.current === null) emaSmoothY.current = noseY;
-        emaSmoothY.current = emaSmoothY.current * 0.4 + noseY * 0.6;
-        const smoothY = emaSmoothY.current;
-
-        // Displacement in Pixels
-        const displacement = (baselineY.current - smoothY) * H;
+        // --- 3. JUMP DETECTION LOGIC (Pixel Units) ---
+        if (emaSmoothY.current === null) emaSmoothY.current = nose.y;
+        emaSmoothY.current = emaSmoothY.current * 0.4 + nose.y * 0.6;
+        const currentSmoothY = emaSmoothY.current ?? nose.y;
         
-        // Smart Sensitivity: 3.5% of body height (Filters nodes, catches hops)
+        // Final Displacement (In Pixels)
+        const displacement = ((baselineY.current ?? nose.y) - currentSmoothY) * H;
         const jumpMinThreshold = Math.max(12, bodyHeightRef.current * 0.035);
         
-        // Standard Velocity: Pixels Per Second
-        const rawVelPxPerSec = ((displacement - lastDisplacementRef.current) / Math.max(1, deltaTime)) * 1000;
+        // Velocity (PPS)
+        const rawVelPxPerSec = ((displacement - lastDisplacementRef.current) / deltaTime) * 1000;
         velocityRef.current = velocityRef.current * 0.3 + rawVelPxPerSec * 0.7;
         lastDisplacementRef.current = displacement;
+        
+        // Visual Percentage
         const pct = Math.max(0, Math.min(100, (displacement / (bodyHeightRef.current * 0.12)) * 100));
         setMovementPct(Math.round(pct));
 
-        // --- SMART SYNC LAYER: Filters Head Nodes ---
-        const hipDisplacement = ((baselineHipY.current ?? hipMidY) - hipMidY) * H;
-        // Require hips to rise by at least 30% of the head's rise to be a 'Jump'
+        // Smart Sync Guard
+        const bHipY = baselineHipY.current ?? hipMidY;
+        const hipDisplacement = bHipY - hipMidY;
         const isBodySync = hipDisplacement > Math.max(4, displacement * 0.3);
 
         if (jumpStatusRef.current === 'standing') {
-            // Must have displacement (px) + upward velocity (px/sec) + body sync (hip movement)
             if (displacement > jumpMinThreshold && velocityRef.current > 40 && isBodySync) {
                 jumpStatusRef.current = 'jumping';
                 peakY.current = displacement;
             } else if (Math.abs(velocityRef.current) < 30) {
-                baselineY.current = (baselineY.current ?? smoothY) * 0.95 + smoothY * 0.05;
-                if (baselineHipY.current !== null) {
-                    baselineHipY.current = baselineHipY.current * 0.95 + hipMidY * 0.05;
-                }
+                baselineY.current = baselineY.current * 0.95 + noseY_raw * 0.05;
+                baselineHipY.current = baselineHipY.current * 0.95 + hipMidY * 0.05;
             }
         } else {
             if (displacement > peakY.current) peakY.current = displacement;
             
-            // Fast Landing detection
+            // Fast Landing
             const landed = velocityRef.current < -15 || displacement < jumpMinThreshold * 0.5;
 
             if (landed && !cooldownRef.current) {
@@ -338,14 +303,13 @@ export default function JumpRopeTraining() {
                     setJumps(jumpCountRef.current);
                     if ('vibrate' in navigator) navigator.vibrate(50);
 
-                    const now = Date.now();
                     if (!isTimerStartedRef.current) {
                         isTimerStartedRef.current = true;
                         isTimerActiveRef.current = true;
                         setIsTimerActive(true);
                         speak("Session started. Good luck!");
                     }
-                    lastActivityTimeRef.current = now;
+                    lastActivityTimeRef.current = Date.now();
                     if (jumpCountRef.current % 10 === 0) speak(jumpCountRef.current.toString());
                 }
 
@@ -355,7 +319,7 @@ export default function JumpRopeTraining() {
                 setTimeout(() => { cooldownRef.current = false; }, 120);
             }
         }
-    }, [speak]);
+    }, [isTracking, speak]);
 
     useEffect(() => {
         let active = true;

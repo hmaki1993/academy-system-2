@@ -278,9 +278,9 @@ export default function JumpRopeTraining() {
         emaSmoothY.current = emaSmoothY.current * 0.4 + noseY * 0.6;
         const smoothY = emaSmoothY.current;
 
-        // Displacement
-        const displacement = baselineY.current - smoothY;
-        // Calculate velocity in Pixels-Per-Second to fix floating point scaling issues
+        // Displacement in Pixels (H = canvas height, e.g., 480)
+        const displacement = (baselineY.current - smoothY) * H;
+        // Calculate velocity in Standard Pixels-Per-Second to fix thresholding math
         const rawVelPxPerSec = ((displacement - lastDisplacementRef.current) / Math.max(1, deltaTime)) * 1000;
         velocityRef.current = velocityRef.current * 0.3 + rawVelPxPerSec * 0.7;
         lastDisplacementRef.current = displacement;
@@ -290,17 +290,15 @@ export default function JumpRopeTraining() {
         const pct = Math.max(0, Math.min(100, (displacement / (bodyHeightRef.current * 0.12)) * 100));
         setMovementPct(Math.round(pct));
 
-        // --- SYNC GUARD: Validate Nose vs Hip ---
-        // When you jump, hips must rise. When you head nod, hips stay stable.
-        const hipDisplacement = (baselineHipY.current ?? hipMidY) - hipMidY;
-        // Require hips to move up by at least 1.5% of body height to filter head nods,
-        // without requiring a strict 40% correlation which breaks on small hops.
-        const isBodySync = hipDisplacement > Math.max(4, bodyHeightRef.current * 0.015);
+        // Sync Guard: In Pixels
+        const hipDisplacement = ((baselineHipY.current ?? hipMidY) - hipMidY) * H;
+        // Require hips to rise by at least 15% of the head's rise (or min 2px) to filter head tilts
+        const isBodySync = hipDisplacement > Math.max(2, displacement * 0.15);
         const isWalkingLaterally = smoothedVelXRef.current > 130;
 
         if (jumpStatusRef.current === 'standing') {
-            // Must have displacement + upward velocity (px/sec) + body sync (hips moving too)
-            if (displacement > jumpMinThreshold && velocityRef.current > 40 && isBodySync && !isWalkingLaterally) {
+            // Must have displacement (px) + upward velocity (px/sec) + body sync (hips moving up too)
+            if (displacement > jumpMinThreshold && velocityRef.current > 50 && isBodySync && !isWalkingLaterally) {
                 jumpStatusRef.current = 'jumping';
                 peakY.current = displacement;
             } else if (Math.abs(velocityRef.current) < 30) {

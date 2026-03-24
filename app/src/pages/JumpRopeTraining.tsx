@@ -52,8 +52,8 @@ export default function JumpRopeTraining() {
     const baselineY = useRef<number | null>(null);
     const bodyHeightRef = useRef<number>(200);
     const peakY = useRef<number>(0);
-    const lastHipY = useRef<number>(0);
-    const lastHipX = useRef<number>(0);
+    const lastNoseY = useRef<number>(0);
+    const lastNoseX = useRef<number>(0);
     const lastShoulderWidth = useRef<number>(0);
     const lastDisplacementRef = useRef<number>(0);
     const emaSmoothY = useRef<number | null>(null);
@@ -144,42 +144,46 @@ export default function JumpRopeTraining() {
         [lShoulder, rShoulder, lElbow, rElbow, lWrist, rWrist, lHip, rHip, lKnee, rKnee, lAnkle, rAnkle, nose].forEach(p => drawPoint(p));
 
         // =====================================================
-        // PROVEN DETECTION ENGINE (from JumpRopeCounter.tsx)
+        // EXACT ORIGINAL ENGINE (from JumpRopeCounter.tsx)
         // =====================================================
 
-        const lShoulder2 = LM[11]; const rShoulder2 = LM[12];
-        const lAnkle2 = LM[27];    const rAnkle2 = LM[28];
+        const nose = LM[0];
+        const lShoulder2 = LM[11];
+        const rShoulder2 = LM[12];
+        const lHip2 = LM[23];
+        const rHip2 = LM[24];
+        const lAnkle2 = LM[27];
+        const rAnkle2 = LM[28];
 
         if (!nose || !lShoulder2 || !rShoulder2) return;
 
+        // --- STABILITY & FULL BODY & PROXIMITY GUARD ---
         const isFullBody = !!(lAnkle2 && rAnkle2);
-        const noseY = nose.y * H; // keep for body-height calc only
-        const shoulderWide = Math.abs(lShoulder2.x - rShoulder2.x) * W;
-        const scaleVelocity = (shoulderWide - lastShoulderWidth.current) / deltaTime;
+        const hasAura = !!(lShoulder2 || rShoulder2 || lHip2 || rHip2);
+        const noseY = nose.y * H;
+        const noseX = nose.x * W;
+        const shoulderW = Math.abs(lShoulder2.x - rShoulder2.x) * W;
 
-        // --- Use SHOULDER MIDPOINT as the ultimate stable anchor ---
-        // Shoulders don't bob independently like the head (nose) does.
-        // Shoulders don't get occluded by swinging arms like the hips do.
-        const shoulderMidY = ((lShoulder2.y + rShoulder2.y) / 2) * H;
-        const shoulderMidX = ((lShoulder2.x + rShoulder2.x) / 2) * W;
+        const frameVelocityY = Math.abs(lastNoseY.current - noseY) / deltaTime;
+        const frameVelocityX = Math.abs(lastNoseX.current - noseX) / deltaTime;
+        const scaleVelocity = (shoulderW - lastShoulderWidth.current) / deltaTime;
 
-        const frameVelocityY = Math.abs(lastHipY.current - shoulderMidY) / deltaTime;
-        const frameVelocityX = Math.abs(lastHipX.current - shoulderMidX) / deltaTime;
-
-        // Mirrored from JumpRopeCounter.tsx proven thresholds
-        const isTooClose = shoulderWide > (W * 0.38);
+        // Balanced Pro-Level thresholds: 38% coverage or 180px/s forward speed
+        const isTooClose = shoulderW > (W * 0.38);
         const isApproaching = scaleVelocity > 180;
         const isCurrentlyMoving = frameVelocityY > 400 || frameVelocityX > 200 || isApproaching;
 
-        lastHipY.current = shoulderMidY;
-        lastHipX.current = shoulderMidX;
-        lastShoulderWidth.current = shoulderWide;
+        lastNoseY.current = noseY;
+        lastNoseX.current = noseX;
+        lastShoulderWidth.current = shoulderW;
 
-        // --- Stability Gate (same as working tracker) ---
+        // --- STABLE PERSISTENCE LOGIC ---
         if (isStableRef.current) {
+            // Balanced Approach Guard: Needs 0.6s persistent proximity to reset
             if (isTooClose || isApproaching) {
-                if (trackingLossStartRef.current === null) trackingLossStartRef.current = now;
-                else if (now - trackingLossStartRef.current > 600) {
+                if (trackingLossStartRef.current === null) {
+                    trackingLossStartRef.current = now;
+                } else if (now - trackingLossStartRef.current > 600) {
                     isStableRef.current = false;
                     stabilityStartRef.current = null;
                     peakY.current = 0;
@@ -190,58 +194,65 @@ export default function JumpRopeTraining() {
                 trackingLossStartRef.current = null;
                 setSetupStatus('READY');
             }
+
+            const essentialTrackingLost = !hasAura || (!lAnkle2 && !rAnkle2);
             const massiveLateralMovement = frameVelocityX > 500;
-            if (massiveLateralMovement) {
-                if (trackingLossStartRef.current === null) trackingLossStartRef.current = now;
-                else if (now - trackingLossStartRef.current > 1200) {
+
+            if (essentialTrackingLost || massiveLateralMovement) {
+                if (trackingLossStartRef.current === null) {
+                    trackingLossStartRef.current = now;
+                } else if (now - trackingLossStartRef.current > 1200) {
                     isStableRef.current = false;
                     stabilityStartRef.current = null;
+                    setSetupStatus(!isFullBody ? 'STEP_BACK' : 'MOVING');
                     return;
                 }
             }
         } else {
+            // Setup Mode
             if (isCurrentlyMoving || !isFullBody || isTooClose) {
                 stabilityStartRef.current = null;
                 setSetupStatus(isTooClose || !isFullBody ? 'STEP_BACK' : 'MOVING');
-                baselineY.current = shoulderMidY;
+                baselineY.current = noseY;
                 setMovementPct(0);
                 return;
             }
-            if (stabilityStartRef.current === null) stabilityStartRef.current = now;
-            else if (now - stabilityStartRef.current > 1500) {
+
+            if (stabilityStartRef.current === null) {
+                stabilityStartRef.current = now;
+            } else if (now - stabilityStartRef.current > 1500) {
                 isStableRef.current = true;
                 setSetupStatus('READY');
             }
-            baselineY.current = shoulderMidY;
+            baselineY.current = noseY;
             return;
         }
 
-        if (baselineY.current === null) { baselineY.current = shoulderMidY; return; }
+        if (baselineY.current === null) {
+            baselineY.current = noseY;
+            return;
+        }
 
-        // Body height for dynamic threshold (nose to ankle - accurate scale)
-        const bodyH2 = Math.abs(((lAnkle2?.y ?? rAnkle2?.y ?? 0) - nose.y) * H);
-        bodyHeightRef.current = Math.max(100, bodyH2);
+        // --- NOSE PEAK DETECTION (The Core) ---
+        const bodyH = Math.abs(((lAnkle2?.y ?? rAnkle2?.y ?? 0) - nose.y) * H);
+        bodyHeightRef.current = Math.max(100, bodyH);
 
-        // EMA Smoothing on the SHOULDER signal
-        if (emaSmoothY.current === null) emaSmoothY.current = shoulderMidY;
-        emaSmoothY.current = emaSmoothY.current * 0.4 + shoulderMidY * 0.6;
+        // EMA Smoothing
+        if (emaSmoothY.current === null) emaSmoothY.current = noseY;
+        emaSmoothY.current = emaSmoothY.current * 0.4 + noseY * 0.6;
         const smoothY = emaSmoothY.current;
 
+        // Relative Movement
         const displacement = baselineY.current - smoothY;
+        const velocity = (lastDisplacementRef.current - displacement) / deltaTime; // Frame velocity
         velocityRef.current = velocityRef.current * 0.3 + (displacement - lastDisplacementRef.current) / deltaTime * 0.7;
         lastDisplacementRef.current = displacement;
 
-        const jumpMinThreshold = Math.max(20, bodyHeightRef.current * 0.04);
+        const jumpMinThreshold = Math.max(12, bodyHeightRef.current * 0.025);
         const pct = Math.max(0, Math.min(100, (displacement / (bodyHeightRef.current * 0.10)) * 100));
         setMovementPct(Math.round(pct));
 
-        // Walking guard: lateral movement > 120px/s means the body is drifting sideways → not a jump
-        if (frameVelocityX > 120) {
-            jumpStatusRef.current = 'standing';
-            return;
-        }
-
-        // --- State Machine ---
+        // State Machine
         if (jumpStatusRef.current === 'standing') {
             if (displacement > jumpMinThreshold && velocityRef.current > 40) {
                 jumpStatusRef.current = 'jumping';
@@ -253,17 +264,31 @@ export default function JumpRopeTraining() {
             if (displacement > peakY.current) peakY.current = displacement;
 
             if ((velocityRef.current < -30 || displacement < jumpMinThreshold * 0.5) && !cooldownRef.current) {
+                // Success! Block if user is already pushing forward for real
                 if (peakY.current > jumpMinThreshold && scaleVelocity < 100) {
                     jumpCountRef.current += 1;
                     setJumps(jumpCountRef.current);
                     if ('vibrate' in navigator) navigator.vibrate(50);
-                    lastActivityTimeRef.current = Date.now();
-                    if (jumpCountRef.current % 10 === 0) speak(jumpCountRef.current.toString());
+
+                    // Auto-start timer on first jump if duration is set
+                    const now = Date.now();
+                    if (timerRemainingRef.current !== null && !isTimerStartedRef.current) {
+                        isTimerStartedRef.current = true;
+                        setIsTimerActive(true);
+                        speak("Session started. Good luck!");
+                    }
+                    lastActivityTimeRef.current = now;
+                    // Speak every 10 jumps
+                    if (jumpCountRef.current % 10 === 0) {
+                        speak(jumpCountRef.current.toString());
+                    }
                 }
+
+                // CRITICAL FIX: Reset status ONLY after valid landing detection
                 jumpStatusRef.current = 'standing';
                 peakY.current = 0;
                 cooldownRef.current = true;
-                setTimeout(() => { cooldownRef.current = false; }, 250); // 250ms = max 4 jumps/sec
+                setTimeout(() => { cooldownRef.current = false; }, 120);
             }
         }
     }, [speak]);

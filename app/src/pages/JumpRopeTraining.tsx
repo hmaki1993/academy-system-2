@@ -155,8 +155,10 @@ export default function JumpRopeTraining() {
         const frameVelocityX = Math.abs(lastCenterX.current - noseX) / deltaTime;
         const scaleVelocity = (shoulderW - lastShoulderWidth.current) / deltaTime;
 
-        // Balanced Pro-Level thresholds: 38% coverage or 180px/s forward speed
-        const isTooClose = shoulderW > (W * 0.38);
+        // --- Proximity Hysteresis & Stabilization ---
+        // Enter at 0.38, Exit at 0.34 to prevent flickering
+        const wasTooClose = setupStatus === 'TOO_CLOSE';
+        const isTooClose = wasTooClose ? (shoulderW > W * 0.34) : (shoulderW > W * 0.38);
         const isApproaching = scaleVelocity > 180;
         const isCurrentlyMoving = frameVelocityY > 400 || frameVelocityX > 200 || isApproaching;
         
@@ -195,10 +197,17 @@ export default function JumpRopeTraining() {
                 }
             }
         } else {
-            // Setup Mode
-            if (isCurrentlyMoving || !isFullBody || (isTooClose && isSessionActive)) {
+            // Setup Mode with Persistence
+            const currentlyTooClose = isTooClose && isSessionActive;
+            if (isCurrentlyMoving || !isFullBody || currentlyTooClose) {
                 stabilityStartRef.current = null;
-                setSetupStatus((isTooClose && isSessionActive) ? 'TOO_CLOSE' : !isFullBody ? 'STEP_BACK' : 'MOVING');
+                const nextStatus = currentlyTooClose ? 'TOO_CLOSE' : !isFullBody ? 'STEP_BACK' : 'MOVING';
+                
+                // Only update if status is different to prevent unnecessary renders
+                if (setupStatus !== nextStatus) {
+                    setSetupStatus(nextStatus);
+                }
+                
                 baselineY.current = nose.y;
                 baselineHipY.current = hMidY !== null ? hMidY / H : null;
                 setMovementPct(0);

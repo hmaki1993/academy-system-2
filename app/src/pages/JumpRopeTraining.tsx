@@ -74,6 +74,7 @@ export default function JumpRopeTraining() {
 
     // --- Detection Refs ---
     const jumpCountRef = useRef(0);
+    const isJumpingRef = useRef(false);
     const jumpStatusRef = useRef<'standing' | 'jumping'>('standing');
     const baselineY = useRef<number | null>(null);
     const baselineHipY = useRef<number | null>(null);
@@ -195,9 +196,9 @@ export default function JumpRopeTraining() {
             }
         } else {
             // Setup Mode
-            if (isCurrentlyMoving || !isFullBody || isTooClose) {
+            if (isCurrentlyMoving || !isFullBody || (isTooClose && isSessionActive)) {
                 stabilityStartRef.current = null;
-                setSetupStatus(isTooClose ? 'TOO_CLOSE' : !isFullBody ? 'STEP_BACK' : 'MOVING');
+                setSetupStatus((isTooClose && isSessionActive) ? 'TOO_CLOSE' : !isFullBody ? 'STEP_BACK' : 'MOVING');
                 baselineY.current = nose.y;
                 baselineHipY.current = hMidY !== null ? hMidY / H : null;
                 setMovementPct(0);
@@ -274,41 +275,46 @@ export default function JumpRopeTraining() {
 
         // State Machine
         if (jumpStatusRef.current === 'standing') {
-            // BLOCK HEAD TILTS: A real jump requires at least 40% of the movement from the hips
-            const isBodyMoving = hipDisplacement > (jumpMinThreshold * 0.4);
+            // Stability Checks:
+            // 1. Minimum displacement (Height check)
+            // 2. High velocity upward (Impulse check)
+            // 3. Proximity check (Too close blocks count)
+            // 4. Hip-displacement validation (Suppresses head-tilts)
+            const isBodyMoving = hipDisplacement > (jumpMinThreshold * 0.5);
             
-            if (displacement > jumpMinThreshold && velocityRef.current > 40 && !isTooClose && !isApproaching && isBodyMoving) {
+            if (displacement > jumpMinThreshold && velocityRef.current > 45 && !isTooClose && isBodyMoving) {
                 jumpStatusRef.current = 'jumping';
                 peakY.current = displacement;
-            } else if (Math.abs(velocityRef.current) < 25 && baselineY.current !== null) {
-                baselineY.current = (baselineY.current ?? nose.y) * 0.95 + (smoothY / H) * 0.05;
-                if (hMidY !== null) {
-                    baselineHipY.current = (baselineHipY.current ?? hMidY / H) * 0.95 + (hMidY / H) * 0.05;
+                isJumpingRef.current = true;
+
+                // INSTANT TRIGGER: Start the timer on the FIRST jump IMPULSE for best UX
+                if (!isTimerStartedRef.current && isSessionActiveRef.current) {
+                    isTimerStartedRef.current = true;
+                    isTimerActiveRef.current = true;
+                    setIsTimerActive(true);
+                    speak("Session started! Let's go!");
+                    lastActivityTimeRef.current = now;
                 }
+            } else if (Math.abs(velocityRef.current) < 25 && baselineY.current !== null) {
+                baselineY.current = (baselineY.current + (smoothY / H)) / 2;
             }
-        } else {
+        } else if (jumpStatusRef.current === 'jumping') {
             if (displacement > peakY.current) peakY.current = displacement;
 
+            // Peak Confirmation (Reset phase)
             if ((velocityRef.current < -30 || displacement < jumpMinThreshold * 0.5) && !cooldownRef.current) {
-                if (peakY.current > jumpMinThreshold && !isApproaching && isSessionActiveRef.current) {
-                    jumpCountRef.current += 1;
+                if (peakY.current > jumpMinThreshold && isSessionActiveRef.current) {
+                    jumpCountRef.current++;
                     setJumps(jumpCountRef.current);
+                    speak(jumpCountRef.current.toString());
                     if ('vibrate' in navigator) navigator.vibrate(50);
-
-                    if (!isTimerStartedRef.current) {
-                        isTimerStartedRef.current = true;
-                        isTimerActiveRef.current = true;
-                        setIsTimerActive(true);
-                        speak("Session started. Good luck!");
-                    }
                     lastActivityTimeRef.current = now;
-                    if (jumpCountRef.current % 10 === 0) speak(jumpCountRef.current.toString());
                 }
 
                 jumpStatusRef.current = 'standing';
-                peakY.current = 0;
                 cooldownRef.current = true;
-                setTimeout(() => { cooldownRef.current = false; }, 120);
+                isJumpingRef.current = false;
+                setTimeout(() => { cooldownRef.current = false; }, 150);
             }
         }
     }, [isTracking, speak]);
@@ -682,9 +688,9 @@ export default function JumpRopeTraining() {
                 </div>
             )}
             {/* 6. FULLSCREEN PROXIMITY OVERLAY (The Requested Blocker) */}
-            {setupStatus === 'TOO_CLOSE' && (
+            {setupStatus === 'TOO_CLOSE' && isSessionActive && (
                 <div className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-[25px] flex flex-col items-center justify-center p-12 text-center animate-in fade-in duration-700">
-                    <div className="w-24 h-24 rounded-full bg-red-500/20 border border-red-500/30 flex items-center justify-center mb-10 share-shadow-[0_0_50px_rgba(239,68,68,0.3)] animate-pulse">
+                    <div className="w-24 h-24 rounded-full bg-red-500/20 border border-red-500/30 flex items-center justify-center mb-10 shadow-[0_0_50px_rgba(239,68,68,0.3)] animate-pulse">
                         <AlertTriangle size={48} className="text-red-500" />
                     </div>
                     <h2 className="text-4xl md:text-5xl font-black uppercase tracking-tighter text-white mb-4">

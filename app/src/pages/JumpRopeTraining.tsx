@@ -280,7 +280,9 @@ export default function JumpRopeTraining() {
 
         // Displacement
         const displacement = baselineY.current - smoothY;
-        velocityRef.current = velocityRef.current * 0.3 + (displacement - lastDisplacementRef.current) / deltaTime * 0.7;
+        // Calculate velocity in Pixels-Per-Second to fix floating point scaling issues
+        const rawVelPxPerSec = ((displacement - lastDisplacementRef.current) / Math.max(1, deltaTime)) * 1000;
+        velocityRef.current = velocityRef.current * 0.3 + rawVelPxPerSec * 0.7;
         lastDisplacementRef.current = displacement;
 
         // Threshold: 2.5% of body height (more sensitive for jump rope hops)
@@ -297,11 +299,11 @@ export default function JumpRopeTraining() {
         const isWalkingLaterally = smoothedVelXRef.current > 130;
 
         if (jumpStatusRef.current === 'standing') {
-            // Must have displacement + upward velocity + body sync (hips moving too)
-            if (displacement > jumpMinThreshold && velocityRef.current > 15 && isBodySync && !isWalkingLaterally) {
+            // Must have displacement + upward velocity (px/sec) + body sync (hips moving too)
+            if (displacement > jumpMinThreshold && velocityRef.current > 40 && isBodySync && !isWalkingLaterally) {
                 jumpStatusRef.current = 'jumping';
                 peakY.current = displacement;
-            } else if (Math.abs(velocityRef.current) < 15) {
+            } else if (Math.abs(velocityRef.current) < 30) {
                 baselineY.current = (baselineY.current ?? smoothY) * 0.95 + smoothY * 0.05;
                 if (baselineHipY.current !== null) {
                     baselineHipY.current = baselineHipY.current * 0.95 + hipMidY * 0.05;
@@ -310,7 +312,7 @@ export default function JumpRopeTraining() {
         } else {
             if (displacement > peakY.current) peakY.current = displacement;
 
-            const landed = velocityRef.current < -20 || displacement < jumpMinThreshold * 0.5;
+            const landed = velocityRef.current < -30 || displacement < jumpMinThreshold * 0.5;
 
             if (landed && !cooldownRef.current) {
                 if (peakY.current > jumpMinThreshold && !isWalkingLaterally && isSessionActiveRef.current) {
@@ -570,7 +572,7 @@ export default function JumpRopeTraining() {
                     </div>
 
                     {/* Bottom Action Area (Start/Finish) */}
-                    <div className="absolute bottom-20 inset-x-0 flex flex-col items-center gap-5 px-10 pointer-events-auto">
+                    <div className="absolute bottom-32 pb-safe inset-x-0 flex flex-col items-center gap-5 px-10 pointer-events-auto">
                         {!isSessionActive ? (
                             <button 
                                 onClick={handleStart}

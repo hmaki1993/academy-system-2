@@ -22,7 +22,7 @@ import { useTheme } from '../context/ThemeContext';
 import { handleSmartError } from '../utils/smartUtils';
 import toast from 'react-hot-toast';
 
-interface AICoachAssistantModalProps {
+interface EliteCoachAssistantModalProps {
     isOpen: boolean;
     onClose: () => void;
 }
@@ -146,7 +146,7 @@ function CustomSelect({ label, value, options, onChange, allowCustom = false }: 
     );
 }
 
-export default function AICoachAssistantModal({ isOpen, onClose }: AICoachAssistantModalProps) {
+export default function EliteCoachAssistantModal({ isOpen, onClose }: EliteCoachAssistantModalProps) {
     const { t } = useTranslation();
     const { settings } = useTheme();
     const [loading, setLoading] = useState(false);
@@ -238,9 +238,9 @@ export default function AICoachAssistantModal({ isOpen, onClose }: AICoachAssist
             return;
         }
 
-        const apiKey = settings.api_keys?.gemini || 'AIzaSyBilFTTvflCz5EoNv07xIbBCw7t7OYt5lY';
+        const apiKey = settings.api_keys?.smart || 'AIzaSyBilFTTvflCz5EoNv07xIbBCw7t7OYt5lY';
         if (!apiKey) {
-            toast.error("Gemini API Key missing!");
+            toast.error("Smart Engine Key missing!");
             return;
         }
 
@@ -644,7 +644,7 @@ export default function AICoachAssistantModal({ isOpen, onClose }: AICoachAssist
                         <div className="flex-1 flex flex-col bg-black/40 overflow-hidden">
                             <div className="p-8 border-b border-white/5 flex items-center justify-between">
                                 <div>
-                                    <h3 className="text-xl font-black text-white uppercase tracking-widest">Saved Repository</h3>
+                                    <h2 className="text-xl font-black text-white uppercase tracking-widest">Elite Motion Assistant</h2>
                                     <p className="text-[10px] text-white/30 uppercase tracking-widest font-black mt-1">Access previously generated tactical plans</p>
                                 </div>
                                 <div className="px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-[10px] font-black text-white/40 uppercase tracking-widest">

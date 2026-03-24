@@ -41,10 +41,12 @@ export default function MonthlyReportModal({ isOpen, onClose, student, currentUs
     const [reportLanguage, setReportLanguage] = useState<'Arabic' | 'English'>('Arabic');
 
     const generateSmartSummary = async () => {
-        if (!settings.api_keys?.gemini) {
-            toast.error("Gemini API Key missing in Settings!");
+        if (!settings.api_keys?.smart) {
+            toast.error("Engine Key missing in Settings!");
             return;
         }
+
+        const apiKey = settings.api_keys.smart;
 
         if (retryTimer && retryTimer > 0) {
             toast.error(`Please wait ${retryTimer}s before retrying.`);
@@ -59,7 +61,7 @@ export default function MonthlyReportModal({ isOpen, onClose, student, currentUs
                 present: stats.present,
                 total: stats.total,
                 assessments: monthlyAssessments,
-                apiKey: settings.api_keys.gemini,
+                apiKey: settings.api_keys.smart,
                 language: reportLanguage
             });
 
@@ -511,7 +513,7 @@ ${evaluations.notes}
                                 value={evaluations.notes}
                                 onChange={(e) => setEvaluations({ ...evaluations, notes: e.target.value })}
                                 className="w-full h-40 bg-purple-500/[0.02] border border-purple-500/10 rounded-3xl p-6 text-sm font-medium text-purple-100/90 focus:border-purple-500/40 outline-none transition-all resize-none placeholder:text-purple-500/20 hover:bg-purple-500/[0.04]"
-                                placeholder="Generate AI Report to see the Action Plan..."
+                                placeholder="Generate Smart Report to see the Action Plan..."
                             />
                         </div>
                     </div>

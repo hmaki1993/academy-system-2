@@ -453,10 +453,10 @@ export default function HeadCoachDashboard() {
             }
 
             {
-                isAIAssistantOpen && (
-                    <AICoachAssistantModal
-                        isOpen={isAIAssistantOpen}
-                        onClose={() => setIsAIAssistantOpen(false)}
+                isEliteAssistantOpen && (
+                    <EliteCoachAssistantModal
+                        isOpen={isEliteAssistantOpen}
+                        onClose={() => setIsEliteAssistantOpen(false)}
                     />
                 )
             }

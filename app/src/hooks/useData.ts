@@ -250,7 +250,7 @@ export function useDashboardStats() {
     });
 }
 
-// --- AI Context Hook ---
+// --- Smart Engine Context Hook ---
 export function useGymData() {
     const { data: students } = useStudents();
     const { data: coaches } = useCoaches();

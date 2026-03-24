@@ -84,7 +84,7 @@ const MobileBottomNav = () => (
 );
 
 /* ─── Main Layout ────────────────────────────────────────────── */
-export default function JumpRopeLayout() {
+export default function JumpRopeLayout({ children }: { children?: React.ReactNode }) {
     const location = useLocation();
     const [settings, setSettings] = React.useState(loadJrSettings);
 
@@ -235,7 +235,7 @@ export default function JumpRopeLayout() {
             >
                 {/* Per-page fade-in */}
                 <div key={location.pathname} className="page-content flex-1 flex flex-col">
-                    <Outlet />
+                    {children || <Outlet />}
                 </div>
             </main>
 

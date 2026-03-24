@@ -149,12 +149,12 @@ export default function PublicRegistration() {
     const textColorMuted = 'rgba(255, 255, 255, 0.6)';
     const logoUrl = settings.logo_url || (getSetting('login_logo_url') as string) || '/logo.png';
 
-    // Dynamic AI Theming: Extract color from logo
+    // Dynamic Smart engine: Extract color from logo
     useEffect(() => {
         if (logoUrl) {
             getDominantColor(logoUrl).then(color => {
                 if (color) {
-                    console.log('🎨 AI Theme: Extracted dominant color from logo:', color);
+                    console.log('🎨 Smart Engine: Extracted dominant color from logo:', color);
                     setExtractedColor(color);
                 }
             });

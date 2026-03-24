@@ -23,7 +23,7 @@ export const handleSmartError = (error: any): SmartErrorResponse => {
         return result;
     }
 
-    // Handle structured GoogleGenerativeAI errors
+    // Handle structured Smart Engine errors
     const errorMessage = error?.message || "";
     const errorStatus = error?.status || (error?.response?.status);
 
@@ -47,7 +47,7 @@ export const handleSmartError = (error: any): SmartErrorResponse => {
                     const seconds = parseFloat(delayStr);
                     if (!isNaN(seconds)) {
                         result.retryAfterSeconds = Math.ceil(seconds);
-                        console.log(`[AI-Retry] Extracted delay from structured info: ${result.retryAfterSeconds}s`);
+                        console.log(`[Smart-Retry] Extracted delay from structured info: ${result.retryAfterSeconds}s`);
                     }
                 }
             }
@@ -57,7 +57,7 @@ export const handleSmartError = (error: any): SmartErrorResponse => {
                 const match = errorMessage.match(/retry in ([\d.]+)/);
                 if (match && match[1]) {
                     result.retryAfterSeconds = Math.ceil(parseFloat(match[1]));
-                    console.log(`[AI-Retry] Extracted delay from message string: ${result.retryAfterSeconds}s`);
+                    console.log(`[Smart-Retry] Extracted delay from message string: ${result.retryAfterSeconds}s`);
                 }
             }
         } catch (e) {

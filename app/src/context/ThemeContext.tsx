@@ -94,7 +94,7 @@ export interface GymSettings {
     notify_registrations?: boolean;
     notify_browser_push?: boolean;
     api_keys?: {
-        gemini?: string;
+        smart?: string;
     };
 }
 
@@ -255,7 +255,7 @@ export const defaultSettings: GymSettings = {
     login_show_logo: true,
     login_logo_scale: 1,
     api_keys: {
-        gemini: 'AIzaSyBilFTTvflCz5EoNv07xIbBCw7t7OYt5lY'
+        smart: 'AIzaSyBilFTTvflCz5EoNv07xIbBCw7t7OYt5lY'
     },
     login_logo_x_offset: 0,
     login_logo_y_offset: 0,
@@ -481,12 +481,12 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
                     )
                 );
                 
-                // FORCE OVERRIDE: If database logo contains legacy branding, fall back to project default
-                if (filteredGlobal.logo_url && typeof filteredGlobal.logo_url === 'string' && filteredGlobal.logo_url.toLowerCase().includes('healy')) {
-                    filteredGlobal.logo_url = '/logo.png?v=2';
+                // FORCE OVERRIDE: If database logo contains legacy paths, fall back to project default
+                if (filteredGlobal.logo_url && typeof filteredGlobal.logo_url === 'string' && (filteredGlobal.logo_url.toLowerCase().includes('healy') || filteredGlobal.logo_url.toLowerCase().includes('fame'))) {
+                    filteredGlobal.logo_url = '/logo-jumprope.png';
                 }
-                if (filteredGlobal.login_logo_url && typeof filteredGlobal.login_logo_url === 'string' && filteredGlobal.login_logo_url.toLowerCase().includes('healy')) {
-                    filteredGlobal.login_logo_url = '/logo.png?v=2';
+                if (filteredGlobal.login_logo_url && typeof filteredGlobal.login_logo_url === 'string' && (filteredGlobal.login_logo_url.toLowerCase().includes('healy') || filteredGlobal.login_logo_url.toLowerCase().includes('fame'))) {
+                    filteredGlobal.login_logo_url = '/logo-jumprope.png';
                 }
 
                 finalSettings = { ...finalSettings, ...filteredGlobal };

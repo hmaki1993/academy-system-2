@@ -246,7 +246,7 @@ export default function ImportStudentsModal({ isOpen, onClose, onSuccess }: Impo
                                     return true;
                                 }
 
-                                // Number match (e.g., if DB has "8 classes" and AI extracted "8" or "8 حصه")
+                                // Number match (e.g., if DB has "8 classes" and Engine extracted "8" or "8 حصه")
                                 if (extractNumber) {
                                     // Look for this number standing alone or with a space in the dbName to prevent "8" matching "18"
                                     const regex = new RegExp(`(^|\\D)${extractNumber}(\\D|$)`);
@@ -779,7 +779,7 @@ export default function ImportStudentsModal({ isOpen, onClose, onSuccess }: Impo
                                                         Analyzing Image... 🧠
                                                     </p>
                                                     <p className="text-[9px] font-black uppercase tracking-[0.3em] text-primary/60">
-                                                        Our AI is reading the student list
+                                                        Our Engine is reading the student list
                                                     </p>
                                                 </div>
                                             ) : (
@@ -804,7 +804,7 @@ export default function ImportStudentsModal({ isOpen, onClose, onSuccess }: Impo
                                         </div>
                                         <p className="text-[10px] font-medium text-white/40 leading-relaxed max-w-xl">
                                             Take a clear photo of a handwritten or printed list containing student names, phone numbers, and even birth dates or gender.
-                                            Our AI will automatically extract this information and pre-fill the Quick Entry Grid for you to review and import.
+                                            Our Smart Engine will automatically extract this information and pre-fill the Quick Entry Grid for you to review and import.
                                         </p>
                                     </div>
                                 </div>

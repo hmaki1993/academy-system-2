@@ -1,26 +1,13 @@
-import React, { Suspense } from 'react';
+import React from 'react';
+import JumpRopeLayout from '../layouts/JumpRopeLayout';
 import JumpRopeCounter from '../components/JumpRopeCounter';
-import PageHeader from '../components/PageHeader';
 
-const AITraining: React.FC = () => {
+const SmartTraining: React.FC = () => {
     return (
-        <div className="p-4 md:p-8 min-h-screen">
-            <div className="max-w-6xl mx-auto">
-
-                <div className="grid grid-cols-1 gap-8">
-                    <Suspense fallback={
-                        <div className="w-full h-[400px] bg-white/5 rounded-3xl animate-pulse flex items-center justify-center">
-                            <span className="text-white/20 font-bold uppercase tracking-widest text-xs">Initializing Tracker Engine...</span>
-                        </div>
-                    }>
-                        <JumpRopeCounter />
-                    </Suspense>
-                </div>
-
-
-            </div>
-        </div>
+        <JumpRopeLayout>
+            <JumpRopeCounter />
+        </JumpRopeLayout>
     );
 };
 
-export default AITraining;
+export default SmartTraining;

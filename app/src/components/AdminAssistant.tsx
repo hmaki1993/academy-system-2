@@ -224,7 +224,7 @@ export default function AdminAssistant({ onClose }: AdminAssistantProps) {
                     </button>
                 </div>
                 <p className="text-xs text-purple-300 mt-2 text-center">
-                    Powered by Google Gemini • بيتعلم من استخداماتك
+                    Powered by Smart Engine • بيتعلم من استخداماتك
                 </p>
             </div>
         </div>

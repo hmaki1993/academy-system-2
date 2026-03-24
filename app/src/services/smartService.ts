@@ -58,10 +58,10 @@ export const processImageWithSmartEngine = async (base64Image: string): Promise<
         const textResponse = result.response.text();
 
         if (!textResponse) {
-            throw new Error("No text returned from Gemini API");
+            throw new Error("No text returned from Smart Engine API");
         }
 
-        // Clean up any potential markdown formatting in case Gemini ignored the prompt
+        // Clean up any potential markdown formatting in case Engine ignored the prompt
         let cleanedText = textResponse.trim();
         if (cleanedText.startsWith('```json')) {
             cleanedText = cleanedText.substring(7);
@@ -175,7 +175,7 @@ export const generateMonthlyReportSummary = async (params: {
     language?: 'Arabic' | 'English'
 }): Promise<any> => {
     if (!params.apiKey) {
-        throw new Error("Gemini API Key missing in Settings!");
+        throw new Error("Smart Engine Key missing in Settings!");
     }
 
     const { fullName, month, present, total, assessments, apiKey, language = 'Arabic' } = params;

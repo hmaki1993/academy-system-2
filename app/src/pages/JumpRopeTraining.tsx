@@ -260,31 +260,43 @@ export default function JumpRopeTraining() {
             return;
         }
 
-        // --- 3. JUMP DETECTION LOGIC (Pixel Units) ---
+        // --- 3. DYNAMIC DISTANCE-AWARE LOGIC ---
+        // Scale thresholds based on user distance (body height)
+        const distanceFactor = bodyHeightRef.current / 250; // Reference height is 250px
+
+        // EMA Smoothing + Distance Scaling
         if (emaSmoothY.current === null) emaSmoothY.current = nose.y;
         emaSmoothY.current = (emaSmoothY.current ?? nose.y) * 0.4 + nose.y * 0.6;
         const currentSmoothY = emaSmoothY.current ?? nose.y;
         
-        // Final Displacement (In Pixels)
+        // Displacement in Pixels
         const displacement = ((baselineY.current ?? nose.y) - currentSmoothY) * H;
-        const jumpMinThreshold = Math.max(12, bodyHeightRef.current * 0.035);
         
-        // Velocity (PPS)
+        // Smart Sensitivity: Scale threshold by distance
+        const jumpMinThreshold = Math.max(8, bodyHeightRef.current * 0.03); // e.g. 3% of body
+        
+        // Velocity (PPS) - Scale target velocity by distance to handle low-res/far-away shots
         const rawVelPxPerSec = ((displacement - lastDisplacementRef.current) / deltaTime) * 1000;
         velocityRef.current = velocityRef.current * 0.3 + rawVelPxPerSec * 0.7;
         lastDisplacementRef.current = displacement;
+        
+        const velocityThreshold = Math.max(20, 40 * distanceFactor);
+        const landingVelocityThreshold = Math.max(-10, -15 * distanceFactor);
         
         // Visual Percentage
         const pct = Math.max(0, Math.min(100, (displacement / (bodyHeightRef.current * 0.12)) * 100));
         setMovementPct(Math.round(pct));
 
+        // Approach Blocker: Pause if shoulder width is expanding fast (picking up phone)
+        const isApproaching = frameVelocityX > 180 || isTooClose;
+
         // Smart Sync Guard
         const bHipY = baselineHipY.current ?? hipMidY;
         const hipDisplacement = bHipY - hipMidY;
-        const isBodySync = hipDisplacement > Math.max(4, displacement * 0.3);
+        const isBodySync = hipDisplacement > Math.max(2, displacement * 0.2);
 
         if (jumpStatusRef.current === 'standing') {
-            if (displacement > jumpMinThreshold && velocityRef.current > 40 && isBodySync) {
+            if (displacement > jumpMinThreshold && velocityRef.current > velocityThreshold && isBodySync && !isApproaching) {
                 jumpStatusRef.current = 'jumping';
                 peakY.current = displacement;
             } else if (Math.abs(velocityRef.current) < 30) {
@@ -295,7 +307,7 @@ export default function JumpRopeTraining() {
             if (displacement > peakY.current) peakY.current = displacement;
             
             // Fast Landing
-            const landed = velocityRef.current < -15 || displacement < jumpMinThreshold * 0.5;
+            const landed = velocityRef.current < landingVelocityThreshold || displacement < jumpMinThreshold * 0.5;
 
             if (landed && !cooldownRef.current) {
                 if (peakY.current > jumpMinThreshold && isSessionActiveRef.current) {

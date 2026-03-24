@@ -162,7 +162,7 @@ export default function JumpRopeLayout() {
             {/* ── Header (hidden during training for max space) ─────────── */}
             {!isTraining && (
                 <header
-                    className="relative z-40 shrink-0 flex items-center justify-between px-5 py-3"
+                    className="relative z-40 shrink-0 flex items-center justify-between pl-3 pr-5 py-3"
                     style={{
                         background: 'linear-gradient(180deg, rgba(0,0,0,0.1) 0%, transparent 100%)',
                         borderBottom: '1px solid var(--jr-border)',
@@ -175,44 +175,39 @@ export default function JumpRopeLayout() {
                     />
 
                     {/* Logo + Name */}
-                    <div className="flex items-center gap-3">
-                        {/* Logo container with glow ring */}
-                        <div
-                            className="w-10 h-10 rounded-[14px] flex items-center justify-center overflow-hidden shrink-0"
-                            style={{
-                                background: 'linear-gradient(135deg, rgba(255,255,255,0.1), rgba(255,255,255,0.02))',
-                                backdropFilter: 'blur(12px)',
-                                border: '1px solid rgba(255,255,255,0.12)',
-                                boxShadow: '0 8px 32px 0 rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.1), 0 0 20px var(--jr-glow)',
-                            }}
-                        >
-                            {settings.logoDataUrl ? (
-                                <img src={settings.logoDataUrl} alt="logo" className="w-full h-full object-cover" />
-                            ) : (
-                                <Activity
-                                    className="w-5 h-5"
-                                    style={{ color: 'var(--color-primary, #ff3b30)', filter: 'drop-shadow(0 0 8px var(--color-primary, #ff3b30))' }}
-                                />
-                            )}
-                        </div>
-
-                        <div className="h-10 w-[1px] bg-white/5 mx-1" />
-                        
-                        <div className="flex flex-col gap-0.5">
+                    <div className="flex items-center gap-2">
+                        {/* Logo container area ... */}
+                        {!settings.logoDataUrl ? (
+                            <img 
+                                src="/logo-jumprope.png"
+                                alt="JUMP ROPE PRO"
+                                className="w-20 h-20 object-contain shrink-0"
+                                style={{ filter: 'brightness(1.2) contrast(1.1) drop-shadow(0 0 12px rgba(129,140,248,0.4))' }}
+                            />
+                        ) : (
+                            <img 
+                                src={settings.logoDataUrl} 
+                                alt="logo" 
+                                className="w-20 h-20 object-contain shrink-0"
+                                style={{ filter: 'brightness(1.1) drop-shadow(0 0 10px rgba(129,140,248,0.3))' }} 
+                            />
+                        )}
+ 
+                        <div className="flex flex-col justify-center -ml-1">
                             <h1 
-                                className="font-extrabold text-[15.5px] tracking-[0.45em] leading-none uppercase" 
+                                className="font-extrabold text-[17px] tracking-[0.2em] leading-none uppercase" 
                                 style={{ 
                                     background: 'linear-gradient(90deg, #818cf8 0%, #c084fc 45%, #22d3ee 100%)',
                                     WebkitBackgroundClip: 'text',
                                     WebkitTextFillColor: 'transparent',
                                     backgroundClip: 'text',
                                     color: 'transparent',
-                                    filter: 'drop-shadow(0 0 15px rgba(129,140,248,0.3))'
+                                    filter: 'drop-shadow(0 0 10px rgba(129,140,248,0.2))'
                                 }}
                             >
                                 {settings.appName || 'JUMP ROPE PRO'}
                             </h1>
-                            <p className="text-[7px] font-black uppercase tracking-[0.55em] text-white/20 ml-0.5">
+                            <p className="text-[7px] font-black uppercase tracking-[0.45em] text-white/20 ml-0.5 mt-1">
                                 Performance Tracking Elite
                             </p>
                         </div>

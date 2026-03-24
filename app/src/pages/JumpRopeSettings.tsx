@@ -118,6 +118,45 @@ export default function JumpRopeSettings() {
 
                 <div className="flex flex-col flex-1 pb-6 overflow-y-auto custom-scrollbar">
                     <div className="flex flex-col gap-5">
+                        {/* — App Logo Section — Restored */}
+                        <div className="flex items-center gap-6 px-3 py-4">
+                            <div
+                                className="w-12 h-12 rounded-[14px] flex items-center justify-center relative overflow-hidden shrink-0 cursor-pointer hover:opacity-80 transition-all group/logo"
+                                onClick={() => fileRef.current?.click()}
+                                style={{ background: 'var(--jr-surface)', border: '1px solid var(--jr-border)' }}
+                            >
+                                {settings.logoDataUrl ? (
+                                    <img src={settings.logoDataUrl} alt="logo" className="w-full h-full object-cover" />
+                                ) : (
+                                    <img src="/logo-jumprope.png" alt="logo" className="w-full h-full object-contain p-1" />
+                                )}
+                                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/logo:opacity-100 flex items-center justify-center transition-opacity">
+                                    <Upload size={12} className="text-white" />
+                                </div>
+                            </div>
+                            <div className="flex flex-col flex-1">
+                                <label className="text-[11px] font-black uppercase tracking-[0.3em] mb-2" style={{ color: 'var(--jr-text-soft)' }}>App Logo</label>
+                                <div className="flex items-center gap-3">
+                                    <button
+                                        onClick={() => fileRef.current?.click()}
+                                        className="text-[10px] font-black uppercase tracking-[0.1em] text-primary hover:opacity-70 transition-colors"
+                                    >
+                                        Update Logo
+                                    </button>
+                                    {settings.logoDataUrl && (
+                                        <button
+                                            onClick={() => setSettings(s => ({ ...s, logoDataUrl: '' }))}
+                                            className="text-[10px] font-black uppercase tracking-[0.1em] transition-all"
+                                            style={{ color: settings.themeId === 'pure-white' ? 'rgba(0,0,0,0.4)' : 'rgba(255,255,255,0.4)' }}
+                                        >
+                                            Remove
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+                            <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleLogo} />
+                        </div>
+
                         {/* — Profile Section — Standardized Layout */}
                         <div className="flex items-center gap-6 px-3 py-4">
                             <div

@@ -66,12 +66,12 @@ export default function JumpRopeLanding() {
                             <Activity className="w-5 h-5 text-blue-400" />
                         )}
                     </div>
-                    <div
-                        className="w-14 h-14 rounded-2xl flex items-center justify-center overflow-hidden shrink-0 border border-white/10"
-                        style={{ background: 'linear-gradient(135deg, rgba(255,255,255,0.05), rgba(255,255,255,0.01))' }}
-                    >
-                        <Activity className="w-7 h-7 text-primary" />
-                    </div>
+                    <img 
+                        src="/logo-jumprope.png"
+                        alt="JUMP ROPE PRO"
+                        className="w-16 h-16 object-contain mix-blend-screen shrink-0"
+                        style={{ filter: 'brightness(1.3) contrast(1.2) saturate(1.1) drop-shadow(0 0 10px rgba(129,140,248,0.4))' }}
+                    />
                     <div>
                         <h1 
                             className="text-[18px] font-extrabold tracking-[0.45em] uppercase"

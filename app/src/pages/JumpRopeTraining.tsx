@@ -239,9 +239,9 @@ export default function JumpRopeTraining() {
         bodyHeightRef.current = Math.max(100, bodyH);
 
         // --- HYBRID ANKLE CHECK (From User Logic) ---
-        // Normalized check: Ankle should be within 20% of hip height to be "up"
-        const lAnkleUp = lAnkle2 && lHip2 && lAnkle2.y < (lHip2.y + 0.18);
-        const rAnkleUp = rAnkle2 && rHip2 && rAnkle2.y < (rHip2.y + 0.18);
+        // Wider check: ankle just needs to be above a lenient hip-relative threshold
+        const lAnkleUp = lAnkle2 && lHip2 && lAnkle2.y < (lHip2.y + 0.30);
+        const rAnkleUp = rAnkle2 && rHip2 && rAnkle2.y < (rHip2.y + 0.30);
         const isAnkleUp = lAnkleUp || rAnkleUp;
 
         // EMA Smoothing
@@ -255,17 +255,18 @@ export default function JumpRopeTraining() {
         velocityRef.current = velocityRef.current * 0.3 + (displacement - lastDisplacementRef.current) / deltaTime * 0.7;
         lastDisplacementRef.current = displacement;
 
-        // Tune: 4% of body height is much more stable than 2.5%
-        const jumpMinThreshold = Math.max(18, bodyHeightRef.current * 0.04);
+        // Balanced: 3% of body height — not too tight, not too loose
+        const jumpMinThreshold = Math.max(12, bodyHeightRef.current * 0.03);
         const pct = Math.max(0, Math.min(100, (displacement / (bodyHeightRef.current * 0.10)) * 100));
         setMovementPct(Math.round(pct));
 
         // State Machine
         if (jumpStatusRef.current === 'standing') {
-            // Require BOTH nose displacement AND ankle movement (if visible) to start a jump
-            const jumpTriggered = isFullBody ? (displacement > jumpMinThreshold && isAnkleUp) : (displacement > jumpMinThreshold * 1.2);
+            // Ankle check is a BONUS signal, not a blocker — nose alone can still trigger
+            const ankleBonusOk = !isFullBody || isAnkleUp;
+            const jumpTriggered = displacement > jumpMinThreshold && (ankleBonusOk || displacement > jumpMinThreshold * 1.5);
             
-            if (jumpTriggered && velocityRef.current > 40) {
+            if (jumpTriggered && velocityRef.current > 35) {
                 jumpStatusRef.current = 'jumping';
                 peakY.current = displacement;
             } else if (Math.abs(velocityRef.current) < 15 && baselineY.current !== null) {
@@ -274,8 +275,8 @@ export default function JumpRopeTraining() {
         } else {
             if (displacement > peakY.current) peakY.current = displacement;
 
-            // Landing detected if displacement drops significantly OR ankles touch down
-            const landed = isFullBody ? (displacement < jumpMinThreshold * 0.4 || !isAnkleUp) : (displacement < jumpMinThreshold * 0.4);
+            // Landing: velocity drops OR displacement falls back — ankle optional
+            const landed = (velocityRef.current < -25 || displacement < jumpMinThreshold * 0.5);
 
             if (landed && !cooldownRef.current) {
                 // Success! Block if user is already pushing forward for real

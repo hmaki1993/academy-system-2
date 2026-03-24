@@ -278,30 +278,26 @@ export default function JumpRopeTraining() {
         emaSmoothY.current = emaSmoothY.current * 0.4 + noseY * 0.6;
         const smoothY = emaSmoothY.current;
 
-        // Displacement in Pixels (H = canvas height, e.g., 480)
+        // Displacement in Pixels
         const displacement = (baselineY.current - smoothY) * H;
-        // Calculate velocity in Standard Pixels-Per-Second to fix thresholding math
+        
+        // Final Sensitivity: 1.5% of body height (Ultra Sensitive for Hops)
+        const jumpMinThreshold = Math.max(8, bodyHeightRef.current * 0.015);
+        
+        // Standard Velocity: Pixels Per Second
         const rawVelPxPerSec = ((displacement - lastDisplacementRef.current) / Math.max(1, deltaTime)) * 1000;
         velocityRef.current = velocityRef.current * 0.3 + rawVelPxPerSec * 0.7;
         lastDisplacementRef.current = displacement;
-
-        // Threshold: 2.5% of body height (more sensitive for jump rope hops)
-        const jumpMinThreshold = Math.max(10, bodyHeightRef.current * 0.025);
         const pct = Math.max(0, Math.min(100, (displacement / (bodyHeightRef.current * 0.12)) * 100));
         setMovementPct(Math.round(pct));
 
-        // Sync Guard: In Pixels
-        const hipDisplacement = ((baselineHipY.current ?? hipMidY) - hipMidY) * H;
-        // Require hips to rise by at least 15% of the head's rise (or min 2px) to filter head tilts
-        const isBodySync = hipDisplacement > Math.max(2, displacement * 0.15);
-        const isWalkingLaterally = smoothedVelXRef.current > 130;
-
+        // EMERGENCY RELAXATION: Only Vertical Nose Movement
         if (jumpStatusRef.current === 'standing') {
-            // Must have displacement (px) + upward velocity (px/sec) + body sync (hips moving up too)
-            if (displacement > jumpMinThreshold && velocityRef.current > 50 && isBodySync && !isWalkingLaterally) {
+            // Very sensitive: Any upward velocity over 20px/sec + small displacement
+            if (displacement > jumpMinThreshold && velocityRef.current > 20) {
                 jumpStatusRef.current = 'jumping';
                 peakY.current = displacement;
-            } else if (Math.abs(velocityRef.current) < 30) {
+            } else if (Math.abs(velocityRef.current) < 20) {
                 baselineY.current = (baselineY.current ?? smoothY) * 0.95 + smoothY * 0.05;
                 if (baselineHipY.current !== null) {
                     baselineHipY.current = baselineHipY.current * 0.95 + hipMidY * 0.05;
@@ -309,11 +305,12 @@ export default function JumpRopeTraining() {
             }
         } else {
             if (displacement > peakY.current) peakY.current = displacement;
-
-            const landed = velocityRef.current < -30 || displacement < jumpMinThreshold * 0.5;
+            
+            // Fast Landing detection
+            const landed = velocityRef.current < -15 || displacement < jumpMinThreshold * 0.5;
 
             if (landed && !cooldownRef.current) {
-                if (peakY.current > jumpMinThreshold && !isWalkingLaterally && isSessionActiveRef.current) {
+                if (peakY.current > jumpMinThreshold && isSessionActiveRef.current) {
                     jumpCountRef.current += 1;
                     setJumps(jumpCountRef.current);
                     if ('vibrate' in navigator) navigator.vibrate(50);

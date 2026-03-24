@@ -1,25 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Video, Wifi, Save, Activity, Users } from 'lucide-react';
+import { Video, Wifi, Save, Activity } from 'lucide-react';
 import PageHeader from '../components/PageHeader';
 import { useWebRTCViewer } from '../hooks/useWebRTCViewer';
-import { useLiveMonitors } from '../hooks/useLiveMonitors';
 
 export default function AdminCameras() {
     const { t } = useTranslation();
-    const monitors = useLiveMonitors();
-    const [selectedStreamId, setSelectedStreamId] = useState<string>('');
-    
-    // Auto-select first available stream if none is selected
-    useEffect(() => {
-        if (monitors.length > 0 && !selectedStreamId) {
-            setSelectedStreamId(monitors[0].streamId);
-        } else if (monitors.length === 0) {
-            setSelectedStreamId('');
-        }
-    }, [monitors, selectedStreamId]);
-
-    const { remoteStream, connectionStatus } = useWebRTCViewer(selectedStreamId);
+    const { remoteStream, connectionStatus } = useWebRTCViewer('live_stream_1');
     const videoRef = useRef<HTMLVideoElement>(null);
 
     useEffect(() => {
@@ -93,67 +80,24 @@ export default function AdminCameras() {
                         </h3>
 
                         <div className="space-y-6 md:space-y-8 relative z-10">
-                            {/* Current Action Stream Status */}
-                            {selectedStreamId && (
-                                <div className="space-y-3 md:space-y-4">
-                                    <label className="text-[9px] md:text-[10px] font-black uppercase tracking-[0.3em] text-white/30 ml-2">
-                                        Connection State
-                                    </label>
-                                    <div className="w-full bg-white/5 border border-white/10 rounded-[1.2rem] md:rounded-[1.5rem] px-5 md:px-8 py-4 md:py-5 flex items-center justify-between">
-                                        <span className="text-white font-bold text-xs md:text-sm tracking-tight truncate mr-2">
-                                            {monitors.find(m => m.streamId === selectedStreamId)?.label || 'Active Stream'}
-                                        </span>
-                                        <span className={`text-[10px] font-black tracking-widest uppercase px-3 py-1 rounded-full whitespace-nowrap ${
-                                            connectionStatus === 'CONNECTED' ? 'bg-green-500/20 text-green-400 border border-green-500/30' :
-                                            connectionStatus === 'CONNECTING' ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30 animate-pulse' :
-                                            'bg-white/10 text-white/50 border border-white/10'
-                                        }`}>
-                                            {connectionStatus}
-                                        </span>
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* Active Monitors List */}
                             <div className="space-y-3 md:space-y-4">
-                                <label className="text-[9px] md:text-[10px] font-black uppercase tracking-[0.3em] text-white/30 ml-2 flex items-center gap-2">
-                                    <Users size={12} />
-                                    Active Sessions ({monitors.length})
+                                <label className="text-[9px] md:text-[10px] font-black uppercase tracking-[0.3em] text-white/30 ml-2">
+                                    Connection State
                                 </label>
-                                
-                                <div className="space-y-2 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
-                                    {monitors.length === 0 ? (
-                                        <div className="text-center py-8 text-white/30 text-xs font-medium border border-white/5 rounded-2xl bg-white/5 border-dashed">
-                                            No athletes currently training.
-                                        </div>
-                                    ) : (
-                                        monitors.map((monitor, idx) => (
-                                            <button
-                                                key={monitor.streamId}
-                                                onClick={() => setSelectedStreamId(monitor.streamId)}
-                                                className={`w-full flex items-center justify-between px-5 md:px-6 py-4 rounded-2xl transition-all border ${
-                                                    selectedStreamId === monitor.streamId
-                                                        ? 'bg-blue-500/10 border-blue-500/30 shadow-[0_0_15px_rgba(59,130,246,0.15)]'
-                                                        : 'bg-white/5 border-white/5 hover:bg-white/10 hover:border-white/10'
-                                                }`}
-                                            >
-                                                <div className="flex items-center gap-3">
-                                                    <div className={`w-2.5 h-2.5 rounded-full shadow-[0_0_10px_rgba(34,197,94,0.5)] ${monitor.status === 'active' ? 'bg-green-500' : 'bg-red-500'}`} />
-                                                    <span className={`font-bold text-xs md:text-sm tracking-tight ${selectedStreamId === monitor.streamId ? 'text-blue-400' : 'text-white'}`}>
-                                                        Channel {idx + 1}
-                                                    </span>
-                                                </div>
-                                                <span className="text-[9px] font-black tracking-widest uppercase text-white/40">
-                                                    {new Date(monitor.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                                </span>
-                                            </button>
-                                        ))
-                                    )}
+                                <div className="w-full bg-white/5 border border-white/10 rounded-[1.2rem] md:rounded-[1.5rem] px-5 md:px-8 py-4 md:py-5 flex items-center justify-between">
+                                    <span className="text-white font-bold text-xs md:text-sm tracking-tight">Channel 1</span>
+                                    <span className={`text-[10px] font-black tracking-widest uppercase px-3 py-1 rounded-full ${
+                                        connectionStatus === 'CONNECTED' ? 'bg-green-500/20 text-green-400 border border-green-500/30' :
+                                        connectionStatus === 'CONNECTING' ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30 animate-pulse' :
+                                        'bg-white/10 text-white/50 border border-white/10'
+                                    }`}>
+                                        {connectionStatus}
+                                    </span>
                                 </div>
                             </div>
                             
-                            <div className="p-4 bg-white/5 rounded-2xl border border-white/10 text-[10px] text-white/50 leading-relaxed font-medium">
-                                The system automatically detects and silent-connects to incoming broadcasts from active training sessions.
+                            <div className="p-4 bg-white/5 rounded-2xl border border-white/10 text-xs text-white/50 leading-relaxed font-medium">
+                                The system automatically listens for incoming broadcasts from active training sessions. No manual setup is required.
                             </div>
                         </div>
                     </div>

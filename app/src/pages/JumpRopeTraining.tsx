@@ -263,9 +263,9 @@ export default function JumpRopeTraining() {
         const bodyH = Math.abs(((lAnkle?.y ?? rAnkle?.y ?? 0) - nose.y) * H);
         bodyHeightRef.current = Math.max(100, bodyH);
 
-        // EMA Smoothing
+        // EMA Smoothing — lighter weight = faster response, fewer missed jumps
         if (emaSmoothY.current === null) emaSmoothY.current = noseY;
-        emaSmoothY.current = (emaSmoothY.current ?? noseY) * 0.4 + noseY * 0.6;
+        emaSmoothY.current = (emaSmoothY.current ?? noseY) * 0.3 + noseY * 0.7;
         const smoothY = emaSmoothY.current ?? noseY;
 
         // Relative Movement
@@ -278,7 +278,7 @@ export default function JumpRopeTraining() {
         velocityRef.current = (velocityRef.current * 0.3) + ((displacement - lastDisplacementRef.current) / deltaTime * 0.7);
         lastDisplacementRef.current = displacement;
 
-        const jumpMinThreshold = Math.max(12, bodyHeightRef.current * 0.025);
+        const jumpMinThreshold = Math.max(10, bodyHeightRef.current * 0.020);
         const pct = Math.max(0, Math.min(100, (displacement / (bodyHeightRef.current * 0.10)) * 100));
         setMovementPct(Math.round(pct));
 
@@ -314,12 +314,14 @@ export default function JumpRopeTraining() {
             // Stability Checks:
             // 1. Minimum displacement (Height check)
             // 2. High velocity upward (Impulse check)
-            const isBodyMoving = hipDisplacement > (jumpMinThreshold * 0.4);
+            // Hip check is optional — only suppress if hips ARE detected but not moving
+            const hipsDetected = hMidY !== null;
+            const isBodyMoving = !hipsDetected || hipDisplacement > (jumpMinThreshold * 0.3);
             
             // Strict counting filter: Block if too close, walking sideways, approaching camera, or ankles lost
             const isSuppressed = isTooClose || isApproaching || isWalking || !isFullBody;
 
-            if (displacement > jumpMinThreshold && velocityRef.current > 35 && !isSuppressed && isBodyMoving) {
+            if (displacement > jumpMinThreshold && velocityRef.current > 20 && !isSuppressed && isBodyMoving) {
 
                 jumpStatusRef.current = 'jumping';
                 peakY.current = displacement;
@@ -348,8 +350,8 @@ export default function JumpRopeTraining() {
                 jumpStatusRef.current = 'standing';
                 cooldownRef.current = true;
                 isJumpingRef.current = false;
-                // Faster cooldown for high-speed jumps (90ms = ~660 RPM max theoretical)
-                setTimeout(() => { cooldownRef.current = false; }, 90);
+                // Faster cooldown for high-speed jumps (60ms = ~1000 RPM max theoretical)
+                setTimeout(() => { cooldownRef.current = false; }, 60);
             }
         }
     }, [isTracking, speak]);

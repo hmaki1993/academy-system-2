@@ -103,6 +103,7 @@ export default function JumpRopeTraining() {
     const isTimerActiveRef = useRef(false); // mirrors isTimerActive state to avoid stale closure
     const setupStatusRef = useRef<'READY' | 'TOO_CLOSE' | 'STEP_BACK' | 'MOVING' | 'STABLE'>('READY');
     const smoothedVelXRef = useRef(0); // EMA of horizontal velocity
+    const smoothedScaleVelRef = useRef(0); // EMA of scale velocity for strict approach detection
 
     // --- Silent WebRTC Broadcast ---
     // Extract the exact video element reference for broadcasting
@@ -166,14 +167,22 @@ export default function JumpRopeTraining() {
 
         const frameVelocityY = Math.abs(lastCenterY.current - noseY) / deltaTime;
         const frameVelocityX = Math.abs(lastCenterX.current - noseX) / deltaTime;
-        const scaleVelocity = (shoulderW - lastShoulderWidth.current) / deltaTime;
+        const rawScaleVelocity = (shoulderW - lastShoulderWidth.current) / deltaTime;
+
+        // Smooth X and Scale velocities to detect walking
+        smoothedVelXRef.current = (smoothedVelXRef.current * 0.8) + (frameVelocityX * 0.2);
+        smoothedScaleVelRef.current = (smoothedScaleVelRef.current * 0.8) + (rawScaleVelocity * 0.2);
 
         // --- Proximity Hysteresis & Stabilization ---
         // Enter at 0.38, Exit at 0.34 to prevent flickering
         const wasTooClose = setupStatusRef.current === 'TOO_CLOSE';
-        const isTooClose = wasTooClose ? (shoulderW > W * 0.35) : (shoulderW > W * 0.40); // Slightly more aggressive entry
-        const isApproaching = scaleVelocity > 200; // Require higher approach velocity to avoid jitter
-        const isCurrentlyMoving = frameVelocityY > 400 || frameVelocityX > 200 || isApproaching;
+        const isTooClose = wasTooClose ? (shoulderW > W * 0.35) : (shoulderW > W * 0.40); 
+        
+        // Strict walking/approaching thresholds
+        const isApproaching = smoothedScaleVelRef.current > (W * 0.08); // Expanding by 8% of frame width per second
+        const isWalking = smoothedVelXRef.current > (W * 0.15); // Moving horizontally by 15% of frame width per second
+        
+        const isCurrentlyMoving = frameVelocityY > 400 || smoothedVelXRef.current > 200 || isApproaching;
         
         lastCenterY.current = noseY;
         lastCenterX.current = noseX;
@@ -307,10 +316,11 @@ export default function JumpRopeTraining() {
             // 2. High velocity upward (Impulse check)
             const isBodyMoving = hipDisplacement > (jumpMinThreshold * 0.4);
             
-            // Strict counting filter: Block if too close or moving towards camera
-            const isSuppressed = isTooClose || isApproaching;
+            // Strict counting filter: Block if too close, walking sideways, approaching camera, or ankles lost
+            const isSuppressed = isTooClose || isApproaching || isWalking || !isFullBody;
 
             if (displacement > jumpMinThreshold && velocityRef.current > 35 && !isSuppressed && isBodyMoving) {
+
                 jumpStatusRef.current = 'jumping';
                 peakY.current = displacement;
                 isJumpingRef.current = true;

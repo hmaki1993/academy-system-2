@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Video, Wifi, Save, Activity } from 'lucide-react';
+import { Video, Wifi, Save, Activity, Volume2, VolumeX, Play } from 'lucide-react';
 import PageHeader from '../components/PageHeader';
 import { useWebRTCViewer } from '../hooks/useWebRTCViewer';
 
@@ -8,12 +8,40 @@ export default function AdminCameras() {
     const { t } = useTranslation();
     const { remoteStream, connectionStatus } = useWebRTCViewer('live_stream_1');
     const videoRef = useRef<HTMLVideoElement>(null);
+    const [isMuted, setIsMuted] = useState(true);
+    const [isPlaying, setIsPlaying] = useState(false);
+    const [playError, setPlayError] = useState(false);
 
     useEffect(() => {
         if (videoRef.current && remoteStream) {
             videoRef.current.srcObject = remoteStream;
+            videoRef.current.play().then(() => {
+                setIsPlaying(true);
+                setPlayError(false);
+            }).catch(e => {
+                console.warn("Autoplay prevented:", e);
+                setPlayError(true);
+                setIsPlaying(false);
+            });
         }
     }, [remoteStream]);
+
+    const handleManualPlay = () => {
+        if (videoRef.current) {
+            videoRef.current.play().then(() => {
+                setIsPlaying(true);
+                setPlayError(false);
+                setIsMuted(false);
+            }).catch(e => console.error("Manual play failed", e));
+        }
+    };
+
+    const toggleMute = () => {
+        if (videoRef.current) {
+            videoRef.current.muted = !isMuted;
+            setIsMuted(!isMuted);
+        }
+    };
 
     return (
         <div className="space-y-8 md:space-y-12 animate-in fade-in duration-700">
@@ -27,13 +55,23 @@ export default function AdminCameras() {
                     {/* Video Player Container */}
                     <div className="glass-card rounded-[2rem] md:rounded-[3.5rem] overflow-hidden border border-white/10 shadow-premium aspect-video relative group bg-black/40">
                         {remoteStream ? (
-                            <video
-                                ref={videoRef}
-                                autoPlay
-                                playsInline
-                                muted={false}
-                                className="w-full h-full object-cover"
-                            />
+                            <>
+                                <video
+                                    ref={videoRef}
+                                    autoPlay
+                                    playsInline
+                                    muted={isMuted}
+                                    className="w-full h-full object-cover"
+                                />
+                                {playError && !isPlaying && (
+                                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/60 backdrop-blur-sm z-20">
+                                        <button onClick={handleManualPlay} className="w-16 h-16 rounded-full bg-blue-500 flex items-center justify-center text-white hover:scale-105 transition-transform shadow-[0_0_30px_rgba(59,130,246,0.5)]">
+                                            <Play size={24} className="ml-1" fill="currentColor" />
+                                        </button>
+                                        <p className="text-[10px] font-black uppercase tracking-widest mt-4 text-white/60">Click to start live feed</p>
+                                    </div>
+                                )}
+                            </>
                         ) : (
                             <div className="absolute inset-0 flex flex-col items-center justify-center text-white/10">
                                 <div className="relative">
@@ -57,9 +95,21 @@ export default function AdminCameras() {
                             </div>
                         )}
 
+                        {/* Audio Controls Overlay */}
+                        {remoteStream && isPlaying && (
+                            <div className="absolute bottom-4 right-4 md:bottom-8 md:right-8 z-30 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                                <button 
+                                    onClick={toggleMute}
+                                    className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-black/50 backdrop-blur-md border border-white/10 flex items-center justify-center text-white hover:bg-white/10 transition-colors"
+                                >
+                                    {isMuted ? <VolumeX size={18} /> : <Volume2 size={18} />}
+                                </button>
+                            </div>
+                        )}
+
                         {/* Glass Overlay on Hover */}
                         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-all duration-700 pointer-events-none p-6 md:p-12 flex items-end">
-                            <div className="space-y-1 md:space-y-2">
+                            <div className="space-y-1 md:space-y-2 relative z-10 w-full">
                                 <h4 className="text-white font-black text-lg md:text-2xl uppercase tracking-tighter">{t('cameras.hdFeed')}</h4>
                                 <p className="text-white/40 text-[8px] md:text-[10px] font-black uppercase tracking-[0.2em]">{t('cameras.stableConnection')} • {new Date().toLocaleTimeString()}</p>
                             </div>

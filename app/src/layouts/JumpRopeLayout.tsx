@@ -1,5 +1,5 @@
 import React from 'react';
-import { NavLink, Outlet, useLocation } from 'react-router-dom';
+import { NavLink, Outlet, useLocation, Navigate } from 'react-router-dom';
 import { Home, Activity, Trophy, Settings } from 'lucide-react';
 import { loadJrSettings, applyJrTheme } from '../pages/JumpRopeSettings';
 
@@ -87,6 +87,11 @@ const MobileBottomNav = () => (
 export default function JumpRopeLayout({ children }: { children?: React.ReactNode }) {
     const location = useLocation();
     const [settings, setSettings] = React.useState(loadJrSettings);
+
+    // Guard: redirect to welcome if not onboarded
+    if (!localStorage.getItem('jr_onboarded')) {
+        return <Navigate to="/jump-rope/welcome" replace />;
+    }
 
     // Hardcode THEMES directly in layout to ensure immediate access for local CSS vars
     const THEMES = [

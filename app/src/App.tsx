@@ -169,7 +169,7 @@ function AppContent() {
                   <p className="text-white/20 font-black tracking-[0.4em] text-[10px] uppercase">Jump Rope Pro</p>
                 </div>
               }>
-                {localStorage.getItem('jr_onboarded') ? <JumpRopeLayout /> : <Navigate to="/jump-rope/welcome" replace />}
+                <JumpRopeLayout />
               </Suspense>
             }>
               <Route index element={<JumpRopeHub />} />

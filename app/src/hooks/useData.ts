@@ -600,12 +600,17 @@ export function useJumpRopeStats() {
             const sessionsStr = localStorage.getItem(LOCAL_STORAGE_KEY) || '[]';
             const sessions = JSON.parse(sessionsStr);
 
+            const today = new Date().toISOString().split('T')[0];
             const totalJumps = sessions.reduce((sum: number, s: any) => sum + (s.jumps || 0), 0);
+            const todayJumps = sessions
+                .filter((s: any) => s.created_at?.startsWith(today))
+                .reduce((sum: number, s: any) => sum + (s.jumps || 0), 0);
             const maxRpm = sessions.reduce((max: number, s: any) => Math.max(max, s.rpm || 0), 0);
             const recentSessions = sessions.slice(0, 5);
 
             return {
                 totalJumps,
+                todayJumps,
                 maxRpm,
                 recentSessions,
                 sessionCount: sessions.length
@@ -687,12 +692,23 @@ export function useAddJumpRopeSession() {
             const newSession = {
                 id: Date.now().toString(),
                 created_at: new Date().toISOString(),
-                user_id: 'anonymous_user',
+                user_id: (await supabase.auth.getUser()).data.user?.id || 'anonymous_user',
                 ...session
             };
             
             sessions.unshift(newSession); // Add to beginning
             localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(sessions.slice(0, 500))); // Store up to 500
+
+            // Sync to Supabase if logged in
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user) {
+                await supabase.from('jump_rope_sessions').insert([{
+                    user_id: user.id,
+                    jumps: session.jumps,
+                    duration: session.duration,
+                    rpm: session.rpm
+                }]);
+            }
             
             return newSession;
         },

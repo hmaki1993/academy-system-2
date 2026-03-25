@@ -20,6 +20,7 @@ export interface JrSettings {
     logoDataUrl: string;
     profileDataUrl: string;
     themeId: string;
+    dailyGoal: number;
 }
 
 const DEFAULT: JrSettings = {
@@ -28,6 +29,7 @@ const DEFAULT: JrSettings = {
     logoDataUrl: '',
     profileDataUrl: '',
     themeId: 'ember',
+    dailyGoal: 500,
 };
 
 export function loadJrSettings(): JrSettings {
@@ -213,6 +215,28 @@ export default function JumpRopeSettings() {
                                     className="!bg-transparent !bg-none !border-none !border-0 !shadow-none !outline-none !p-0 !m-0 font-black flex-1 placeholder:opacity-10 focus:text-primary transition-colors h-6"
                                     style={{ color: 'var(--jr-text-main)' }}
                                 />
+                            </div>
+                        </div>
+
+                        {/* — Daily Goal Section — */}
+                        <div className="flex items-center gap-6 px-3 py-4">
+                            <div className="w-12 h-12 rounded-[14px] flex items-center justify-center shrink-0" style={{ background: 'var(--jr-surface)', border: '1px solid var(--jr-border)' }}>
+                                <Dumbbell size={20} style={{ color: 'var(--color-text-muted)' }} />
+                            </div>
+                            <div className="flex flex-col flex-1 pb-1">
+                                <label className="text-[11px] font-black uppercase tracking-[0.3em] mb-2" style={{ color: 'var(--jr-text-soft)' }}>Daily Jump Goal</label>
+                                <div className="flex items-center gap-4">
+                                    <input
+                                        type="range"
+                                        min="100"
+                                        max="5000"
+                                        step="100"
+                                        value={settings.dailyGoal}
+                                        onChange={e => setSettings(s => ({ ...s, dailyGoal: parseInt(e.target.value) }))}
+                                        className="flex-1 accent-primary h-1.5 rounded-full appearance-none bg-white/10"
+                                    />
+                                    <span className="text-sm font-black w-12 text-right" style={{ color: 'var(--jr-text-main)' }}>{settings.dailyGoal}</span>
+                                </div>
                             </div>
                         </div>
                         <div className="flex flex-col gap-5 py-4">

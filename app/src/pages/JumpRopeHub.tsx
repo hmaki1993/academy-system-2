@@ -45,43 +45,71 @@ export default function JumpRopeHub() {
         <div className="p-6 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-12 relative z-10">
             
             {/* User Profile Summary */}
-            <div className="flex flex-col items-start gap-4 pt-1 pb-6 relative group px-1">
-                
-                {/* Avatar & Level Badge */}
-                <div className="relative">
-                    <div className="w-12 h-12 rounded-2xl flex items-center justify-center overflow-hidden shadow-[0_8px_24px_rgba(0,0,0,0.2)]" style={{ background: 'var(--jr-surface)', border: '1px solid var(--jr-border)' }}>
-                        {settings.profileDataUrl ? (
-                            <img src={settings.profileDataUrl} alt="profile" className="w-full h-full object-cover" />
-                        ) : (
-                            <User className="w-5 h-5 text-primary/40" />
-                        )}
+            <div className="flex flex-col items-start gap-4 pt-1 relative group px-1">
+                <div className="flex items-center gap-4 w-full">
+                    {/* Avatar & Level Badge */}
+                    <div className="relative">
+                        <div className="w-12 h-12 rounded-2xl flex items-center justify-center overflow-hidden shadow-[0_8px_24px_rgba(0,0,0,0.2)]" style={{ background: 'var(--jr-surface)', border: '1px solid var(--jr-border)' }}>
+                            {settings.profileDataUrl ? (
+                                <img src={settings.profileDataUrl} alt="profile" className="w-full h-full object-cover" />
+                            ) : (
+                                <User className="w-5 h-5 text-primary/40" />
+                            )}
+                        </div>
+                        {/* Level Badge overlapping bottom right */}
+                        <div className="absolute -bottom-1.5 -right-1.5 w-6 h-6 rounded-full border border-primary/50 flex flex-col items-center justify-center shadow-[0_0_10px_rgba(255,59,48,0.2)] overflow-hidden" style={{ background: 'var(--jr-bg)' }}>
+                            <span className="text-[8px] font-black text-primary drop-shadow-[0_0_5px_rgba(255,59,48,0.8)] z-10">{playerLevel}</span>
+                            <div className="absolute inset-x-0 bottom-0 bg-primary/20" style={{ height: `${((stats?.totalJumps || 0) % 5000) / 50}%` }} />
+                        </div>
                     </div>
-                    {/* Level Badge overlapping bottom right */}
-                    <div className="absolute -bottom-1.5 -right-1.5 w-6 h-6 rounded-full border border-primary/50 flex flex-col items-center justify-center shadow-[0_0_10px_rgba(255,59,48,0.2)] overflow-hidden" style={{ background: 'var(--jr-bg)' }}>
-                        <span className="text-[8px] font-black text-primary drop-shadow-[0_0_5px_rgba(255,59,48,0.8)] z-10">{playerLevel}</span>
-                        <div className="absolute inset-x-0 bottom-0 bg-primary/20" style={{ height: `${((stats?.totalJumps || 0) % 5000) / 50}%` }} />
+
+                    {/* Text Content */}
+                    <div className="flex flex-col items-start space-y-1">
+                        <h2 className="text-xl font-black tracking-tight leading-none" style={{ color: 'var(--jr-text-main)' }}>
+                            Hello,{' '}
+                            <span 
+                                style={{ 
+                                    background: settings.themeId === 'pure-white' ? 'none' : 'linear-gradient(135deg, var(--color-primary, #0ea5e9) 0%, #ffffff 100%)',
+                                    backgroundColor: settings.themeId === 'pure-white' ? 'transparent' : 'transparent',
+                                    color: settings.themeId === 'pure-white' ? 'var(--color-primary)' : 'inherit',
+                                    WebkitBackgroundClip: settings.themeId === 'pure-white' ? 'none' : 'text',
+                                    WebkitTextFillColor: settings.themeId === 'pure-white' ? 'initial' : 'transparent',
+                                    textShadow: '0 0 20px var(--jr-glow)',
+                                }}
+                            >
+                                {settings.userName || 'Athlete'}
+                            </span>
+                            !
+                        </h2>
+                        <p className="text-[9px] font-black uppercase tracking-[0.3em]" style={{ color: 'var(--jr-text-soft)' }}>Ready for today?</p>
                     </div>
                 </div>
 
-                {/* Text Content */}
-                <div className="flex flex-col items-start space-y-1">
-                    <h2 className="text-xl font-black tracking-tight leading-none" style={{ color: 'var(--jr-text-main)' }}>
-                        Hello,{' '}
-                        <span 
-                            style={{ 
-                                background: settings.themeId === 'pure-white' ? 'none' : 'linear-gradient(135deg, var(--color-primary, #0ea5e9) 0%, #ffffff 100%)',
-                                backgroundColor: settings.themeId === 'pure-white' ? 'transparent' : 'transparent',
-                                color: settings.themeId === 'pure-white' ? 'var(--color-primary)' : 'inherit',
-                                WebkitBackgroundClip: settings.themeId === 'pure-white' ? 'none' : 'text',
-                                WebkitTextFillColor: settings.themeId === 'pure-white' ? 'initial' : 'transparent',
-                                textShadow: '0 0 20px var(--jr-glow)',
-                            }}
-                        >
-                            {settings.userName || 'Athlete'}
+                {/* Daily Goal Progress Bar — Premium Glass */}
+                <div className="w-full mt-4 p-4 rounded-3xl backdrop-blur-3xl shadow-[0_8px_32px_rgba(0,0,0,0.3)] relative overflow-hidden group/goal" style={{ background: 'var(--jr-surface)', border: '1px solid var(--jr-border)' }}>
+                    {/* Interior Shimmer */}
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/[0.02] to-transparent -translate-x-full group-hover/goal:translate-x-full transition-transform duration-1000 ease-in-out pointer-events-none" />
+                    
+                    <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-2">
+                            <Flame className="w-3.5 h-3.5 text-orange-500 fill-orange-500 drop-shadow-[0_0_8px_rgba(249,115,22,0.4)]" />
+                            <span className="text-[10px] font-black uppercase tracking-[0.2em]" style={{ color: 'var(--jr-text-main)' }}>Daily Goal</span>
+                        </div>
+                        <span className="text-[10px] font-black tabular-nums" style={{ color: 'var(--jr-text-soft)' }}>
+                            {(stats as any)?.todayJumps || 0} / {settings.dailyGoal || 500}
                         </span>
-                        !
-                    </h2>
-                    <p className="text-[9px] font-black uppercase tracking-[0.3em]" style={{ color: 'var(--jr-text-soft)' }}>Ready for today?</p>
+                    </div>
+
+                    {/* The Progress Track */}
+                    <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden relative border border-white/5">
+                        <div 
+                            className="absolute top-0 left-0 h-full rounded-full transition-all duration-1000 ease-out shadow-[0_0_15px_var(--jr-glow)]"
+                            style={{ 
+                                width: `${Math.min(100, (((stats as any)?.todayJumps || 0) / (settings.dailyGoal || 500)) * 100)}%`,
+                                background: 'linear-gradient(90deg, var(--color-primary) 0%, #ffffff 160%)'
+                            }}
+                        />
+                    </div>
                 </div>
             </div>
 
@@ -106,34 +134,34 @@ export default function JumpRopeHub() {
 
             {/* Quick Stats Grid — Premium Glass (Simpler) */}
             <div className="grid grid-cols-2 gap-3.5">
-                <button 
-                    onClick={() => navigate('/jump-rope/leaderboard')}
-                    className="relative group overflow-hidden rounded-[2rem] p-5 backdrop-blur-2xl shadow-[0_15px_35px_rgba(0,0,0,0.15)] transition-all hover:opacity-80 text-center"
-                    style={{ background: 'var(--jr-surface)', border: '1px solid var(--jr-border)' }}
-                >
-                    <div className="w-9 h-9 mx-auto flex items-center justify-center border border-orange-500/15 rounded-xl bg-orange-500/[0.05] group-hover:bg-orange-500/10 transition-colors shadow-inner mb-3">
-                        <Trophy className="w-3.5 h-3.5 text-orange-500/50 group-hover:text-orange-500 transition-colors drop-shadow-[0_0_8px_rgba(249,115,22,0.6)]" />
-                    </div>
-                    <div>
-                        <div className="text-xl font-black drop-shadow-sm tabular-nums tracking-tight leading-none mb-1" style={{ color: 'var(--jr-text-main)' }}>{stats?.totalJumps?.toLocaleString() || 0}</div>
-                        <div className="text-[7.5px] font-black tracking-[0.2em] uppercase transition-colors" style={{ color: 'var(--jr-text-soft)' }}>Total Jumps</div>
-                    </div>
-                </button>
-
-                <button 
-                    onClick={() => navigate('/jump-rope/leaderboard')}
-                    className="relative group overflow-hidden rounded-[2rem] p-5 backdrop-blur-2xl shadow-[0_15px_35px_rgba(0,0,0,0.15)] transition-all hover:opacity-80 text-center"
-                    style={{ background: 'var(--jr-surface)', border: '1px solid var(--jr-border)' }}
-                >
-                    <div className="w-9 h-9 mx-auto flex items-center justify-center border border-blue-500/15 rounded-xl bg-blue-500/[0.05] group-hover:bg-blue-500/10 transition-colors shadow-inner mb-3">
-                        <Activity className="w-3.5 h-3.5 text-blue-500/50 group-hover:text-blue-500 transition-colors drop-shadow-[0_0_8px_rgba(59,130,246,0.6)]" />
-                    </div>
-                    <div>
-                        <div className="text-xl font-black drop-shadow-sm tabular-nums tracking-tight leading-none mb-1" style={{ color: 'var(--jr-text-main)' }}>{stats?.maxRpm || 0}</div>
-                        <div className="text-[7.5px] font-black tracking-[0.2em] uppercase transition-colors" style={{ color: 'var(--jr-text-soft)' }}>Max RPM</div>
-                    </div>
-                </button>
+                {[
+                    { label: 'Total Jumps', value: stats?.totalJumps?.toLocaleString() || 0, icon: Trophy, color: 'orange', delay: '100ms' },
+                    { label: 'Max RPM', value: stats?.maxRpm || 0, icon: Activity, color: 'blue', delay: '200ms' },
+                    { label: 'Sessions', value: stats?.sessionCount || 0, icon: Flame, color: 'primary', delay: '300ms' },
+                    { label: 'Level', value: playerLevel, icon: User, color: 'zinc', delay: '400ms' },
+                ].map((item, i) => (
+                    <button 
+                        key={i}
+                        onClick={() => navigate('/jump-rope/leaderboard')}
+                        className="relative group overflow-hidden rounded-[2rem] p-5 backdrop-blur-2xl shadow-[0_15px_35px_rgba(0,0,0,0.15)] transition-all animate-in fade-in slide-in-from-bottom-2 hover:scale-[1.02] active:scale-[0.98]"
+                        style={{ 
+                            background: 'var(--jr-surface)', 
+                            border: '1px solid var(--jr-border)',
+                            animationDelay: item.delay,
+                            animationFillMode: 'both'
+                        }}
+                    >
+                        <div className="w-9 h-9 mx-auto flex items-center justify-center border border-primary/10 rounded-xl bg-primary/[0.05] group-hover:bg-primary/10 transition-colors shadow-inner mb-3">
+                            <item.icon className="w-3.5 h-3.5 text-primary/40 group-hover:text-primary transition-colors drop-shadow-[0_0_8px_var(--jr-glow)]" />
+                        </div>
+                        <div>
+                            <div className="text-xl font-black drop-shadow-sm tabular-nums tracking-tight leading-none mb-1" style={{ color: 'var(--jr-text-main)' }}>{item.value}</div>
+                            <div className="text-[7.5px] font-black tracking-[0.2em] uppercase transition-colors" style={{ color: 'var(--jr-text-soft)' }}>{item.label}</div>
+                        </div>
+                    </button>
+                ))}
             </div>
+
 
             
 

@@ -2,26 +2,12 @@ import React, { useState } from 'react';
 import { Trophy, Medal, ChevronUp, ChevronDown, Loader2 } from 'lucide-react';
 import { useJumpRopeLeaderboard } from '../hooks/useData';
 
-const MOCK_LEADERBOARD = [
-    { id: 1, name: "Ali Ahmed", jumps: 8540, sessions: 15 },
-    { id: 2, name: "Omar Hassan", jumps: 7200, sessions: 12 },
-    { id: 3, name: "Youssef Tarek", jumps: 6950, sessions: 11 },
-    { id: 4, name: "Ziad Magdy", jumps: 5120, sessions: 9 },
-    { id: 5, name: "Ahmed Samir", jumps: 4800, sessions: 8 },
-    { id: 6, name: "Mohamed Kareem", jumps: 4100, sessions: 7 },
-    { id: 7, name: "Khaled Saied",  jumps: 3800, sessions: 6 },
-    { id: 8, name: "Mahmoud Nabil",  jumps: 3200, sessions: 5 },
-    { id: 9, name: "Hassan Ali",  jumps: 2900, sessions: 5 },
-    { id: 10, name: "Ibrahim Saad", jumps: 2100, sessions: 3 },
-];
+
 
 export default function JumpRopeLeaderboard() {
     const [filter, setFilter] = useState<'global' | 'weekly'>('weekly');
     // Temporarily overriding the hook for testing UI with 10 players
-    const { data: realLeaderboard, isLoading: realIsLoading } = useJumpRopeLeaderboard(filter);
-    
-    const isLoading = false;
-    const leaderboard = MOCK_LEADERBOARD;
+    const { data: leaderboard, isLoading } = useJumpRopeLeaderboard(filter);
 
     if (isLoading) {
         return (
@@ -125,7 +111,7 @@ export default function JumpRopeLeaderboard() {
             {/* List View (4th and below) */}
             <div className="space-y-3 relative z-10">
                 {others.map((user, idx) => (
-                    <div key={idx} className="flex items-center gap-4 p-4 border rounded-2xl transition-colors shadow-[0_4px_24px_-8px_rgba(0,0,0,0.1)]" style={{ background: 'var(--jr-surface, rgba(255,255,255,0.02))', borderColor: 'var(--jr-text-low, rgba(255,255,255,0.05))' }}>
+                    <div key={idx} className="flex items-center gap-4 p-4 border rounded-2xl transition-all shadow-[0_4px_24px_-8px_rgba(0,0,0,0.1)] animate-in fade-in slide-in-from-bottom-2 fill-mode-both hover:scale-[1.01]" style={{ background: 'var(--jr-surface, rgba(255,255,255,0.02))', borderColor: 'var(--jr-text-low, rgba(255,255,255,0.05))', animationDelay: `${500 + (idx * 50)}ms` }}>
                         <div className="w-6 text-center font-black text-[11px] uppercase" style={{ color: 'var(--jr-text-low, #71717a)' }}>{idx + 4}</div>
                         
                         <div className="w-10 h-10 rounded-xl bg-[#0a0a0a] flex items-center justify-center text-[10px] font-black text-white uppercase border border-white/10 shadow-inner">

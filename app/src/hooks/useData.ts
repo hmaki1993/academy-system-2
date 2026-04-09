@@ -852,8 +852,8 @@ export interface JrAdminStat {
     userId: string;
     name: string;
     avatarUrl: string;
-    email: string;
-    phone: string;
+    email?: string;
+    phone?: string;
     role: string;
     totalJumps: number;
     sessionsCount: number;
@@ -867,7 +867,7 @@ export function useJumpRopeAdminStats() {
         queryFn: async () => {
             const { data, error } = await supabase
                 .from('jump_rope_sessions')
-                .select('jumps, created_at, user_id, profiles(full_name, avatar_url, role, last_active_at, email, phone)')
+                .select('jumps, created_at, user_id, profiles(full_name, avatar_url, role, last_active_at, email)')
                 .order('created_at', { ascending: false });
 
             if (error) throw error;
@@ -885,7 +885,7 @@ export function useJumpRopeAdminStats() {
                         name: prof?.full_name || 'Unknown Athlete',
                         avatarUrl: prof?.avatar_url || '',
                         email: prof?.email || '',
-                        phone: prof?.phone || '',
+                        phone: '',
                         role: prof?.role || 'student',
                         totalJumps: 0,
                         sessionsCount: 0,

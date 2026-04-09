@@ -865,55 +865,51 @@ export function useJumpRopeAdminStats() {
     return useQuery({
         queryKey: ['jump_rope_admin_stats'],
         queryFn: async () => {
-            const { data, error } = await supabase
+            // ✅ START from students table - This guarantees ONLY registered students appear
+            const { data: studentsData, error: studentsError } = await supabase
+                .from('students')
+                .select('id, full_name, email, parent_contact, profile_id, profiles(full_name, avatar_url, last_active_at, email)')
+                .not('profile_id', 'is', null);
+
+            if (studentsError) throw studentsError;
+            if (!studentsData || studentsData.length === 0) return [];
+
+            // Get all jump rope sessions
+            const { data: sessionsData } = await supabase
                 .from('jump_rope_sessions')
-                .select('jumps, created_at, user_id, profiles(full_name, avatar_url, role, last_active_at, email)')
+                .select('jumps, created_at, user_id')
                 .order('created_at', { ascending: false });
 
-            if (error) throw error;
-
-            // Fetch students to get contact info (WhatsApp/Parent Contact)
-            const { data: studentsData } = await supabase
-                .from('students')
-                .select('profile_id, parent_contact, email');
-
-            // Fetch coaches to know who to EXCLUDE (staff should not be in the athletes hub)
-            const { data: coachesData } = await supabase
-                .from('coaches')
-                .select('profile_id');
-
-            const coachProfileIds = new Set(coachesData?.map(c => c.profile_id).filter(Boolean));
-
+            // Build stats map: seed ALL students first (even with 0 sessions)
             const userStats: Record<string, JrAdminStat> = {};
 
-            data?.forEach(session => {
-                const uid = session.user_id;
+            studentsData.forEach(student => {
+                const uid = student.profile_id as string;
                 if (!uid) return;
+                const prof = (student as any).profiles as any;
 
-                // 🛡️ ACCURATE FILTER: Only show users in students table AND NOT in coaches table
-                const studentInfo = studentsData?.find(s => s.profile_id === uid);
-                const isActualCoach = coachProfileIds.has(uid);
-                
-                if (!studentInfo || isActualCoach) return; 
-                
-                if (!userStats[uid]) {
-                    const prof = session.profiles as any;                    
-                    userStats[uid] = {
-                        userId: uid,
-                        name: prof?.full_name || 'Unknown Athlete',
-                        avatarUrl: prof?.avatar_url || '',
-                        email: studentInfo?.email || prof?.email || '',
-                        phone: studentInfo?.parent_contact || '',
-                        role: prof?.role || 'student',
-                        totalJumps: 0,
-                        sessionsCount: 0,
-                        lastSession: session.created_at,
-                        lastActiveAt: prof?.last_active_at || null
-                    };
-                }
+                userStats[uid] = {
+                    userId: uid,
+                    name: prof?.full_name || student.full_name || 'Unknown Athlete',
+                    avatarUrl: prof?.avatar_url || '',
+                    email: student.email || prof?.email || '',
+                    phone: student.parent_contact || '',
+                    role: 'student',
+                    totalJumps: 0,
+                    sessionsCount: 0,
+                    lastSession: null,
+                    lastActiveAt: prof?.last_active_at || null
+                };
+            });
+
+            // Now accumulate sessions data — only for known students
+            sessionsData?.forEach(session => {
+                const uid = session.user_id;
+                if (!uid || !userStats[uid]) return;
+
                 userStats[uid].totalJumps += session.jumps;
                 userStats[uid].sessionsCount += 1;
-                
+
                 if (!userStats[uid].lastSession || new Date(session.created_at) > new Date(userStats[uid].lastSession!)) {
                     userStats[uid].lastSession = session.created_at;
                 }

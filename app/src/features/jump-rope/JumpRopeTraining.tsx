@@ -72,15 +72,25 @@ export default function JumpRopeTraining() {
         let activeStudentId = user.id;
 
         const setupTrainingPlan = async () => {
+            console.log('📡 Realtime: Setting up for user:', user.id);
+            
             // First, resolve the actual student ID matching this profile
-            const { data: stData } = await supabase
+            const { data: stData, error: stError } = await supabase
                 .from('students')
                 .select('id')
                 .eq('profile_id', user.id)
                 .maybeSingle();
 
+            if (stError) {
+                console.error('❌ Realtime: Error resolving student ID:', stError);
+                return;
+            }
+
             if (stData?.id) {
                 activeStudentId = stData.id;
+                console.log('✅ Realtime: Resolved Student ID:', activeStudentId);
+            } else {
+                console.warn('⚠️ Realtime: No student record found for profile, using profile_id as fallback');
             }
 
             // Fetch the latest active plan
@@ -92,24 +102,32 @@ export default function JumpRopeTraining() {
                 .limit(1);
             
             if (data && data.length > 0) {
+                console.log('📋 Realtime: Initial plan found:', data[0].id);
                 applyPlanTargets(data[0]);
             }
 
             // Set up Realtime Listener for Live Broadcasts!
-            const channel = supabase.channel('direct_broadcasts')
+            console.log('🔄 Realtime: Subscribing to channel for student_id:', activeStudentId);
+            const channel = supabase.channel(`direct_broadcasts_${activeStudentId}`)
                 .on(
                     'postgres_changes',
-                    { event: 'UPDATE', schema: 'public', table: 'training_plans', filter: `student_id=eq.${activeStudentId}` },
-                    (payload) => applyPlanTargets(payload.new)
+                    { 
+                        event: '*', 
+                        schema: 'public', 
+                        table: 'training_plans', 
+                        filter: `student_id=eq.${activeStudentId}` 
+                    },
+                    (payload) => {
+                        console.log('⚡ Realtime: Received event:', payload.eventType, payload.new);
+                        applyPlanTargets(payload.new);
+                    }
                 )
-                .on(
-                    'postgres_changes',
-                    { event: 'INSERT', schema: 'public', table: 'training_plans', filter: `student_id=eq.${activeStudentId}` },
-                    (payload) => applyPlanTargets(payload.new)
-                )
-                .subscribe();
+                .subscribe((status) => {
+                    console.log('📡 Realtime: Subscription status:', status);
+                });
 
             return () => {
+                console.log('🔌 Realtime: Terminating subscription for:', activeStudentId);
                 supabase.removeChannel(channel);
             };
         };

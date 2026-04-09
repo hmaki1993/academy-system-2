@@ -1,19 +1,24 @@
--- [SQL] ADD PRESENCE TRACKING TO PROFILES
--- Purpose: Adds a 'last_active_at' column to track real-time user activity.
--- Run this in your Supabase SQL Editor.
+-- Allow users to update their own presence (last_active_at)
+DROP POLICY IF EXISTS "Users can update their own presence" ON public.profiles;
 
-ALTER TABLE public.profiles 
-ADD COLUMN IF NOT EXISTS last_active_at TIMESTAMPTZ DEFAULT NOW();
+CREATE POLICY "Users can update their own presence" ON public.profiles
+FOR UPDATE
+TO authenticated
+USING (auth.uid() = id)
+WITH CHECK (auth.uid() = id);
 
--- Also, let's enable realtime for the profiles table if not already enabled
--- to make sure the coach gets updates faster.
-BEGIN;
-  ALTER TABLE public.profiles REPLICA IDENTITY FULL;
-  -- Note: Adding table to publication might fail if it's already there, so we wrap it
-  DO $$ 
-  BEGIN 
-    ALTER PUBLICATION supabase_realtime ADD TABLE public.profiles;
-  EXCEPTION WHEN OTHERS THEN 
-    NULL; 
-  END $$;
-COMMIT;
+-- Ensure Realtime is enabled for training_plans (crucial for direct broadcasts)
+ALTER TABLE public.training_plans REPLICA IDENTITY FULL;
+
+-- Check if training_plans is in the realtime publication
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_publication_tables 
+    WHERE pubname = 'supabase_realtime' 
+    AND schemaname = 'public' 
+    AND tablename = 'training_plans'
+  ) THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.training_plans;
+  END IF;
+END $$;

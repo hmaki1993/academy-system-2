@@ -681,7 +681,7 @@ export default function StrategyWorkplace() {
                                             {athlete.avatarUrl ? <img src={athlete.avatarUrl} className="w-full h-full object-cover" /> : <UserCircle2 size={20} className="text-white/20" />}
                                         </div>
                                         {(() => {
-                                            const isLive = athlete.lastActiveAt && (Date.now() - new Date(athlete.lastActiveAt).getTime() < 120000);
+                                            const isLive = athlete.lastActiveAt && (Date.now() - new Date(athlete.lastActiveAt).getTime() < 300000);
                                             return (
                                                 <div className="flex flex-col">
                                                     <h3 className="text-[11px] font-black tracking-widest text-white uppercase truncate max-w-[100px]">{athlete.name}</h3>

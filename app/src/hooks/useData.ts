@@ -868,7 +868,7 @@ export function useJumpRopeAdminStats() {
             // ✅ START from students table - This guarantees ONLY registered students appear
             const { data: studentsData, error: studentsError } = await supabase
                 .from('students')
-                .select('id, full_name, email, parent_contact, profile_id, profiles(full_name, avatar_url, last_active_at, email)')
+                .select('id, full_name, email, parent_contact, profile_id, profiles(full_name, avatar_url, last_active_at, email, role)')
                 .not('profile_id', 'is', null);
 
             if (studentsError) throw studentsError;
@@ -887,6 +887,10 @@ export function useJumpRopeAdminStats() {
                 const uid = student.profile_id as string;
                 if (!uid) return;
                 const prof = (student as any).profiles as any;
+
+                // 🛡️ FINAL GUARD: Skip staff/admin even if they have a student record
+                const STAFF_ROLES = ['admin', 'coach', 'head_coach', 'reception', 'cleaner'];
+                if (STAFF_ROLES.includes((prof?.role || '').toLowerCase())) return;
 
                 userStats[uid] = {
                     userId: uid,

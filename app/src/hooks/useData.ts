@@ -882,10 +882,13 @@ export function useJumpRopeAdminStats() {
             data?.forEach(session => {
                 const uid = session.user_id;
                 if (!uid) return;
+
+                // 🛡️ SECURITY & FILTER: Only show registered students (motdarben), not staff
+                const studentInfo = studentsData?.find(s => s.profile_id === uid);
+                if (!studentInfo) return; 
                 
                 if (!userStats[uid]) {
                     const prof = session.profiles as any;
-                    const studentInfo = studentsData?.find(s => s.profile_id === uid);
                     
                     userStats[uid] = {
                         userId: uid,

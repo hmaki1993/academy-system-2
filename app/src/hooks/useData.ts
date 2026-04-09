@@ -865,11 +865,13 @@ export function useJumpRopeAdminStats() {
     return useQuery({
         queryKey: ['jump_rope_admin_stats'],
         queryFn: async () => {
-            // ✅ START from students table - This guarantees ONLY registered students appear
+            // ✅ DEFINITIVE FIX: Use DB-level filter to ONLY retrieve profiles with role='student'
+            // Using inner join (!inner) ensures only students with a matching profile are returned
             const { data: studentsData, error: studentsError } = await supabase
                 .from('students')
-                .select('id, full_name, email, parent_contact, profile_id, profiles(full_name, avatar_url, last_active_at, email, role)')
-                .not('profile_id', 'is', null);
+                .select('id, full_name, email, parent_contact, profile_id, profiles!inner(full_name, avatar_url, last_active_at, email, role)')
+                .not('profile_id', 'is', null)
+                .eq('profiles.role', 'student');
 
             if (studentsError) throw studentsError;
             if (!studentsData || studentsData.length === 0) return [];

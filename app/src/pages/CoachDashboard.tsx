@@ -16,6 +16,7 @@ import { useTheme } from '../context/ThemeContext';
 import BatchAssessmentModal from '../components/BatchAssessmentModal';
 import AssessmentHistoryModal from '../components/AssessmentHistoryModal';
 import PremiumCalendarModal from '../components/PremiumCalendarModal';
+import CoachPTCalendar from '../features/zoom-pt/CoachPTCalendar';
 import FinancialProgressChart from '../components/FinancialProgressChart';
 import PerformanceAnalyticsCard from '../components/PerformanceAnalyticsCard';
 import { useFinancialTrends } from '../hooks/useData';
@@ -54,6 +55,7 @@ export default function CoachDashboard() {
     const [showEarningsModal, setShowEarningsModal] = useState(false);
     const [monthSessions, setMonthSessions] = useState<any[]>([]);
     const [showCalendarModal, setShowCalendarModal] = useState(false);
+    const [showPTCalendar, setShowPTCalendar] = useState(false);
     const [selectedSubscription, setSelectedSubscription] = useState<any>(null);
     const [showGroupDetails, setShowGroupDetails] = useState(false);
     const [selectedGroup, setSelectedGroup] = useState<any>(null);
@@ -716,6 +718,13 @@ export default function CoachDashboard() {
                 subtitle={t('dashboard.coachSubtitle', 'Live Analytics & Training Tools')}
             >
                 <button
+                    onClick={() => setShowPTCalendar(true)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20 transition-all font-black uppercase tracking-widest text-[9px]"
+                >
+                    <Calendar className="w-3.5 h-3.5" />
+                    PT Schedule
+                </button>
+                <button
                     onClick={() => setShowBatchTest(true)}
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20 transition-all font-black uppercase tracking-widest text-[9px]"
                 >
@@ -1275,6 +1284,14 @@ export default function CoachDashboard() {
                         </div>
                     </div>
                 </div>
+            )}
+
+            {/* PT Schedule Calendar Modal */}
+            {showPTCalendar && coachId && (
+                <CoachPTCalendar
+                    coachId={coachId}
+                    onClose={() => setShowPTCalendar(false)}
+                />
             )}
         </div>
     );

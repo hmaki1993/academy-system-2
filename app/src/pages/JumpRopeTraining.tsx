@@ -1,10 +1,11 @@
 import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
-import { Play, Square, RefreshCcw, Activity, Pause, Camera, Volume2, VolumeX, TrendingUp, Trophy, Clock, Zap, ArrowLeft, X, Loader2, AlertTriangle } from 'lucide-react';
+import { Play, Square, RefreshCcw, Activity, Pause, Camera, Volume2, VolumeX, TrendingUp, Trophy, Clock, Zap, ArrowLeft, X, Loader2, AlertTriangle, LayoutDashboard } from 'lucide-react';
 import Webcam from 'react-webcam';
 import { useAddJumpRopeSession } from '../hooks/useData';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { useNavigate } from 'react-router-dom';
 import { useWebRTCBroadcast } from '../hooks/useWebRTCBroadcast';
+import PageHeader from '../components/PageHeader';
 
 const MEDIAPIPE_POSE_VERSION = '0.5.1675469404';
 
@@ -350,6 +351,13 @@ export default function JumpRopeTraining() {
                 jumpStatusRef.current = 'standing';
                 cooldownRef.current = true;
                 isJumpingRef.current = false;
+                
+                // --- TRIGER TIMER ON FIRST JUMP ---
+                if (isSessionActiveRef.current && !isTimerActiveRef.current) {
+                    isTimerActiveRef.current = true;
+                    lastActivityTimeRef.current = Date.now();
+                }
+
                 // Faster cooldown for high-speed jumps (60ms = ~1000 RPM max theoretical)
                 setTimeout(() => { cooldownRef.current = false; }, 60);
             }
@@ -431,7 +439,13 @@ export default function JumpRopeTraining() {
         setRpm(finalRpm);
         setTotalSeconds(totalWork + totalRest);
 
-        addSession({ jumps: totalJumps, duration: totalWork + totalRest, rpm: finalRpm });
+        addSession({ 
+            jumps: totalJumps, 
+            duration: totalWork + totalRest, 
+            rpm: finalRpm,
+            work_duration: totalWork,
+            rest_duration: totalRest
+        });
         setShowSummary(true);
         speak(`${totalJumps} jumps completed.`);
     }, [addSession, speak]);
@@ -448,9 +462,9 @@ export default function JumpRopeTraining() {
         setIsTracking(true); // Camera must be on
         setIsSessionActive(true);
         isSessionActiveRef.current = true;
-        setIsTimerActive(true); // Explicitly start timer now as requested
-        isTimerActiveRef.current = true;
-        isTimerStartedRef.current = true; // Use the manual start as the trigger
+        setIsTimerActive(false); // WAIT FOR PHYSICAL JUMP TO START TIMER
+        isTimerActiveRef.current = false;
+        isTimerStartedRef.current = false; 
         speak("Session ready. Start jumping now!");
         jumpCountRef.current = 0;
         setJumps(0);
@@ -465,97 +479,46 @@ export default function JumpRopeTraining() {
     };
 
     return (
-        <div className="flex-1 flex flex-col relative w-full bg-black overflow-hidden font-sans selection:bg-blue-400/30 antialiased" style={{ background: 'var(--jr-bg, #000)' }}>
-            {/* 1. Immersive Camera Base */}
-            <div className="absolute inset-0 z-10 flex flex-col items-center justify-center pointer-events-none" style={{ background: 'var(--jr-bg, #080808)' }}>
+        <div className="flex-1 flex flex-col relative w-full bg-transparent overflow-hidden font-sans selection:bg-blue-400/30 antialiased">
+            <div className="absolute inset-0 z-10 flex flex-col items-center justify-center pointer-events-none bg-transparent">
                 <Webcam ref={webcamRef} className="w-full h-full object-cover opacity-60 grayscale-[0.5] contrast-[1.2]" mirrored={true} onUserMedia={handleVideoLoad} onUserMediaError={handleCameraError} />
                 <canvas ref={canvasRef} className="absolute inset-0 w-full h-full z-10 pointer-events-none opacity-50" width={640} height={480} />
             </div>
 
-            {/* 2. Professional HUD Control Layer (TOP) */}
-            <div className="absolute top-0 inset-x-0 z-50 p-6 flex flex-col gap-6 pointer-events-none">
-                <div className="flex items-start justify-between pointer-events-auto">
-                    {/* Compact Athletic Identification */}
-                    <div className="flex flex-col">
-                        <h1 className="text-2xl font-black uppercase tracking-tighter text-blue-400 drop-shadow-[0_0_20px_rgba(96,165,250,0.4)]">
-                            TRAIN
-                        </h1>
-                        <p className="text-[9px] font-black uppercase tracking-[0.4em] text-white/30 mt-0.5">
-                            Pro Tracker
-                        </p>
-                    </div>
-
-                    <div className="flex items-center gap-2 shrink-0">
-                        {/* Parity Action Buttons — Standardized Circular/Pill */}
-                        <button 
-                            onClick={() => setVoiceEnabled(!voiceEnabled)} 
-                            className={`w-10 h-10 rounded-full border backdrop-blur-3xl flex items-center justify-center transition-all active:scale-90 ${voiceEnabled ? 'bg-blue-400 text-black border-blue-400 shadow-[0_0_20px_rgba(96,165,250,0.3)]' : 'bg-white/5 border-white/10 text-white/40'}`}
-                            title={voiceEnabled ? 'VOICE ON' : 'VOICE OFF'}
-                        >
-                            {voiceEnabled ? <Volume2 size={16} className="fill-current" /> : <VolumeX size={16} />}
-                        </button>
-                        
-                        {!isSessionActive && (
+            {/* 2. Professional Unified Header Layer (TOP) */}
+            <div className="absolute top-0 inset-x-0 z-50 pt-2 px-6 pointer-events-none">
+                <div className="pointer-events-auto">
+                    <PageHeader 
+                        title="Performance Tracker"
+                        subtitle="AI Powered Performance Monitoring"
+                        titleSuffix={
                             <button 
-                                onClick={() => navigate('/jump-rope/history')} 
-                                className="w-10 h-10 rounded-full border border-white/10 bg-white/5 backdrop-blur-3xl text-white/40 flex items-center justify-center active:scale-90"
-                                title="SHOW HISTORY"
+                                onClick={() => setVoiceEnabled(!voiceEnabled)} 
+                                className={`ml-2 w-8 h-8 flex items-center justify-center transition-all active:scale-90 ${voiceEnabled ? 'text-primary drop-shadow-[0_0_8px_rgba(var(--primary-rgb),0.5)]' : 'text-white/20'}`}
+                                title={voiceEnabled ? 'VOICE ON' : 'VOICE OFF'}
                             >
-                                <Activity size={16} />
+                                {voiceEnabled ? <Volume2 size={18} className="fill-current" /> : <VolumeX size={18} />}
                             </button>
-                        )}
-                    </div>
-                </div>
-
-                <div className="flex items-center justify-between pointer-events-auto">
-                    <button 
-                        onClick={() => navigate('/jump-rope')} 
-                        className="w-9 h-9 rounded-full border border-white/10 bg-white/5 backdrop-blur-3xl flex items-center justify-center text-white/40 active:scale-90"
-                    >
-                        <ArrowLeft size={16} />
-                    </button>
-
-                    {/* Tap-to-Open Timer Pill */}
-                    {!isSessionActive && (() => {
-                        const hasTimer = countdownMins > 0 || countdownSecs > 0;
-                        return (
-                            <button 
-                                onClick={openTimerPicker} 
-                                className="flex items-center gap-2 border backdrop-blur-3xl rounded-full px-4 py-2 shadow-[0_8px_32px_rgba(0,0,0,0.5)] transition-all active:scale-95" 
-                                style={{ 
-                                    background: 'var(--jr-surface, rgba(15,15,18,0.65))', 
-                                    borderColor: hasTimer ? 'rgba(96,165,250,0.35)' : 'rgba(255,255,255,0.12)' 
-                                }}
-                            >
-                                <Clock size={12} className={hasTimer ? 'text-blue-400' : 'text-white/40'} />
-                                <span className={`font-mono text-sm font-black tracking-wider ${hasTimer ? 'text-white' : 'text-white/40'}`}>
-                                    {String(countdownMins).padStart(2,'0')}:{String(countdownSecs).padStart(2,'0')}
-                                </span>
-                            </button>
-                        );
-                    })()}
+                        }
+                    />
                 </div>
 
                 {/* Session-Only Sub-HUD Indicators */}
                 {isSessionActive && (
                     <div className="flex items-center justify-center gap-3">
-                        <div className="flex items-center gap-2 border backdrop-blur-3xl rounded-full px-4 py-2 shadow-[0_8px_32px_rgba(0,0,0,0.5)]" style={{ background: 'rgba(15,15,18,0.65)', borderColor: 'rgba(255,255,255,0.12)' }}>
-                            <div className="flex flex-col items-center leading-none">
-                                <span className="text-blue-400 text-[8px] font-black uppercase tracking-[0.2em] mb-1">{intensityStatus}</span>
-                                <span className="font-mono text-sm font-black tracking-wider text-white">
-                                    {timerRemaining !== null ? `${Math.floor(timerRemaining/60)}:${String(timerRemaining%60).padStart(2,'0')}` : `${Math.floor(totalSeconds/60)}:${String(totalSeconds%60).padStart(2,'0')}`}
+                        <div className="flex items-center gap-2 border backdrop-blur-3xl rounded-full px-5 py-2.5 shadow-[0_8px_32px_rgba(239,68,68,0.2)] animate-pulse" style={{ background: 'rgba(255,59,48,0.1)', borderColor: 'rgba(255,59,48,0.3)' }}>
+                            <Zap size={14} className="text-red-500 fill-red-500" />
+                            <div className="flex flex-col items-start leading-none gap-0.5">
+                                <span className="text-red-500/60 text-[7px] font-black uppercase tracking-[0.3em] font-mono">{intensityStatus}</span>
+                                <span className="font-mono text-base font-black tracking-widest text-red-500">
+                                    {intensityStatus === 'RESTING' ? (
+                                        `${Math.floor(currentRestSecs/60)}:${String(currentRestSecs%60).padStart(2,'0')}`
+                                    ) : (
+                                        timerRemaining !== null ? `${Math.floor(timerRemaining/60)}:${String(timerRemaining%60).padStart(2,'0')}` : `${Math.floor(totalSeconds/60)}:${String(totalSeconds%60).padStart(2,'0')}`
+                                    )}
                                 </span>
                             </div>
                         </div>
-
-                        {intensityStatus === 'RESTING' && currentRestSecs > 0 && (
-                            <div className="flex items-center gap-2 border backdrop-blur-3xl rounded-full px-4 py-2 shadow-[0_8px_32px_rgba(255,59,48,0.2)] animate-pulse" style={{ background: 'rgba(255,59,48,0.1)', borderColor: 'rgba(255,59,48,0.3)' }}>
-                                <Zap size={10} className="text-red-500 fill-red-500" />
-                                <span className="font-mono text-sm font-black tracking-wider text-red-500">
-                                    {Math.floor(currentRestSecs/60)}:{String(currentRestSecs%60).padStart(2,'0')}
-                                </span>
-                            </div>
-                        )}
                     </div>
                 )}
             </div>
@@ -631,14 +594,20 @@ export default function JumpRopeTraining() {
                     </div>
 
                     {/* Bottom Action Area (Start/Finish) */}
-                    <div className="absolute bottom-28 pb-safe inset-x-0 flex flex-col items-center gap-5 px-10 pointer-events-auto">
+                    <div className="absolute bottom-4 pb-safe inset-x-0 flex flex-col items-center gap-5 px-10 pointer-events-auto">
                         {!isSessionActive ? (
                             <button 
                                 onClick={handleStart}
-                                className="w-full max-w-[240px] h-11 rounded-xl bg-blue-400 text-black font-black uppercase tracking-[0.3em] text-[10px] shadow-[0_20px_40px_rgba(96,165,250,0.3)] transition-all active:scale-95 hover:brightness-110 flex items-center justify-center gap-3"
+                                className="group relative flex flex-col items-center gap-2 transition-all active:scale-95"
                             >
-                                <Play size={12} fill="currentColor" />
-                                START TRAINING
+                                <div className="flex items-center gap-4 text-white animate-pulse">
+                                    <div className="w-1 h-1 rounded-full bg-primary shadow-[0_0_15px_var(--color-primary)] opacity-60" />
+                                    <span className="text-[12px] font-black uppercase tracking-[0.5em] drop-shadow-[0_0_10px_rgba(255,255,255,0.8)]">
+                                        START TRAINING
+                                    </span>
+                                    <div className="w-1 h-1 rounded-full bg-primary shadow-[0_0_15px_var(--color-primary)] opacity-60" />
+                                </div>
+                                <div className="h-[1px] w-8 bg-gradient-to-r from-transparent via-primary/40 to-transparent scale-x-0 group-hover:scale-x-100 transition-transform duration-700" />
                             </button>
                         ) : (
                             <button 
@@ -660,71 +629,75 @@ export default function JumpRopeTraining() {
                 </div>
             )}
 
-            {/* 5. Summary Modal Overlay */}
+            {/* 5. Summary Modal Overlay (Strategy Hub Premium Style) */}
             {showSummary && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/80 backdrop-blur-xl animate-in fade-in duration-500">
-                    <div className="w-full max-w-[340px] border rounded-[2rem] p-6 shadow-[0_40px_100px_rgba(0,0,0,0.8)] relative overflow-hidden flex flex-col gap-5" style={{ background: 'rgba(10,10,10,0.98)', borderColor: 'rgba(255,255,255,0.08)' }}>
-                        <div className="absolute top-0 right-0 w-48 h-48 bg-blue-400/5 rounded-full blur-[80px] -translate-y-1/3 translate-x-1/3" />
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/40 backdrop-blur-[30px] animate-in fade-in duration-700 font-sans overflow-hidden">
+                    {/* Background Glow to match Hub */}
+                    <div className="absolute top-0 right-0 w-[60%] h-[60%] bg-orange-500/[0.08] blur-[150px] rounded-full pointer-events-none" />
+                    <div className="absolute bottom-0 left-0 w-[40%] h-[40%] bg-blue-500/[0.03] blur-[150px] rounded-full pointer-events-none" />
+
+                    <div className="w-full max-w-[380px] border rounded-[3rem] p-8 shadow-[0_50px_100px_rgba(0,0,0,0.9)] relative overflow-hidden flex flex-col gap-8" style={{ background: 'rgba(10,10,10,0.9)', borderColor: 'rgba(255,255,255,0.06)' }}>
+                        <div className="absolute top-0 right-0 w-64 h-64 bg-orange-500/10 rounded-full blur-[100px] -translate-y-1/2 translate-x-1/2" />
                         
-                        <div className="flex items-center justify-between relative z-10">
-                            <div className="flex items-center gap-3">
-                                <div className="w-9 h-9 rounded-xl bg-blue-400/10 border border-blue-400/20 flex items-center justify-center">
-                                    <Trophy className="w-4 h-4 text-blue-400" />
-                                </div>
-                                <div className="flex flex-col">
-                                    <h2 className="text-lg font-black leading-none mb-1 text-white">Workout Report</h2>
-                                    <p className="text-[7px] font-black uppercase tracking-[0.2em] italic text-white/20">Pure Performance</p>
-                                </div>
+                        <div className="flex items-center justify-between relative z-10 font-sans">
+                            <div className="flex flex-col gap-1">
+                                <h1 className="text-3xl font-black text-white uppercase tracking-tighter leading-none">
+                                    <span className="premium-gradient-text">
+                                        Elite Report
+                                    </span>
+                                </h1>
+                                <p className="text-muted text-[9px] font-black tracking-[0.2em] uppercase flex items-center gap-2 mt-2">
+                                    <span className="w-4 h-[1px] bg-primary/50 inline-block"></span>
+                                    Performance Metrics and session analysis
+                                </p>
                             </div>
-                            <button onClick={() => setShowSummary(false)} className="w-7 h-7 rounded-full transition-all bg-white/5 text-white/30 border border-white/5 flex items-center justify-center active:scale-90">
+                            <button 
+                                onClick={() => setShowSummary(false)} 
+                                className="w-8 h-8 rounded-full transition-all bg-red-500/5 text-red-500 border border-red-500/10 flex items-center justify-center active:scale-90 hover:bg-red-500/10 shadow-[0_0_15px_rgba(239,68,68,0.1)]"
+                            >
                                 <X size={14} />
                             </button>
                         </div>
 
-                        <div className="grid grid-cols-2 gap-2 relative z-10">
-                            <div className="border backdrop-blur-3xl rounded-xl p-3 flex flex-col items-center bg-white/[0.02] border-white/5">
-                                <span className="text-lg font-black mb-0.5 text-white">{jumps}</span>
-                                <span className="text-[6px] font-bold uppercase tracking-[0.2em] text-white/20">Jumps</span>
+                        <div className="grid grid-cols-2 gap-3 relative z-10">
+                            <div className="border rounded-[2rem] p-4 flex flex-col items-center justify-center bg-white/[0.02] border-white/5 backdrop-blur-3xl group hover:border-orange-500/20 transition-all">
+                                <span className="text-2xl font-black mb-0.5 text-white tabular-nums tracking-tighter">{jumps}</span>
+                                <span className="text-[7px] font-black uppercase tracking-[0.2em] text-white/20">Total Jumps</span>
                             </div>
-                            <div className="border backdrop-blur-3xl rounded-xl p-3 flex flex-col items-center bg-white/[0.02] border-white/5">
-                                <span className="text-lg font-black text-blue-400 mb-0.5">{rpm}</span>
-                                <span className="text-[6px] font-bold uppercase tracking-[0.2em] text-white/20">Avg RPM</span>
+                            <div className="border rounded-[2rem] p-4 flex flex-col items-center justify-center bg-white/[0.02] border-white/5 backdrop-blur-3xl group hover:border-blue-500/20 transition-all">
+                                <span className="text-2xl font-black text-blue-400 mb-0.5 tabular-nums tracking-tighter">{rpm}</span>
+                                <span className="text-[7px] font-black uppercase tracking-[0.2em] text-white/20">Avg RPM</span>
                             </div>
-                            <div className="border backdrop-blur-3xl rounded-xl p-3 flex flex-col items-center text-center bg-white/[0.02] border-white/5">
-                                <span className="text-xs font-black mb-0.5 text-white">{Math.floor(totalSeconds/60)}m {totalSeconds%60}s</span>
-                                <span className="text-[6px] font-bold uppercase tracking-[0.2em] mt-1 text-white/20">Total</span>
-                            </div>
-                            <div className="border backdrop-blur-3xl rounded-xl p-3 flex flex-col items-center text-center bg-red-500/5 border-red-500/10">
-                                <span className="text-xs font-black mb-0.5 text-red-500">{Math.floor(finalRestSecs/60)}m {finalRestSecs%60}s</span>
-                                <span className="text-[6px] font-bold uppercase tracking-[0.2em] mt-1 text-red-500/30">Rest</span>
+                            <div className="border rounded-[2rem] p-4 flex flex-col items-center justify-center bg-white/[0.02] border-white/5 backdrop-blur-3xl group hover:border-white/10 transition-all col-span-2">
+                                <div className="grid grid-cols-3 w-full gap-2">
+                                    <div className="flex flex-col items-center">
+                                        <span className="text-xs font-black text-white">{Math.floor(totalSeconds/60)}m {totalSeconds%60}s</span>
+                                        <span className="text-[6px] font-black uppercase tracking-[0.1em] mt-0.5 text-white/30">Session</span>
+                                    </div>
+                                    <div className="flex flex-col items-center">
+                                        <span className="text-xs font-black text-orange-400">{Math.floor((totalSeconds - finalRestSecs)/60)}m {(totalSeconds - finalRestSecs)%60}s</span>
+                                        <span className="text-[6px] font-black uppercase tracking-[0.1em] mt-0.5 text-orange-400/50">Active</span>
+                                    </div>
+                                    <div className="flex flex-col items-center">
+                                        <span className="text-xs font-black text-red-500">{Math.floor(finalRestSecs/60)}m {finalRestSecs%60}s</span>
+                                        <span className="text-[6px] font-black uppercase tracking-[0.1em] mt-0.5 text-red-500/30">Rest</span>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
-                        {intensityHistoryRef.current.length > 5 && (
-                            <div className="w-full relative z-10" style={{ height: 100 }}>
-                                <ResponsiveContainer width="100%" height={100} debounce={50}>
-                                    <AreaChart data={intensityHistoryRef.current}>
-                                        <defs>
-                                            <linearGradient id="premiumGlow" x1="0" y1="0" x2="0" y2="1">
-                                                <stop offset="5%" stopColor="#60a5fa" stopOpacity={0.2}/>
-                                                <stop offset="95%" stopColor="#60a5fa" stopOpacity={0}/>
-                                            </linearGradient>
-                                        </defs>
-                                        <Area type="monotone" dataKey="jpm" stroke="#60a5fa" strokeWidth={1.5} fillOpacity={1} fill="url(#premiumGlow)" />
-                                        <Tooltip contentStyle={{background: 'rgba(10,10,10,0.8)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '10px', fontSize: '9px', backdropFilter: 'blur(10px)'}} labelStyle={{display: 'none'}} itemStyle={{color: '#60a5fa', fontWeight: 'bold'}} />
-                                    </AreaChart>
-                                </ResponsiveContainer>
-                            </div>
-                        )}
-
-                        <div className="flex flex-col items-center relative z-10">
-                             <p className="text-[8px] font-bold italic tracking-wide text-center uppercase opacity-30 leading-relaxed text-white">
-                                "The only bad workout is the one<br/>that didn't happen."
-                             </p>
+                        <div className="flex flex-col items-center relative z-10 pt-4 border-t border-white/5">
+                             <div className="flex items-center gap-2">
+                                <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse shadow-[0_0_10px_rgba(34,197,94,0.5)]" />
+                                <span className="text-[8px] font-black text-white/40 uppercase tracking-[0.3em]">Strategy Synced</span>
+                             </div>
                         </div>
                         
-                        <button onClick={() => setShowSummary(false)} className="w-full py-4 border font-black uppercase text-[10px] tracking-[0.3em] rounded-2xl transition-all backdrop-blur-3xl bg-white/5 border-white/10 text-white active:scale-95">
-                            Dismiss Report
+                        <button 
+                            onClick={() => navigate('/app/strategy-hub')} 
+                            className="w-full py-5 rounded-3xl border border-orange-500/30 bg-orange-500/5 text-orange-500 font-black uppercase tracking-[0.3em] text-[11px] hover:bg-orange-500/10 hover:border-orange-500/50 active:scale-95 transition-all relative z-10 shadow-[0_20px_40px_rgba(249,115,22,0.05)]"
+                        >
+                            Return To Hub
                         </button>
                     </div>
                 </div>
@@ -766,12 +739,6 @@ export default function JumpRopeTraining() {
                                 Finish Session
                             </button>
                         )}
-                        <button 
-                            onClick={() => navigate('/jump-rope')}
-                            className="w-full py-4 rounded-2xl bg-red-500/10 border border-red-500/20 text-red-500 font-black uppercase tracking-[0.2em] text-xs backdrop-blur-md active:scale-95 transition-all"
-                        >
-                            Back To Home
-                        </button>
                     </div>
 
                     <div className="mt-12 flex flex-col items-center gap-3">

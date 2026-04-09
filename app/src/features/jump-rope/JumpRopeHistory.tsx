@@ -1,7 +1,7 @@
 import React from 'react';
 import { History, ArrowLeft, Calendar, Zap, Timer, Activity, Loader2, Trash2, CheckCircle2, Circle, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { useJumpRopeHistory, useDeleteJumpRopeSession, useDeleteMultipleJumpRopeSessions } from '../hooks/useData';
+import { useJumpRopeHistory, useDeleteJumpRopeSession, useDeleteMultipleJumpRopeSessions } from '../../hooks/useData';
 import { format } from 'date-fns';
 import { toast } from 'react-hot-toast';
 

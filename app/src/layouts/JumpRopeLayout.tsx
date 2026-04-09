@@ -1,7 +1,7 @@
 import React from 'react';
 import { NavLink, Outlet, useLocation, Navigate } from 'react-router-dom';
 import { Home, Activity, Trophy, Settings } from 'lucide-react';
-import { loadJrSettings, applyJrTheme } from '../pages/JumpRopeSettings';
+import { loadJrSettings, applyJrTheme } from '../features/jump-rope/JumpRopeSettings';
 
 /* ─── Bottom Navigation ──────────────────────────────────────── */
 const navItems = [

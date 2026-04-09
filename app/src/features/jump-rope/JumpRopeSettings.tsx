@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Upload, User, Palette, ChevronLeft, Check, Trash2, Dumbbell, LogOut } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '../lib/supabase';
+import { supabase } from '../../lib/supabase';
 
 export const STORAGE_KEY = 'jump_rope_app_settings';
 

@@ -130,6 +130,9 @@ ALTER TABLE public.students ADD COLUMN IF NOT EXISTS sessions_remaining INTEGER;
 ALTER TABLE public.students ADD COLUMN IF NOT EXISTS notes TEXT;
 ALTER TABLE public.students ADD COLUMN IF NOT EXISTS training_days TEXT[] DEFAULT '{}';
 ALTER TABLE public.students ADD COLUMN IF NOT EXISTS training_schedule JSONB DEFAULT '[]'::jsonb;
+ALTER TABLE public.students ADD COLUMN IF NOT EXISTS profile_id UUID REFERENCES public.profiles(id) ON DELETE SET NULL;
+ALTER TABLE public.students ADD COLUMN IF NOT EXISTS current_training_level INTEGER DEFAULT 1;
+ALTER TABLE public.students ADD CONSTRAINT students_profile_id_key UNIQUE (profile_id);
 
 -- FORCE FK RELATIONSHIPS
 ALTER TABLE public.students 
@@ -399,7 +402,117 @@ CREATE TABLE IF NOT EXISTS public.user_settings (
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- [13] RLS Policies (Safe Defaults)
+-- [13] Fame Academy Features: Videos & Assignments
+CREATE TABLE IF NOT EXISTS public.training_videos (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    title TEXT NOT NULL,
+    description TEXT,
+    video_url TEXT NOT NULL,
+    thumbnail_url TEXT,
+    duration TEXT,
+    plan_id UUID REFERENCES public.subscription_plans(id) ON DELETE SET NULL,
+    category TEXT DEFAULT 'general',
+    level_number INTEGER DEFAULT 1,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS public.training_assignments (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    student_id UUID REFERENCES public.students(id) ON DELETE CASCADE,
+    coach_id UUID REFERENCES public.coaches(id) ON DELETE SET NULL,
+    target_jumps INTEGER,
+    target_duration_minutes INTEGER,
+    instructions TEXT,
+    status TEXT DEFAULT 'pending',
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- [14] RLS for Fame Academy Features
+ALTER TABLE public.training_videos ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.training_assignments ENABLE ROW LEVEL SECURITY;
+
+-- Videos: Everyone can see, only coaches/admins can manage
+CREATE POLICY "Everyone can view training videos" 
+ON public.training_videos FOR SELECT 
+TO authenticated 
+USING (true);
+
+  )
+);
+
+-- Advanced Level RLS: Students only see videos for their current assigned level
+DROP POLICY IF EXISTS "Students can only see their current level videos" ON public.training_videos;
+CREATE POLICY "Students can only see their current level videos" 
+ON public.training_videos FOR SELECT 
+TO authenticated 
+USING (
+  level_number <= (
+    SELECT current_training_level FROM public.students 
+    WHERE profile_id = auth.uid()
+    LIMIT 1
+  ) OR 
+  EXISTS (
+    SELECT 1 FROM public.profiles 
+    WHERE id = auth.uid() AND role IN ('admin', 'coach', 'head_coach')
+  )
+);
+
+-- Assignments: Coaches can manage, students can see their own
+CREATE POLICY "Students can view their assignments" 
+ON public.training_assignments FOR SELECT 
+TO authenticated 
+USING (
+    student_id IN (SELECT id FROM public.students WHERE profile_id = auth.uid())
+);
+
+CREATE POLICY "Coaches can manage assignments" 
+ON public.training_assignments FOR ALL 
+TO authenticated 
+USING (
+  EXISTS (
+    SELECT 1 FROM public.profiles 
+    WHERE id = auth.uid() AND role IN ('admin', 'coach', 'head_coach')
+  )
+);
+
+-- Update pt_sessions to include Zoom link
+ALTER TABLE public.pt_sessions ADD COLUMN IF NOT EXISTS zoom_link TEXT;
+
+-- [15] Supabase Storage Policies (For 'videos' bucket)
+-- NOTE: Make sure the bucket 'videos' exists in Supabase Storage first.
+INSERT INTO storage.buckets (id, name, public) 
+VALUES ('videos', 'videos', true)
+ON CONFLICT (id) DO NOTHING;
+
+CREATE POLICY "Public Access" 
+ON storage.objects FOR SELECT 
+TO public 
+USING (bucket_id = 'videos');
+
+CREATE POLICY "Coaches can upload" 
+ON storage.objects FOR INSERT 
+TO authenticated 
+WITH CHECK (
+  bucket_id = 'videos' AND 
+  (EXISTS (
+    SELECT 1 FROM public.profiles 
+    WHERE id = auth.uid() AND role IN ('admin', 'coach', 'head_coach')
+  ))
+);
+
+CREATE POLICY "Coaches can delete" 
+ON storage.objects FOR DELETE 
+TO authenticated 
+USING (
+  bucket_id = 'videos' AND 
+  (EXISTS (
+    SELECT 1 FROM public.profiles 
+    WHERE id = auth.uid() AND role IN ('admin', 'coach', 'head_coach')
+  ))
+);
+
+-- [14] RLS Policies (Safe Defaults)
 DO $$
 DECLARE
     t TEXT;

@@ -1,32 +1,29 @@
 import React, { useEffect, useState } from 'react';
 import { Play, Activity, History, Flame, Trophy, Loader2, Dumbbell, User, Users } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { useJumpRopeStats } from '../hooks/useData';
+import { useJumpRopeStats, useJumpRopeAccess } from '../../hooks/useData';
 import { format } from 'date-fns';
 import { loadJrSettings } from './JumpRopeSettings';
-import { supabase } from '../lib/supabase';
+import { supabase } from '../../lib/supabase';
 
 export default function JumpRopeHub() {
     const navigate = useNavigate();
-    const { data: stats, isLoading } = useJumpRopeStats();
+    const { data: stats, isLoading: isLoadingStats } = useJumpRopeStats();
+    const { data: access, isLoading: isCheckingAccess } = useJumpRopeAccess();
     const settings = loadJrSettings();
-    const [userRole, setUserRole] = useState<string | null>(null);
 
     useEffect(() => {
-        supabase.auth.getUser().then(({ data: { user } }) => {
-            if (user) {
-                supabase.from('profiles').select('role').eq('id', user.id).single()
-                    .then(({ data }) => setUserRole(data?.role));
-            }
-        });
-    }, []);
+        // Security Guard: If not admin and locked, push back to welcome
+        if (!isCheckingAccess && access?.isLocked && !access?.isAdmin) {
+            navigate('/jump-rope/welcome', { replace: true });
+        }
+    }, [access, isCheckingAccess, navigate]);
 
-    if (isLoading) {
-// ... existing loader ...
+    if (isLoadingStats || isCheckingAccess) {
         return (
             <div className="flex flex-col items-center justify-center min-h-[50vh] gap-4">
                 <Loader2 className="w-8 h-8 text-primary animate-spin" />
-                <p className="text-xs font-black uppercase tracking-widest text-zinc-500">Loading Your Stats...</p>
+                <p className="text-xs font-black uppercase tracking-widest text-zinc-500">Securely Verifying Access...</p>
             </div>
         );
     }

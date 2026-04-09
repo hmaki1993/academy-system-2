@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Trophy, Medal, ChevronUp, ChevronDown, Loader2 } from 'lucide-react';
-import { useJumpRopeLeaderboard } from '../hooks/useData';
+import { useJumpRopeLeaderboard } from '../../hooks/useData';
 
 
 

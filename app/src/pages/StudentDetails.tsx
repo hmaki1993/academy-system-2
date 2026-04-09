@@ -12,9 +12,11 @@ import {
     MessageSquare,
     Shield,
     Key,
-    UserPlus
+    UserPlus,
+    TrendingUp
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { toast } from 'react-hot-toast';
 
 export default function StudentDetails() {
     const { id } = useParams();
@@ -25,6 +27,23 @@ export default function StudentDetails() {
     const [attendance, setAttendance] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [selectedMonth, setSelectedMonth] = useState(new Date());
+    const [isPromoting, setIsPromoting] = useState(false);
+
+    const handlePromoteLevel = async () => {
+        if (!student || !student.id) return;
+        setIsPromoting(true);
+        try {
+            const nextLevel = (student.current_training_level || 1) + 1;
+            const { error } = await supabase.from('students').update({ current_training_level: nextLevel }).eq('id', student.id);
+            if (error) throw error;
+            setStudent({ ...student, current_training_level: nextLevel });
+            toast.success(t('common.promoteStudent') + ' - ' + t('common.level') + ' ' + nextLevel);
+        } catch (e: any) {
+            toast.error('Error: ' + e.message);
+        } finally {
+            setIsPromoting(false);
+        }
+    };
 
     useEffect(() => {
         if (id) fetchStudentData();
@@ -139,46 +158,82 @@ export default function StudentDetails() {
                 </div>
             </div>
 
-            {/* Portal Access Card */}
-            <div className="glass-card p-8 rounded-[2.5rem] border border-white/10 relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full blur-3xl -mr-16 -mt-16"></div>
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
-                    <div className="flex items-center gap-6">
-                        <div className={`w-16 h-16 rounded-[2rem] flex items-center justify-center ${student.user_id ? 'bg-emerald-500/20 text-emerald-400' : 'bg-white/5 text-white/20'}`}>
-                            <Shield className="w-8 h-8" />
+            {/* Management Cards (Level & Portal) */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Level Management Card */}
+                <div className="glass-card p-8 rounded-[2.5rem] border border-white/10 relative overflow-hidden">
+                    <div className="absolute top-0 left-0 w-32 h-32 bg-amber-500/5 rounded-full blur-3xl -ml-16 -mt-16"></div>
+                    <div className="flex flex-col md:flex-row md:items-center justify-between h-full gap-6 relative z-10">
+                        <div className="flex items-center gap-6">
+                            <div className="w-16 h-16 shrink-0 rounded-[2rem] flex flex-col items-center justify-center bg-amber-500/20 text-amber-500 font-black border border-amber-500/10 shadow-[0_0_20px_rgba(245,158,11,0.15)]">
+                                <span className="text-[10px] tracking-widest uppercase opacity-70">Lvl</span>
+                                <span className="text-2xl leading-none">{student.current_training_level || 1}</span>
+                            </div>
+                            <div>
+                                <h2 className="text-xl font-black text-white uppercase tracking-tight">
+                                    {t('videoLibrary.trainingLevel')}
+                                </h2>
+                                <p className="text-white/40 text-sm font-medium mt-1">
+                                    {t('videoLibrary.currentLevel')}: {student.current_training_level || 1} <br />
+                                    {t('videoLibrary.nextLevel')}: {(student.current_training_level || 1) + 1}
+                                </p>
+                            </div>
                         </div>
-                        <div>
-                            <h2 className="text-xl font-black text-white uppercase tracking-tight flex items-center gap-2">
-                                Portal Access
-                                {student.user_id ? (
-                                    <span className="text-[10px] bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-full border border-emerald-500/20">Active</span>
-                                ) : (
-                                    <span className="text-[10px] bg-white/5 text-white/40 px-2 py-0.5 rounded-full border border-white/10">Disabled</span>
-                                )}
-                            </h2>
-                            <p className="text-white/40 text-sm font-medium">
-                                {student.user_id
-                                    ? 'Student can log in to view their performance and chat with you.'
-                                    : 'Grant this student access to their own portal to track sessions and chat.'}
-                            </p>
+
+                        <div className="flex items-center gap-3 shrink-0 h-full">
+                            <button
+                                onClick={handlePromoteLevel}
+                                disabled={isPromoting}
+                                className="flex items-center justify-center gap-3 px-8 py-4 h-[60px] bg-amber-500 text-black hover:bg-amber-400 disabled:opacity-50 disabled:cursor-not-allowed rounded-[1.5rem] font-black text-xs uppercase tracking-[0.2em] shadow-xl shadow-amber-500/20 hover:scale-105 transition-all w-full"
+                            >
+                                <TrendingUp className="w-5 h-5 shrink-0" />
+                                <span className="whitespace-nowrap">{isPromoting ? '...' : t('videoLibrary.promoteStudent')}</span>
+                            </button>
                         </div>
                     </div>
+                </div>
 
-                    <div className="flex items-center gap-3">
-                        {student.user_id ? (
-                            <div className="flex items-center gap-3 px-6 py-3 bg-white/5 rounded-2xl border border-white/10">
-                                <Key className="w-4 h-4 text-emerald-400" />
-                                <span className="text-xs font-black text-white/60 tracking-widest uppercase">Account Linked</span>
+                {/* Portal Access Card */}
+                <div className="glass-card p-8 rounded-[2.5rem] border border-white/10 relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full blur-3xl -mr-16 -mt-16"></div>
+                    <div className="flex flex-col md:flex-row md:items-center justify-between h-full gap-6 relative z-10">
+                        <div className="flex items-center gap-6">
+                            <div className={`w-16 h-16 rounded-[2rem] shrink-0 flex items-center justify-center ${student.user_id ? 'bg-emerald-500/20 text-emerald-400' : 'bg-white/5 text-white/20'}`}>
+                                <Shield className="w-8 h-8" />
                             </div>
-                        ) : (
-                            <button
-                                onClick={() => navigate('/register', { state: { prefill: { email: student.email, full_name: student.full_name, student_id: student.id, role: 'student' } } })}
-                                className="flex items-center gap-3 px-8 py-4 bg-primary text-white rounded-[1.5rem] font-black text-xs uppercase tracking-[0.2em] shadow-2xl shadow-primary/20 hover:scale-105 transition-all"
-                            >
-                                <UserPlus className="w-5 h-5" />
-                                Create Portal Access
-                            </button>
-                        )}
+                            <div>
+                                <h2 className="text-xl font-black text-white uppercase tracking-tight flex items-center gap-2">
+                                    Portal Access
+                                    {student.user_id ? (
+                                        <span className="text-[10px] bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-full border border-emerald-500/20">Active</span>
+                                    ) : (
+                                        <span className="text-[10px] bg-white/5 text-white/40 px-2 py-0.5 rounded-full border border-white/10">Disabled</span>
+                                    )}
+                                </h2>
+                                <p className="text-white/40 text-sm font-medium mt-1">
+                                    {student.user_id
+                                        ? 'Account linked for portal.'
+                                        : 'Grant portal access.'}
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="flex items-center gap-3 shrink-0 h-full">
+                            {student.user_id ? (
+                                <div className="flex items-center justify-center gap-3 px-6 py-4 h-[60px] w-full bg-white/5 rounded-[1.5rem] border border-white/10">
+                                    <Key className="w-4 h-4 text-emerald-400 shrink-0" />
+                                    <span className="text-xs font-black text-white/60 tracking-widest uppercase whitespace-nowrap">Account Linked</span>
+                                </div>
+                            ) : (
+                                <button
+                                    onClick={() => navigate('/register', { state: { prefill: { email: student.email, full_name: student.full_name, student_id: student.id, role: 'student' } } })}
+                                    className="flex items-center justify-center gap-3 px-8 py-4 h-[60px] bg-primary text-white rounded-[1.5rem] font-black text-xs uppercase tracking-[0.2em] shadow-2xl shadow-primary/20 hover:scale-105 transition-all w-full"
+                                >
+                                    <UserPlus className="w-5 h-5 shrink-0" />
+                                    <span className="whitespace-nowrap">Create Access</span>
+                                </button>
+                            )}
+                        </div>
                     </div>
                 </div>
             </div>

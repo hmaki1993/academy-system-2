@@ -1,13 +1,10 @@
 import React from 'react';
-import JumpRopeLayout from '../layouts/JumpRopeLayout';
-import JumpRopeCounter from '../components/JumpRopeCounter';
+import JumpRopeTraining from './JumpRopeTraining';
 
-const SmartTraining: React.FC = () => {
+export default function SmartTraining() {
     return (
-        <JumpRopeLayout>
-            <JumpRopeCounter />
-        </JumpRopeLayout>
+        <div className="flex-1 flex flex-col h-full bg-transparent overflow-hidden relative">
+            <JumpRopeTraining />
+        </div>
     );
-};
-
-export default SmartTraining;
+}

@@ -1,37 +1,61 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
-import { Lock, Mail, Loader2, User, Globe, ChevronDown } from 'lucide-react';
+import { Lock, Mail, Loader2, User, Globe, ChevronDown, Phone } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 export default function Register() {
+    const navigate = useNavigate();
     const location = useLocation();
-    const prefill = location.state?.prefill || {};
+    const { t, i18n } = useTranslation();
+
+    // 1. Unified Prefill Logic (State or URL Query)
+    const getInitialPrefill = () => {
+        if (location.state?.prefill) return location.state.prefill;
+        const params = new URLSearchParams(location.search);
+        const prefillParam = params.get('prefill');
+        if (prefillParam) {
+            try {
+                return JSON.parse(decodeURIComponent(prefillParam));
+            } catch (e) {
+                console.error('Failed to parse prefill param:', e);
+            }
+        }
+        return {};
+    };
+
+    const prefill = getInitialPrefill();
 
     const [fullName, setFullName] = useState(prefill.full_name || '');
     const [email, setEmail] = useState(prefill.email || '');
+    const [phone, setPhone] = useState(prefill.phone || '');
     const [password, setPassword] = useState('');
     const [role, setRole] = useState<'admin' | 'coach' | 'student'>(prefill.role || 'coach');
     const [studentId, setStudentId] = useState<string | null>(prefill.student_id || null);
     const [ptId, setPtId] = useState<string | null>(prefill.pt_id || null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const navigate = useNavigate();
-    const { t, i18n } = useTranslation();
 
     const handleRegister = async (e: React.FormEvent) => {
         e.preventDefault();
+        
+        // Client-side validation
+        if (password.length < 6) {
+            setError('Password must be at least 6 characters long');
+            return;
+        }
+
         setLoading(true);
         setError(null);
 
         try {
-            // 1. Sign up with metadata for the trigger
             const { data, error: signUpError } = await supabase.auth.signUp({
                 email,
                 password,
                 options: {
                     data: {
                         full_name: fullName,
+                        phone: phone,
                         role: role,
                         student_id: studentId,
                         pt_id: ptId,
@@ -39,44 +63,40 @@ export default function Register() {
                 },
             });
 
-            if (signUpError) throw signUpError;
+            if (signUpError) {
+                console.error('Registration error:', signUpError);
+                throw signUpError;
+            }
 
-            // 2. If signup successful
             if (data.user) {
-                // Notice: We removed the manual insert to 'profiles' here
-                // because the database trigger 'handle_new_user' handles it automatically
-                // and more safely.
-
                 const { error: signInError } = await supabase.auth.signInWithPassword({
                     email,
                     password,
                 });
-
                 if (signInError) throw signInError;
 
-                // 3. For students, the trigger handles the linking to students table, 
-                // but we also need to ensure the profile exists (already handled by insert above)
-
-                // 4. If role is coach, create a record in the coaches table
-                if (role === 'coach') {
-                    const { error: coachError } = await supabase.from('coaches').insert({
-                        id: data.user.id,
-                        full_name: fullName,
-                        specialty: 'Gymnastics Coach', // Default
-                        pt_rate: 0,
-                    });
-                    if (coachError) console.error('Error creating coach record:', coachError);
+                // 2. Link Student Record (for Quick Add joins)
+                if (role === 'student' && studentId) {
+                    const { error: updateError } = await supabase
+                        .from('students')
+                        .update({ profile_id: data.user.id })
+                        .eq('id', studentId);
+                    if (updateError) console.error('Error linking student profile:', updateError);
                 }
 
-                // Navigate to dashboard
+                // 3. Create Coach profile if applicable
+                if (role === 'coach') {
+                    await supabase.from('coaches').insert({
+                        id: data.user.id,
+                        full_name: fullName,
+                        specialty: 'Gymnastics Coach',
+                        pt_rate: 0,
+                    });
+                }
                 navigate('/');
             }
         } catch (err: unknown) {
-            if (err instanceof Error) {
-                setError(err.message);
-            } else {
-                setError('Failed to register');
-            }
+            setError(err instanceof Error ? err.message : 'Failed to register');
         } finally {
             setLoading(false);
         }
@@ -89,153 +109,156 @@ export default function Register() {
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-black font-cairo p-4 relative overflow-hidden">
-            {/* Background Cinematic Effects */}
-            <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-primary/10 rounded-full blur-[120px] -translate-y-1/2 translate-x-1/4 animate-pulse"></div>
-            <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-accent/5 rounded-full blur-[120px] translate-y-1/2 -translate-x-1/4"></div>
+        <div className="min-h-screen flex flex-col items-center justify-start bg-black font-cairo p-4 pt-4 relative overflow-hidden">
+            {/* Background Glows */}
+            <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-red-500/5 rounded-full blur-[120px] -translate-y-1/2 translate-x-1/4"></div>
+            <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-red-500/5 rounded-full blur-[120px] translate-y-1/2 -translate-x-1/4"></div>
 
-            <div className="w-full max-w-lg relative z-10">
-                {/* Logo Section */}
-                <div className="mb-12 text-center animate-in fade-in slide-in-from-top-8 duration-1000">
-                    <div className="relative inline-block group">
-                        <div className="absolute -inset-1 bg-gradient-to-r from-primary to-accent rounded-full blur opacity-25 group-hover:opacity-50 transition duration-1000"></div>
-                        <img
-                            src="/logo.png"
-                            alt="Logo"
-                            className="relative h-24 w-auto mx-auto drop-shadow-[0_0_15px_rgba(251,191,36,0.2)] transition-transform hover:scale-105 duration-500"
-                        />
-                    </div>
+            <div className="w-full max-w-sm relative z-10 flex flex-col items-center bg-transparent border-none shadow-none">
+                {/* Integrated Logo */}
+                <div className="mb-2 animate-in fade-in zoom-in duration-1000">
+                    <img src="/logo.png" alt="Logo" className="h-[60px] w-auto filter drop-shadow-[0_0_15px_rgba(239,68,68,0.2)]" />
                 </div>
 
-                {/* Register Card */}
-                <div className="glass-card rounded-[3rem] border border-white/10 shadow-premium overflow-hidden animate-in fade-in zoom-in-95 duration-700">
-                    <div className="p-10 md:p-14">
-                        <div className="mb-10 text-center">
-                            <h1 className="text-4xl font-black text-white uppercase tracking-tighter premium-gradient-text">
-                                {t('common.register') || 'Create Account'}
-                            </h1>
-                            <p className="text-white/30 mt-3 text-xs font-black uppercase tracking-[0.3em]">
-                                Join the Academy Elite
-                            </p>
-                        </div>
+                {/* Floating Content */}
+                <div className="w-full text-center mb-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
+                    <h1 className="text-3xl font-black text-white uppercase tracking-tighter">
+                        {t('register.title')}
+                    </h1>
+                    <p className="text-red-500/40 mt-1 text-[9px] font-black uppercase tracking-[0.4em]">
+                        {t('register.subtitle')}
+                    </p>
+                </div>
 
-                        {error && (
-                            <div className="bg-rose-500/10 text-rose-400 text-xs font-black p-4 rounded-2xl mb-8 border border-rose-500/20 text-center uppercase tracking-widest animate-in shake duration-500">
-                                {error}
-                            </div>
-                        )}
+                {error && (
+                    <div className="w-full bg-red-500/10 text-red-400 text-[10px] font-black p-3 rounded-none mb-6 border border-red-500/20 text-center animate-in fade-in scale-in duration-300 uppercase tracking-widest">
+                        {error}
+                    </div>
+                )}
 
-                        <form onSubmit={handleRegister} className="space-y-6">
-                            <div className="space-y-2">
-                                <label className="text-[10px] font-black text-white/40 uppercase tracking-[0.3em] ml-4">
-                                    Full Name
-                                </label>
-                                <div className="flex items-center group bg-white/5 border border-white/10 rounded-[2rem] focus-within:ring-4 focus-within:ring-primary/10 focus-within:border-primary/50 transition-all overflow-hidden">
-                                    <div className="pl-6 pr-2 py-4 flex-shrink-0">
-                                        <User className="w-5 h-5 text-white/30 group-focus-within:text-primary transition-colors" />
-                                    </div>
-                                    <input
-                                        type="text"
-                                        required
-                                        className="w-full bg-transparent border-none outline-none py-4 pr-8 text-white placeholder-white/10 font-bold text-lg tracking-tight"
-                                        placeholder="Full Name"
-                                        value={fullName}
-                                        onChange={(e) => setFullName(e.target.value)}
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="space-y-2">
-                                <label className="text-[10px] font-black text-white/40 uppercase tracking-[0.3em] ml-4">
-                                    Email Address
-                                </label>
-                                <div className="flex items-center group bg-white/5 border border-white/10 rounded-[2rem] focus-within:ring-4 focus-within:ring-primary/10 focus-within:border-primary/50 transition-all overflow-hidden">
-                                    <div className="pl-6 pr-2 py-4 flex-shrink-0">
-                                        <Mail className="w-5 h-5 text-white/30 group-focus-within:text-primary transition-colors" />
-                                    </div>
-                                    <input
-                                        type="email"
-                                        required
-                                        dir="ltr"
-                                        className="w-full bg-transparent border-none outline-none py-4 pr-8 text-white placeholder-white/10 font-bold text-lg tracking-tight text-left"
-                                        placeholder="Email"
-                                        value={email}
-                                        onChange={(e) => setEmail(e.target.value)}
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="space-y-2">
-                                <label className="text-[10px] font-black text-white/40 uppercase tracking-[0.3em] ml-4">
-                                    Password
-                                </label>
-                                <div className="flex items-center group bg-white/5 border border-white/10 rounded-[2rem] focus-within:ring-4 focus-within:ring-primary/10 focus-within:border-primary/50 transition-all overflow-hidden">
-                                    <div className="pl-6 pr-2 py-4 flex-shrink-0">
-                                        <Lock className="w-5 h-5 text-white/30 group-focus-within:text-primary transition-colors" />
-                                    </div>
-                                    <input
-                                        type="password"
-                                        required
-                                        dir="ltr"
-                                        className="w-full bg-transparent border-none outline-none py-4 pr-8 text-white placeholder-white/10 font-bold text-lg tracking-tight text-left"
-                                        placeholder="••••••••"
-                                        value={password}
-                                        onChange={(e) => setPassword(e.target.value)}
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="space-y-2">
-                                <label className="text-[10px] font-black text-white/40 uppercase tracking-[0.3em] ml-4">
-                                    Account Role
-                                </label>
-                                <div className="relative group/role">
-                                    <select
-                                        value={role}
-                                        onChange={(e) => setRole(e.target.value as 'admin' | 'coach' | 'student')}
-                                        className="w-full px-8 py-4 bg-white/5 border border-white/10 rounded-[2rem] text-white focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary/50 transition-all font-bold text-lg tracking-tight appearance-none cursor-pointer pr-16"
-                                    >
-                                        <option value="coach" className="bg-slate-900">Coach / مدرب</option>
-                                        <option value="admin" className="bg-slate-900">Admin / مدير</option>
-                                        <option value="student" className="bg-slate-900">Student / متدرب</option>
-                                    </select>
-                                    <div className="absolute inset-y-0 right-8 flex items-center pointer-events-none opacity-40 group-hover/role:opacity-100 transition-opacity">
-                                        <ChevronDown className="w-6 h-6 text-white" />
-                                    </div>
-                                </div>
-                            </div>
-
-                            <button
-                                type="submit"
-                                disabled={loading}
-                                className="w-full relative group overflow-hidden mt-6"
-                            >
-                                <div className="absolute inset-0 bg-primary/20 rounded-[2rem] blur group-hover:blur-xl transition-all opacity-0 group-hover:opacity-100"></div>
-                                <div className="relative bg-primary hover:bg-primary/90 text-white font-black py-5 rounded-[2rem] shadow-xl shadow-primary/20 transition-all hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-3 text-lg uppercase tracking-widest">
-                                    {loading ? (
-                                        <Loader2 className="w-6 h-6 animate-spin" />
-                                    ) : (
-                                        <span>Create Account</span>
-                                    )}
-                                </div>
-                            </button>
-                        </form>
-
-                        <div className="mt-10 flex flex-col items-center gap-6">
-                            <Link to="/login" className="text-[10px] font-black text-white/40 hover:text-primary uppercase tracking-[0.3em] transition-colors">
-                                Already have an account? <span className="text-primary underline">Log In</span>
-                            </Link>
-
-                            <button
-                                onClick={toggleLanguage}
-                                className="flex items-center gap-3 px-6 py-3 rounded-2xl bg-white/5 text-white/40 hover:text-white hover:bg-white/10 transition-all text-[10px] font-black uppercase tracking-[0.2em]"
-                            >
-                                <Globe className="w-4 h-4" />
-                                {i18n.language === 'en' ? 'Switch to Arabic' : 'Switch to English'}
-                            </button>
+                <form onSubmit={handleRegister} className="w-full flex flex-col space-y-7 animate-in fade-in slide-in-from-bottom-8 duration-1000 bg-transparent border-none shadow-none">
+                    <div className="space-y-1.5 px-0">
+                        <label className="text-[9px] font-black text-white/40 uppercase tracking-[0.4em]">{t('register.fullName')}</label>
+                        <div className={`flex items-center !bg-transparent border-b ${prefill.full_name ? 'border-white/5 opacity-50' : 'border-white/10 focus-within:border-red-500/40'} transition-all duration-500 group !rounded-none !shadow-none`}>
+                            <User className="w-3.5 h-3.5 text-white/40 group-focus-within:text-red-500/40 transition-colors mr-6" />
+                            <input 
+                                type="text" 
+                                required 
+                                readOnly={!!prefill.full_name} 
+                                className="w-full !bg-transparent !border-none !outline-none py-3 px-0 text-white font-bold text-sm tracking-wide !shadow-none !rounded-none" 
+                                value={fullName} 
+                                onChange={(e) => setFullName(e.target.value)} 
+                            />
                         </div>
                     </div>
+
+                    <div className="space-y-1.5 px-0">
+                        <label className="text-[9px] font-black text-white/40 uppercase tracking-[0.4em]">{t('register.phone')}</label>
+                        <div className={`flex items-center !bg-transparent border-b ${prefill.phone ? 'border-white/5 opacity-50' : 'border-white/10 focus-within:border-red-500/40'} transition-all duration-500 group !rounded-none !shadow-none`}>
+                            <Phone className="w-3.5 h-3.5 text-white/40 group-focus-within:text-red-500/40 transition-colors mr-6" />
+                            <input 
+                                type="text" 
+                                required 
+                                readOnly={!!prefill.phone} 
+                                className="w-full !bg-transparent !border-none !outline-none py-3 px-0 text-white font-bold text-sm tracking-wide text-left !shadow-none !rounded-none" 
+                                dir="ltr" 
+                                value={phone} 
+                                onChange={(e) => setPhone(e.target.value)} 
+                            />
+                        </div>
+                    </div>
+
+                    <div className="space-y-1.5 px-0">
+                        <label className="text-[9px] font-black text-white/40 uppercase tracking-[0.4em]">{t('register.email')}</label>
+                        <div className={`flex items-center !bg-transparent border-b ${prefill.email ? 'border-white/5 opacity-50' : 'border-white/10 focus-within:border-red-500/40'} transition-all duration-500 group !rounded-none !shadow-none`}>
+                            <Mail className="w-3.5 h-3.5 text-white/40 group-focus-within:text-red-500/40 transition-colors mr-6" />
+                            <input 
+                                type="email" 
+                                required 
+                                readOnly={!!prefill.email} 
+                                className="w-full !bg-transparent !border-none !outline-none py-3 px-0 text-white font-bold text-sm tracking-wide text-left !shadow-none !rounded-none" 
+                                dir="ltr" 
+                                value={email} 
+                                onChange={(e) => setEmail(e.target.value)} 
+                            />
+                        </div>
+                    </div>
+
+                    <div className="space-y-1.5 px-0">
+                        <label className="text-[9px] font-black text-white/40 uppercase tracking-[0.4em]">{t('register.password')}</label>
+                        <div className="flex items-center !bg-transparent border-b border-white/10 focus-within:border-red-500/40 transition-all duration-500 group !rounded-none !shadow-none">
+                            <Lock className="w-3.5 h-3.5 text-white/40 group-focus-within:text-red-500/40 transition-colors mr-6" />
+                            <input 
+                                type="password" 
+                                required 
+                                className="w-full !bg-transparent !border-none !outline-none py-3 px-0 text-white font-bold text-sm tracking-widest text-left !shadow-none !rounded-none" 
+                                dir="ltr" 
+                                placeholder="••••••••" 
+                                value={password} 
+                                onChange={(e) => setPassword(e.target.value)} 
+                            />
+                        </div>
+                    </div>
+
+                    {!prefill.role ? (
+                        <div className="space-y-1.5 px-0">
+                            <label className="text-[9px] font-black text-white/40 uppercase tracking-[0.4em]">{t('register.role')}</label>
+                            <div className="relative border-b border-white/10 focus-within:border-red-500/40 transition-all duration-500 !rounded-none">
+                                <select 
+                                    value={role} 
+                                    onChange={(e) => setRole(e.target.value as any)} 
+                                    className="w-full !px-0 !py-3 !bg-transparent text-white font-bold text-sm appearance-none outline-none cursor-pointer !rounded-none !border-none"
+                                >
+                                    <option value="coach" className="bg-black">{t('common.coach')}</option>
+                                    <option value="admin" className="bg-black">{t('common.adminRole')}</option>
+                                    <option value="student" className="bg-black">{t('common.student')}</option>
+                                </select>
+                                <ChevronDown className="absolute right-0 top-1/2 -translate-y-1/2 w-4 h-4 text-white/10 pointer-events-none" />
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="hidden">
+                            <label className="text-[9px] font-black text-white/40 uppercase tracking-[0.4em]">Fixed Role</label>
+                            <div className="text-red-500/20 font-black text-[10px] uppercase tracking-widest">{role}</div>
+                        </div>
+                    )}
+
+                    <div className="w-full flex justify-center pt-10">
+                        <button 
+                            type="submit" 
+                            disabled={loading} 
+                            className="bg-transparent border-none p-0 outline-none transition-all active:scale-95 group relative"
+                        >
+                            <style>{`
+                                @keyframes text-breathe {
+                                    0%, 100% { text-shadow: 0 0 10px rgba(220, 38, 38, 0.3); opacity: 0.6; transform: scale(1); }
+                                    50% { text-shadow: 0 0 30px rgba(220, 38, 38, 0.8), 0 0 50px rgba(220, 38, 38, 0.4); opacity: 1; transform: scale(1.05); }
+                                }
+                            `}</style>
+                            <span className="text-red-600 font-black text-xs uppercase tracking-[0.5em] animate-[text-breathe_3s_infinite_ease-in-out] block">
+                                {loading ? t('register.processing') : t('register.title')}
+                            </span>
+                        </button>
+                    </div>
+                </form>
+
+                <div className="mt-8 flex flex-col items-center gap-6 animate-in fade-in duration-1000">
+                    <Link to="/login" className="text-[9px] font-black text-white/20 hover:text-red-500 uppercase tracking-[0.4em] transition-all">
+                        {t('register.alreadyJoined')} <span className="text-red-500/60 underline underline-offset-4 decoration-red-500/20">{t('register.loginLink')}</span>
+                    </Link>
                 </div>
+
+                {/* Bottom Right Language Toggle */}
+                <button 
+                    onClick={toggleLanguage} 
+                    className="fixed bottom-6 right-6 w-8 h-8 flex items-center justify-center rounded-full bg-white/[0.02] text-white/10 hover:text-white/40 hover:bg-white/[0.05] transition-all border border-white/5 z-50 group"
+                    title={i18n.language === 'en' ? 'Switch to Arabic' : 'Switch to English'}
+                >
+                    <Globe className="w-3.5 h-3.5" />
+                    <span className="absolute right-full mr-3 text-[8px] font-black uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none text-white/20">
+                        {i18n.language === 'en' ? 'AR' : 'EN'}
+                    </span>
+                </button>
             </div>
         </div>
     );

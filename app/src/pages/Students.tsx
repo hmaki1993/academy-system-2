@@ -11,6 +11,7 @@ import GroupDetailsModal from '../components/GroupDetailsModal';
 import PageHeader from '../components/PageHeader';
 import ConfirmModal from '../components/ConfirmModal';
 import ImportStudentsModal from '../components/ImportStudentsModal';
+import QuickAddStudentModal from '../components/QuickAddStudentModal';
 import { useTranslation } from 'react-i18next';
 import { useStudents, useCoaches, useGroups } from '../hooks/useData';
 import toast from 'react-hot-toast';
@@ -250,6 +251,7 @@ export default function Students() {
     const { data: coachesData } = useCoaches();
     const { data: groupsData } = useGroups();
     const [showFilters, setShowFilters] = useState(false);
+    const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
     const [filters, setFilters] = useState({
         status: 'all',
         coachId: 'all',
@@ -840,6 +842,14 @@ export default function Students() {
                         </button>
 
                         <button
+                            onClick={() => setIsQuickAddOpen(true)}
+                            className="bg-primary/10 hover:bg-primary text-primary hover:text-white px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl border border-primary/20 shadow-lg shadow-primary/5 transition-all active:scale-95 whitespace-nowrap flex items-center justify-center gap-1.5 sm:gap-2 font-black uppercase tracking-widest text-[9px]"
+                        >
+                            <UserPlus className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                            Quick
+                        </button>
+
+                        <button
                             onClick={() => setShowImportModal(true)}
                             className="bg-gradient-to-r from-[#622347] to-[#8B3A62] hover:from-[#622347]/90 hover:to-[#8B3A62]/90 text-white px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl shadow-lg shadow-[#622347]/20 transition-all active:scale-95 whitespace-nowrap flex items-center justify-center gap-1.5 sm:gap-2 font-black uppercase tracking-widest text-[9px]"
                         >
@@ -1293,6 +1303,11 @@ export default function Students() {
                     />
                 )
             }
+            <QuickAddStudentModal 
+                isOpen={isQuickAddOpen}
+                onClose={() => setIsQuickAddOpen(false)}
+                onSuccess={() => refetch()}
+            />
         </div>
     );
 }

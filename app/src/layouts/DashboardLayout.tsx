@@ -10,6 +10,7 @@ import {
     Wallet,
     Settings,
     Video,
+    CreditCard,
     Menu,
     X,
     LogOut,
@@ -23,8 +24,10 @@ import {
     ExternalLink,
     ClipboardCheck,
     Activity,
+    Sparkles,
     Search,
-    Loader2
+    Loader2,
+    Film
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import toast from 'react-hot-toast';
@@ -100,15 +103,16 @@ export default function DashboardLayout() {
             let query = supabase
                 .from('notifications')
                 .select('*')
-                .or(`user_id.eq.${user.id},user_id.is.null`)
                 .order('created_at', { ascending: false })
                 .limit(20);
 
+            // Filter by user_id if needed (using separate filter instead of complex OR)
             const { data } = await query;
-            if (data) {
-                setNotifications(data);
-                // Mark initial loaded IDs as processed so we don't toast them if a race condition happens
-                data.forEach((n: any) => processedIds.current.add(n.id));
+            const filteredData = data?.filter((n: any) => !n.user_id || n.user_id === user.id);
+
+            if (filteredData) {
+                setNotifications(filteredData);
+                filteredData.forEach((n: any) => processedIds.current.add(n.id));
             }
         };
 
@@ -400,21 +404,26 @@ export default function DashboardLayout() {
         }
     };
 
+    const normalizedRole = role?.toLowerCase().trim().replace(/\s+/g, '_');
+
     const allNavItems = [
         { to: '/app', icon: LayoutDashboard, label: t('common.dashboard'), roles: ['admin', 'head_coach', 'coach', 'reception', 'cleaner', 'student'] },
-        { to: '/app/students', icon: Users, label: t('common.students'), roles: ['admin', 'head_coach', 'reception'] },
-        { to: '/app/coaches', icon: UserCircle, label: t('common.coaches'), roles: ['admin', 'head_coach'] },
-        { to: '/app/schedule', icon: Calendar, label: t('common.schedule'), roles: ['admin', 'head_coach', 'reception'] },
-        { to: '/app/finance', icon: Wallet, label: t('common.finance'), roles: ['admin'] },
+        { to: (normalizedRole === 'admin' || normalizedRole === 'head_coach' || normalizedRole === 'coach') ? '/app/pt-availability' : '/app/pt-booking', 
+          icon: CreditCard, 
+          label: (normalizedRole === 'admin' || normalizedRole === 'head_coach' || normalizedRole === 'coach') ? t('common.ptManagement', 'PT Management') : t('common.ptHub', 'PT HUB'), 
+          roles: ['admin', 'head_coach', 'coach', 'reception', 'student'] },
         { to: '/app/evaluations', icon: ClipboardCheck, label: t('common.evaluations', 'Evaluations'), roles: ['admin', 'head_coach'] },
         { to: '/app/my-work', icon: UserCircle, label: t('dashboard.myWork', 'My Work'), roles: ['head_coach'] },
         { to: '/app/communications', icon: MessageSquare, label: t('common.communications', 'Chats'), roles: ['admin', 'head_coach', 'coach', 'reception', 'cleaner', 'student'] },
-        { to: '/app/admin/cameras', icon: Video, label: t('common.cameras'), roles: ['admin'] },
-        { to: '/app/smart-training', icon: Activity, label: t('common.performanceTracker'), roles: ['admin', 'head_coach', 'coach', 'student'] },
+        { to: (normalizedRole === 'student') ? '/app/book-consultation' : '/app/consultations', 
+          icon: Video, 
+          label: (normalizedRole === 'student') ? t('common.bookConsultation', 'Book Consultation') : t('common.consultations', 'Consultations'), 
+          roles: ['admin', 'student'] },
+        { to: '/app/strategy-hub', icon: Sparkles, label: 'Strategy Hub', roles: ['admin', 'head_coach', 'coach'] },
+        { to: '/app/smart-training', icon: Activity, label: 'AI Camera Tracker', roles: ['admin', 'head_coach', 'coach', 'student'] },
+        { to: '/app/video-library', icon: Film, label: t('common.videoLibrary'), roles: ['admin', 'head_coach', 'coach', 'student'] },
         { to: '/app/settings', icon: Settings, label: t('common.settings'), roles: ['admin', 'head_coach', 'coach', 'reception', 'cleaner', 'student'] },
     ];
-
-    const normalizedRole = role?.toLowerCase().trim().replace(/\s+/g, '_');
 
     const navItems = allNavItems.filter(item => {
         if (!normalizedRole) return false; // Show nothing while loading to avoid flickering
@@ -574,13 +583,13 @@ export default function DashboardLayout() {
             <aside
                 onMouseEnter={() => setIsHoveringSidebar(true)}
                 onMouseLeave={() => setIsHoveringSidebar(false)}
-                className={`fixed z-[300] transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] flex flex-col no-print
+                className={`fixed z-[300] transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] flex flex-col no-print
                     bottom-0 left-0 right-0 w-full h-[100dvh]
                     lg:top-0 lg:bottom-0 lg:h-full lg:rounded-none
                     ${isRtl ? 'lg:right-0 lg:left-auto lg:border-l' : 'lg:left-0 lg:right-auto lg:border-r'}
                     ${isHoveringSidebar
-                        ? 'lg:w-64 lg:bg-white/[0.02] lg:backdrop-blur-3xl lg:border-white/[0.05] lg:shadow-[20px_0_60px_-15px_rgba(0,0,0,0.8)]'
-                        : 'lg:w-20 lg:bg-white/[0.01] lg:backdrop-blur-2xl lg:border-transparent lg:shadow-none'
+                        ? 'lg:w-64 lg:bg-black/20 lg:backdrop-blur-[60px] lg:border-white/5 lg:shadow-[40px_0_100px_-20px_rgba(0,0,0,0.9)]'
+                        : 'lg:w-20 lg:bg-black/10 lg:backdrop-blur-[40px] lg:border-transparent lg:shadow-none'
                     }
                     transform ${sidebarOpen
                         ? 'translate-y-0 lg:translate-x-0'
@@ -592,7 +601,7 @@ export default function DashboardLayout() {
                 style={{ zIndex: 300 }}
             >
                 {/* Intrinsic Sidebar Glow */}
-                <div className="absolute inset-0 pointer-events-none z-0 opacity-10" style={{ background: 'radial-gradient(circle at 50% 30%, var(--color-primary), transparent 65%)' }} />
+                <div className="absolute inset-0 pointer-events-none z-0 opacity-[0.03]" style={{ background: 'radial-gradient(circle at 50% 30%, var(--color-primary), transparent 65%)' }} />
 
                 {/* ---- MOBILE LAYOUT: Full-Screen Glassy Grid ---- */}
                 <div className="lg:hidden flex flex-col h-[100dvh] bg-black/40 backdrop-blur-3xl pt-safe pb-safe overflow-hidden">
@@ -623,15 +632,18 @@ export default function DashboardLayout() {
                                         key={item.to}
                                         to={item.to}
                                         onClick={() => setSidebarOpen(false)}
-                                        className={`flex flex-col items-center justify-center gap-1.5 px-3 py-3 rounded-2xl transition-all duration-300 active:scale-95 group
-                                            ${isActive ? 'bg-transparent text-primary' : 'bg-transparent text-white/60 hover:text-white'}`}
+                                        className={`flex flex-col items-center justify-center gap-2 px-3 py-4 rounded-3xl transition-all duration-500 active:scale-90 group relative overflow-hidden
+                                            ${isActive ? 'bg-white/5 border border-white/10 shadow-[0_0_20px_rgba(255,255,255,0.05)]' : 'bg-white/[0.02] border border-white/[0.03]'}`}
                                     >
-                                        <div className="shrink-0 flex items-center justify-center h-8">
-                                            <Icon className={`w-6 h-6 transition-all duration-300 ${isActive ? 'text-primary scale-110 drop-shadow-[0_0_8px_rgba(var(--primary-rgb,16,185,129),0.5)]' : 'text-white/60 group-hover:text-white'}`} />
+                                        {isActive && (
+                                            <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-transparent pointer-events-none" />
+                                        )}
+                                        <div className="shrink-0 flex items-center justify-center h-8 relative z-10">
+                                            <Icon className={`w-7 h-7 transition-all duration-500 ${isActive ? 'text-primary scale-110 drop-shadow-[0_0_12px_rgba(var(--primary-rgb,16,185,129),0.6)]' : 'text-white/30 group-hover:text-white/80'}`} />
                                         </div>
-                                        <span className={`font-bold text-[10px] uppercase tracking-widest leading-none truncate transition-all duration-300
-                                            ${isActive ? 'text-primary' : 'text-white/60 group-hover:text-white'}`}>
-                                            {t(item.label)}
+                                        <span className={`font-black text-[9px] uppercase tracking-[0.2em] leading-none truncate transition-all duration-500 relative z-10
+                                            ${isActive ? 'text-white' : 'text-white/20 group-hover:text-white/40'}`}>
+                                            {item.label}
                                         </span>
                                     </Link>
                                 );
@@ -704,30 +716,33 @@ export default function DashboardLayout() {
                                         to={item.to}
                                         onClick={() => setSidebarOpen(false)}
                                         onMouseEnter={playHoverSound}
-                                        className={`relative group grid w-full ${isHoveringSidebar ? 'grid-cols-[80px_1fr] items-center' : 'place-items-center'} p-1.5 rounded-xl transition-all duration-300 ${isActive ? 'sidebar-active-glow' : 'hover:bg-white/[0.03]'}`}
+                                        className={`relative group grid w-full ${isHoveringSidebar ? 'grid-cols-[80px_1fr] items-center' : 'place-items-center'} p-2 rounded-2xl transition-all duration-500 ${isActive ? 'bg-white/5 border-l-2 border-primary' : 'hover:bg-white/[0.03]'}`}
                                     >
+                                        {/* Neon Glimmer for Active State */}
+                                        {isActive && (
+                                            <div className={`absolute inset-0 bg-gradient-to-r ${isRtl ? 'from-transparent to-primary/5' : 'from-primary/5 to-transparent'} pointer-events-none`} />
+                                        )}
+
                                         <div
-                                            className={`nav-icon-container shrink-0 w-8 h-8 rounded-xl flex items-center justify-center transition-all duration-500 mx-auto ${isActive ? 'active text-primary scale-110' : 'bg-transparent text-white/50 group-hover:text-white group-hover:scale-110'}`}
-                                            style={{ color: isActive ? 'var(--color-primary)' : 'var(--color-text-base)' }}
+                                            className={`nav-icon-container shrink-0 w-8 h-8 rounded-xl flex items-center justify-center transition-all duration-500 mx-auto relative z-10 ${isActive ? 'text-primary scale-110 drop-shadow-[0_0_10px_rgba(var(--primary-rgb,16,185,129),0.4)]' : 'text-white/20 group-hover:text-white group-hover:scale-110'}`}
+                                            style={{ color: isActive ? 'var(--color-primary)' : '' }}
                                         >
-                                            <Icon className={`w-4 h-4 transition-all duration-300 group-hover:scale-110 ${isActive ? '' : 'opacity-40 group-hover:opacity-100'}`} />
+                                            <Icon className={`w-4 h-4 transition-all duration-500 ${isActive ? 'rotate-[360deg]' : 'opacity-40 group-hover:opacity-100 group-hover:rotate-12'}`} />
                                         </div>
 
-                                        {/* Desktop Label - Reveals on Hover */}
+                                        {/* Desktop Label - Elite Typography */}
                                         <span 
-                                            className={`font-bold uppercase tracking-widest text-[11px] transition-all duration-500 whitespace-nowrap overflow-hidden ${isHoveringSidebar ? 'w-40 opacity-100 translate-x-0' : 'w-0 opacity-0 -translate-x-2'} ${isActive ? '' : 'opacity-60 group-hover:opacity-100 group-hover:translate-x-1'}`}
-                                            style={{ color: isActive ? 'var(--color-primary)' : 'var(--color-text-base)' }}
+                                            className={`font-black uppercase tracking-[0.3em] text-[10px] transition-all duration-700 whitespace-nowrap overflow-hidden relative z-10 ${isHoveringSidebar ? 'w-40 opacity-100 translate-x-0' : 'w-0 opacity-0 -translate-x-4'} ${isActive ? 'text-white' : 'text-white/10 group-hover:text-white/40 group-hover:translate-x-1'}`}
                                         >
-                                            {t(item.label)}
+                                            {item.label}
                                         </span>
 
-                                        {/* Desktop Tooltip */}
+                                        {/* Desktop Tooltip - Premium Style */}
                                         {!isHoveringSidebar && (
                                             <div 
-                                                className={`absolute ${isRtl ? 'right-full mr-4' : 'left-full ml-4'} px-3 py-1.5 rounded-xl bg-black/80 backdrop-blur-xl border border-white/10 text-[10px] font-bold uppercase tracking-widest opacity-0 pointer-events-none transition-all duration-300 group-hover:opacity-100 z-50 whitespace-nowrap shadow-xl`}
-                                                style={{ color: 'var(--color-text-base)' }}
+                                                className={`absolute ${isRtl ? 'right-full mr-6' : 'left-full ml-6'} px-4 py-2 rounded-xl bg-black/90 backdrop-blur-2xl border border-white/5 text-[9px] font-black uppercase tracking-[0.4em] text-white opacity-0 pointer-events-none transition-all duration-500 group-hover:opacity-100 z-[400] whitespace-nowrap shadow-2xl scale-90 group-hover:scale-100`}
                                             >
-                                                {t(item.label)}
+                                                {item.label}
                                             </div>
                                         )}
                                     </Link>
@@ -736,8 +751,7 @@ export default function DashboardLayout() {
                         })}
                     </div>
 
-                    {/* Footer - Desktop: Bottom buttons */}
-                    <div className={`flex flex-col gap-2 pb-4 border-none pt-2 mt-auto shrink-0 ${isHoveringSidebar ? 'items-start px-4' : 'items-center'}`}>
+                    <div className={`flex flex-col gap-3 pb-6 border-none pt-4 mt-auto shrink-0 ${isHoveringSidebar ? 'items-start px-6' : 'items-center'}`}>
                         <button
                             onClick={() => {
                                 const newLang = i18n.language === 'en' ? 'ar' : 'en';
@@ -746,13 +760,13 @@ export default function DashboardLayout() {
                                 updateSettings({ language: newLang });
                             }}
                             onMouseEnter={playHoverSound}
-                            className={`grid w-full text-muted hover:text-gold transition-all duration-300 group ${isHoveringSidebar ? 'grid-cols-[80px_1fr] items-center' : 'place-items-center'}`}
+                            className={`grid w-full transition-all duration-500 group relative ${isHoveringSidebar ? 'grid-cols-[60px_1fr] items-center' : 'place-items-center'}`}
                             title="Change Language"
                         >
-                            <div className="w-7 h-7 lg:w-8 lg:h-8 flex items-center justify-center rounded-lg lg:rounded-xl shrink-0 mx-auto transition-all duration-300 group-hover:scale-110 group-hover:text-gold text-white/70">
-                                <Globe className="w-3.5 h-3.5 lg:w-4 lg:h-4" />
+                            <div className="w-8 h-8 flex items-center justify-center rounded-xl shrink-0 mx-auto transition-all duration-500 group-hover:scale-110 text-white/20 group-hover:text-primary relative z-10">
+                                <Globe className="w-4 h-4" />
                             </div>
-                            <span className={`font-bold uppercase tracking-widest text-[11px] whitespace-nowrap transition-all duration-500 overflow-hidden ${isHoveringSidebar ? 'w-40 opacity-100 translate-x-0' : 'w-0 opacity-0 -translate-x-2'} group-hover:translate-x-1 group-hover:text-gold`}>
+                            <span className={`font-black uppercase tracking-[0.3em] text-[9px] whitespace-nowrap transition-all duration-500 overflow-hidden relative z-10 ${isHoveringSidebar ? 'w-40 opacity-100 translate-x-0' : 'w-0 opacity-0 -translate-x-4'} text-white/10 group-hover:text-white/40 group-hover:translate-x-1`}>
                                 {i18n.language === 'en' ? 'Arabic' : 'English'}
                             </span>
                         </button>
@@ -760,13 +774,13 @@ export default function DashboardLayout() {
                         <button
                             onClick={handleLogout}
                             onMouseEnter={playHoverSound}
-                            className={`grid w-full text-rose-500 hover:text-gold transition-all duration-300 group ${isHoveringSidebar ? 'grid-cols-[80px_1fr] items-center' : 'place-items-center'}`}
+                            className={`grid w-full transition-all duration-500 group relative ${isHoveringSidebar ? 'grid-cols-[60px_1fr] items-center' : 'place-items-center'}`}
                             title="Logout"
                         >
-                            <div className="w-7 h-7 lg:w-8 lg:h-8 flex items-center justify-center shrink-0 mx-auto transition-all duration-300 group-hover:scale-110 text-rose-500">
-                                <LogOut className="w-3.5 h-3.5 lg:w-4 lg:h-4 transition-transform" />
+                            <div className="w-8 h-8 flex items-center justify-center rounded-xl shrink-0 mx-auto transition-all duration-500 group-hover:scale-110 text-rose-500/20 group-hover:text-rose-500 relative z-10">
+                                <LogOut className="w-4 h-4 transition-transform group-hover:-translate-x-1" />
                             </div>
-                            <span className={`font-bold uppercase tracking-widest text-[11px] whitespace-nowrap transition-all duration-500 overflow-hidden ${isHoveringSidebar ? 'w-40 opacity-100 translate-x-0' : 'w-0 opacity-0 -translate-x-2'} group-hover:translate-x-1 group-hover:text-gold`}>
+                            <span className={`font-black uppercase tracking-[0.3em] text-[9px] whitespace-nowrap transition-all duration-500 overflow-hidden relative z-10 ${isHoveringSidebar ? 'w-40 opacity-100 translate-x-0' : 'w-0 opacity-0 -translate-x-4'} text-white/10 group-hover:text-rose-400 group-hover:translate-x-1`}>
                                 {t('common.logout')}
                             </span>
                         </button>
@@ -775,9 +789,9 @@ export default function DashboardLayout() {
             </aside>
 
             {/* Main Content Area */}
-            <div className={`flex-1 flex flex-col min-w-0 h-full transition-all duration-500 ${isChatView && !isHoveringSidebar ? 'lg:m-0' : (isRtl ? 'lg:mr-20' : 'lg:ml-20')}`}>
+            <div className={`flex-1 flex flex-col min-w-0 h-full transition-all duration-500 bg-transparent ${isChatView && !isHoveringSidebar ? 'lg:m-0' : (isRtl ? 'lg:mr-20' : 'lg:ml-20')}`}>
                 {/* Header - Branding */}
-                {!location.pathname.includes('/communications') && !location.pathname.includes('/smart-training') && (
+                {!location.pathname.includes('/communications') && (
                     <header className={`premium-header-strip relative z-20 w-full pt-4 lg:pt-0 px-4 sm:px-6 lg:px-0 flex flex-col items-center lg:items-center`}>
                         <div className="w-full max-w-7xl lg:max-w-none h-18 lg:h-12 flex items-center justify-between px-2 sm:px-6 relative">
                             {/* Left Side Section - Clock & Mobile Toggle */}

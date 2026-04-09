@@ -1,67 +1,78 @@
 
 /**
- * Utility to extract the dominant color from an image URL using Canvas.
- * Useful for building "AI-driven" dynamic themes.
+ * Helper to create an image element from a URL
  */
-export async function getDominantColor(imageUrl: string): Promise<string | null> {
-    return new Promise((resolve) => {
-        const img = new Image();
-        img.crossOrigin = "Anonymous";
-        img.onload = () => {
-            const canvas = document.createElement('canvas');
-            const ctx = canvas.getContext('2d');
-            if (!ctx) return resolve(null);
-
-            canvas.width = img.width;
-            canvas.height = img.height;
-            ctx.drawImage(img, 0, 0, img.width, img.height);
-
-            try {
-                const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
-                let r = 0, g = 0, b = 0, count = 0;
-
-                // Sample every 10th pixel for performance
-                for (let i = 0; i < imageData.length; i += 40) {
-                    const alpha = imageData[i + 3];
-                    // Skip transparent/too dark/too light pixels for better "brand" color
-                    if (alpha > 128) {
-                        const pr = imageData[i];
-                        const pg = imageData[i + 1];
-                        const pb = imageData[i + 2];
-                        
-                        // Heuristic to ignore extreme whites/blacks
-                        const brightness = (pr + pg + pb) / 3;
-                        if (brightness > 30 && brightness < 230) {
-                            r += pr;
-                            g += pg;
-                            b += pb;
-                            count++;
-                        }
-                    }
-                }
-
-                if (count === 0) return resolve(null);
-
-                r = Math.floor(r / count);
-                g = Math.floor(g / count);
-                b = Math.floor(b / count);
-
-                const toHex = (c: number) => c.toString(16).padStart(2, '0');
-                resolve(`#${toHex(r)}${toHex(g)}${toHex(b)}`);
-            } catch (e) {
-                console.warn('Could not extract image data (CORS?)', e);
-                resolve(null);
-            }
-        };
-        img.onerror = () => resolve(null);
-        img.src = imageUrl;
-    });
-}
+export const createImage = (url: string): Promise<HTMLImageElement> =>
+  new Promise((resolve, reject) => {
+    const image = new Image();
+    image.addEventListener('load', () => resolve(image));
+    image.addEventListener('error', (error) => reject(error));
+    image.setAttribute('crossOrigin', 'anonymous'); // needed to avoid cross-origin issues
+    image.src = url;
+  });
 
 /**
- * Adjusts a hex color's lightness.
+ * Returns the cropped image as a Blob
  */
-export function adjustColor(color: string, amount: number): string {
-    return '#' + color.replace(/^#/, '').replace(/../g, color => 
-        ('0' + Math.min(255, Math.max(0, parseInt(color, 16) + amount)).toString(16)).substr(-2));
+export async function getCroppedImg(
+  imageSrc: string,
+  pixelCrop: { x: number; y: number; width: number; height: number },
+  rotation = 0,
+  flip = { horizontal: false, vertical: false }
+): Promise<Blob | null> {
+  const image = await createImage(imageSrc);
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
+
+  if (!ctx) {
+    return null;
+  }
+
+  const rotRad = (rotation * Math.PI) / 180;
+
+  // calculate bounding box of the rotated image
+  const { width: bWidth, height: bHeight } = {
+      width: Math.abs(Math.cos(rotRad) * image.width) + Math.abs(Math.sin(rotRad) * image.height),
+      height: Math.abs(Math.sin(rotRad) * image.width) + Math.abs(Math.cos(rotRad) * image.height),
+  };
+
+  canvas.width = pixelCrop.width;
+  canvas.height = pixelCrop.height;
+
+  ctx.translate(canvas.width / 2, canvas.height / 2);
+  ctx.scale(flip.horizontal ? -1 : 1, flip.vertical ? -1 : 1);
+  ctx.translate(-canvas.width / 2, -canvas.height / 2);
+
+  // draw image to canvas
+  // we draw the image rotated around its center, then crop it
+  const tempCanvas = document.createElement('canvas');
+  const tempCtx = tempCanvas.getContext('2d');
+  if (!tempCtx) return null;
+
+  tempCanvas.width = bWidth;
+  tempCanvas.height = bHeight;
+
+  tempCtx.translate(bWidth / 2, bHeight / 2);
+  tempCtx.rotate(rotRad);
+  tempCtx.translate(-image.width / 2, -image.height / 2);
+  tempCtx.drawImage(image, 0, 0);
+
+  // draw the cropped portion from the rotated temporary canvas onto the main canvas
+  ctx.drawImage(
+    tempCanvas,
+    pixelCrop.x,
+    pixelCrop.y,
+    pixelCrop.width,
+    pixelCrop.height,
+    0,
+    0,
+    pixelCrop.width,
+    pixelCrop.height
+  );
+
+  return new Promise((resolve) => {
+    canvas.toBlob((blob) => {
+      resolve(blob);
+    }, 'image/jpeg');
+  });
 }

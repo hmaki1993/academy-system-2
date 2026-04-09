@@ -22,6 +22,18 @@ i18n
                         switchToEnglish: 'Switch to English',
                         switchToArabic: 'Switch to Arabic'
                     },
+                    register: {
+                        title: 'Create Account',
+                        subtitle: 'Join the Elite Academy',
+                        fullName: 'Full Name',
+                        phone: 'Phone Number',
+                        email: 'Email Address',
+                        password: 'Secure Password',
+                        role: 'Account Role',
+                        alreadyJoined: 'Already joined?',
+                        loginLink: 'Log In',
+                        processing: 'Processing...'
+                    },
                     common: {
                         dashboard: 'Dashboard',
                         today: 'Today',
@@ -60,6 +72,7 @@ i18n
                         noResults: 'No results found',
                         daysLeft: '{{count}} days left',
                         cameras: 'Live Cameras',
+                        ptManagement: 'PT Management',
                         confirm: 'OK',
                         chat: 'Staff Chat',
                         online: 'Online',
@@ -123,7 +136,13 @@ i18n
                         mother: 'Mother',
                         accessRestricted: 'Access Restricted: Only Admin or Head Coach can manage this',
                         performanceTracker: 'Performance Tracker',
-                        attendance: 'Attendance'
+                        attendance: 'Attendance',
+                        videoLibrary: 'Video Library',
+                        trainingLevel: 'Training Level',
+                        currentLevel: 'Current Level',
+                        nextLevel: 'Next Level',
+                        promoteStudent: 'Promote Gymnast',
+                        level: 'Level'
                     },
                     cameras: {
                         subtitle: 'Monitor gym activities in real-time',
@@ -511,6 +530,39 @@ i18n
                         work: 'Work',
                         rest: 'Rest',
                         jpm: 'JPM'
+                    },
+                    videoLibrary: {
+                        title: 'Video Library',
+                        subtitle: 'Training Sessions',
+                        premiumSubtitle: 'Premium Training',
+                        searchPlaceholder: 'Search skill...',
+                        all: 'All',
+                        basics: 'Basics',
+                        flexibility: 'Flexibility',
+                        fitness: 'Fitness',
+                        skills: 'Skills',
+                        noDescription: 'No description available for this training.',
+                        instructorFallback: 'Academy Coach',
+                        emptyTitle: 'Library is Empty',
+                        emptySubtitleAdmin: 'Start by adding your first training video',
+                        emptySubtitleUser: 'Try searching with different keywords',
+                        addVideo: 'Add Video',
+                        deleteConfirmTitle: 'Delete this training?',
+                        deleteConfirmDesc: 'This action cannot be undone. The video will be permanently removed from the library.',
+                        deleting: 'Deleting...',
+                        confirmDelete: 'Confirm Delete',
+                        cancel: 'Cancel',
+                        uploadTitle: 'Upload New Training',
+                        videoFile: 'Video File',
+                        thumbnailFile: 'Thumbnail (Optional)',
+                        titleLabel: 'Title',
+                        descriptionLabel: 'Description',
+                        categoryLabel: 'Category',
+                        isPremium: 'Premium Access',
+                        uploading: 'Uploading...',
+                        saveVideo: 'Save Video',
+                        uploadSuccess: 'Video uploaded successfully!',
+                        uploadError: 'Failed to upload video'
                     }
                 }
             },
@@ -523,6 +575,18 @@ i18n
                         switchLanguage: 'تغيير إلى {{lang}}',
                         switchToEnglish: 'تغيير إلى الإنجليزية',
                         switchToArabic: 'تغيير إلى العربية'
+                    },
+                    register: {
+                        title: 'إنشاء حساب',
+                        subtitle: 'انضم إلى أكاديمية النخبة',
+                        fullName: 'الاسم بالكامل',
+                        phone: 'رقم الهاتف',
+                        email: 'البريد الإلكتروني',
+                        password: 'كلمة السر آمنة',
+                        role: 'نوع الحساب',
+                        alreadyJoined: 'لديك حساب بالفعل؟',
+                        loginLink: 'تسجيل الدخول',
+                        processing: 'جاري المعالجة...'
                     },
                     common: {
                         dashboard: 'لوحة التحكم',
@@ -562,6 +626,7 @@ i18n
                         noResults: 'لا توجد نتائج',
                         daysLeft: 'متبقي {{count}} يوم',
                         cameras: 'كاميرات المراقبة',
+                        ptManagement: 'إدارة الـ PT',
                         confirm: 'تأكيد',
                         chat: 'شات الموظفين',
                         online: 'متصل',
@@ -631,7 +696,14 @@ i18n
                         mother: 'الأم',
                         accessRestricted: 'غير مسموح: متاح فقط للمدير أو كبير المدربين',
                         performanceTracker: 'متبع التمارين',
-                        attendance: 'الحضور'
+                        attendance: 'الحضور',
+                        videoLibrary: 'مكتبة الفيديوهات',
+                        subtitle: 'حصص تدريبية',
+                        trainingLevel: 'مستوى التدريب',
+                        currentLevel: 'المستوى الحالي',
+                        nextLevel: 'المستوى التالي',
+                        promoteStudent: 'ترقية المتدربة لفئة أعلى',
+                        level: 'المستوى'
                     },
                     dashboard: {
                         welcome: 'مرحباً بك',
@@ -1006,6 +1078,38 @@ i18n
                         work: 'تمرين',
                         rest: 'راحة',
                         jpm: 'نطة/د'
+                    },
+                    videoLibrary: {
+                        title: 'مكتبة الفيديوهات',
+                        premiumSubtitle: 'تدريب بريميوم',
+                        searchPlaceholder: 'ابحث عن مهارة...',
+                        all: 'الكل',
+                        basics: 'أساسيات',
+                        flexibility: 'مرونة',
+                        fitness: 'لياقة',
+                        skills: 'مهارات',
+                        noDescription: 'لا يوجد وصف متاح لهذا التدريب.',
+                        instructorFallback: 'كوتش الأكاديمية',
+                        emptyTitle: 'المكتبة خالية',
+                        emptySubtitleAdmin: 'ابدأ بإضافة أول فيديو تعليمي للفريق',
+                        emptySubtitleUser: 'جرب البحث بكلمات أخرى',
+                        addVideo: 'إضافة فيديو',
+                        deleteConfirmTitle: 'حذف هذا التدريب؟',
+                        deleteConfirmDesc: 'هذا الإجراء لا يمكن التراجع عنه، سيتم مسح الفيديو نهائياً من المكتبة.',
+                        deleting: 'جاري الحذف...',
+                        confirmDelete: 'تأكيد الحذف',
+                        cancel: 'تراجع',
+                        uploadTitle: 'رفع تدريب جديد',
+                        videoFile: 'ملف الفيديو',
+                        thumbnailFile: 'الصورة المصغرة (اختياري)',
+                        titleLabel: 'العنوان',
+                        descriptionLabel: 'الوصف',
+                        categoryLabel: 'التصنيف',
+                        isPremium: 'محتوى بريميوم',
+                        uploading: 'جاري الرفع...',
+                        saveVideo: 'حفظ الفيديو',
+                        uploadSuccess: 'تم رفع الفيديو بنجاح!',
+                        uploadError: 'فشل في رفع الفيديو'
                     }
                 }
             }

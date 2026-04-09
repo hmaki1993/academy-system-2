@@ -381,6 +381,9 @@ export default function Finance() {
                     ) : (
                         payments.map((payment) => {
                             const isPT = payment.notes?.toLowerCase().includes('pt');
+                            const isLevelPurchase = payment.notes?.includes('[LEVEL_PURCHASE]');
+                            const levelMatch = payment.notes?.match(/Level (\d+)/);
+                            const levelNum = levelMatch ? levelMatch[1] : null;
                             const isSelected = selectedItems.includes(payment.id);
                             return (
                                 <div
@@ -409,8 +412,12 @@ export default function Finance() {
                                             <div className="min-w-0">
                                                 <h3 className="font-black text-white text-base truncate tracking-tight">{payment.students?.full_name || (payment.notes?.split(' - ')[1]?.split(' (')[0]?.trim() || t('common.guest'))}</h3>
                                                 <div className="flex items-center gap-2 mt-0.5">
-                                                    <span className={`px-1.5 py-0.5 rounded text-[7px] font-black uppercase tracking-widest border ${!isPT ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-primary/10 text-primary border-primary/20'}`}>
-                                                        {isPT ? t('pt.title') : t('common.student')}
+                                                    <span className={`px-1.5 py-0.5 rounded text-[7px] font-black uppercase tracking-widest border ${
+                                                        isLevelPurchase 
+                                                        ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' 
+                                                        : !isPT ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-primary/10 text-primary border-primary/20'
+                                                    }`}>
+                                                        {isLevelPurchase ? `Level ${levelNum} Access` : isPT ? t('pt.title') : t('common.student')}
                                                     </span>
                                                     <span className="text-[9px] font-black text-white/20 uppercase tracking-widest">
                                                         {format(new Date(payment.payment_date), 'dd MMM yyyy')}
@@ -481,6 +488,9 @@ export default function Finance() {
                             ) : (
                                 payments.map((payment) => {
                                     const isPT = payment.notes?.toLowerCase().includes('pt');
+                                    const isLevelPurchase = payment.notes?.includes('[LEVEL_PURCHASE]');
+                                    const levelMatch = payment.notes?.match(/Level (\d+)/);
+                                    const levelNum = levelMatch ? levelMatch[1] : null;
                                     const isSelected = selectedItems.includes(payment.id);
                                     return (
                                         <tr key={payment.id} className={`group hover:bg-white/[0.04] transition-all duration-500 ${isSelected ? 'bg-primary/5' : ''}`}>
@@ -516,14 +526,18 @@ export default function Finance() {
                                             </td>
                                             <td className="px-4 py-2">
                                                 <span
-                                                    className={`px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-[0.1em] border transition-all duration-500 ${!isPT ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 group-hover:bg-emerald-500/20' : ''}`}
-                                                    style={isPT ? {
+                                                    className={`px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-[0.1em] border transition-all duration-500 ${
+                                                        isLevelPurchase 
+                                                        ? 'bg-blue-500/10 text-blue-400 border-blue-500/20 group-hover:bg-blue-500/20' 
+                                                        : !isPT ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 group-hover:bg-emerald-500/20' : ''
+                                                    }`}
+                                                    style={isPT && !isLevelPurchase ? {
                                                         color: 'var(--color-brand-label)',
                                                         backgroundColor: 'color-mix(in srgb, var(--color-brand-label), transparent 90%)',
                                                         borderColor: 'color-mix(in srgb, var(--color-brand-label), transparent 80%)'
                                                     } : {}}
                                                 >
-                                                    {isPT ? t('pt.title') : t('common.student')}
+                                                    {isLevelPurchase ? `Level ${levelNum} Access` : isPT ? t('pt.title') : t('common.student')}
                                                 </span>
                                             </td>
                                             <td className="px-4 py-2">

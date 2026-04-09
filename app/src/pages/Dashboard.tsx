@@ -14,6 +14,7 @@ import LiveStudentsWidget from '../components/LiveStudentsWidget';
 import GroupsList from '../components/GroupsList';
 import BatchAssessmentModal from '../components/BatchAssessmentModal';
 import AssessmentHistoryModal from '../components/AssessmentHistoryModal';
+import QuickAddStudentModal from '../components/QuickAddStudentModal';
 import { useCurrency } from '../context/CurrencyContext';
 import PremiumClock from '../components/PremiumClock';
 import { useTheme } from '../context/ThemeContext';
@@ -32,9 +33,10 @@ export default function Dashboard() {
     const { formatPrice } = useCurrency();
     const [showBatchTest, setShowBatchTest] = useState(false);
     const [showHistory, setShowHistory] = useState(false);
+    const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
 
-    const { data: stats, isLoading: loading } = useDashboardStats();
-    const { data: financialTrends } = useFinancialTrends();
+    const { data: stats, isLoading: loading, refetch } = useDashboardStats(role as string);
+    const { data: financialTrends } = useFinancialTrends(role as string);
     const { currency } = useCurrency();
 
     // Show loading while role is being determined
@@ -141,6 +143,16 @@ export default function Dashboard() {
                         {t('dashboard.greeting', 'Hello')}, <span className="premium-gradient-text">{fullName?.split(' ')[0] || 'Admin'}</span>
                     </h1>
                     <div className="flex items-center gap-2">
+                        <button
+                            onClick={() => setIsQuickAddOpen(true)}
+                            onMouseEnter={playHoverSound}
+                            className="group relative px-4 py-2 bg-primary/10 border border-primary/20 rounded-xl hover:bg-primary hover:text-white hover:scale-105 transition-all duration-300 active:scale-95 shadow-lg shadow-primary/10"
+                        >
+                            <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest relative z-10 transition-colors">
+                                <UserPlus className="w-3.5 h-3.5" />
+                                <span>{t('dashboard.addStudent', 'Quick Add')}</span>
+                            </div>
+                        </button>
                         <button
                             onClick={() => setShowBatchTest(true)}
                             onMouseEnter={playHoverSound}
@@ -313,6 +325,14 @@ export default function Dashboard() {
                 isOpen={showHistory}
                 onClose={() => setShowHistory(false)}
                 currentCoachId={null}
+            />
+
+            <QuickAddStudentModal 
+                isOpen={isQuickAddOpen}
+                onClose={() => setIsQuickAddOpen(false)}
+                onSuccess={() => {
+                    refetch();
+                }}
             />
         </div>
     );

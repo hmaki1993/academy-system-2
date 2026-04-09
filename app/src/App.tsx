@@ -1,5 +1,6 @@
-import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
+import { usePresence } from './hooks/usePresence';
 import { lazy, Suspense, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -29,15 +30,25 @@ const LandingPage = lazy(() => import('./pages/LandingPage'));
 const Communications = lazy(() => import('./pages/Communications'));
 const SmartTraining = lazy(() => import('./pages/SmartTraining'));
 
+// Consultations
+const ConsultationsAdmin = lazy(() => import('./pages/ConsultationsAdmin'));
+const BookConsultation = lazy(() => import('./pages/BookConsultation'));
+
+// Fame Academy Features
+const VideoLibrary = lazy(() => import('./features/video-library/VideoLibrary'));
+const PTAvailabilityAdmin = lazy(() => import('./features/zoom-pt/PTAvailabilityAdmin'));
+const PTStudentBookings = lazy(() => import('./features/zoom-pt/PTStudentBookings'));
+
 // Jump Rope Independent Layout & App
 const JumpRopeLayout = lazy(() => import('./layouts/JumpRopeLayout'));
-const JumpRopeLanding = lazy(() => import('./pages/JumpRopeLanding'));
-const JumpRopeHub = lazy(() => import('./pages/JumpRopeHub'));
-const JumpRopeTraining = lazy(() => import('./pages/JumpRopeTraining'));
-const JumpRopeLeaderboard = lazy(() => import('./pages/JumpRopeLeaderboard'));
-const JumpRopeHistory = lazy(() => import('./pages/JumpRopeHistory'));
-const JumpRopeSettings = lazy(() => import('./pages/JumpRopeSettings'));
-const JumpRopeAdmin = lazy(() => import('./pages/JumpRopeAdmin'));
+const JumpRopeLanding = lazy(() => import('./features/jump-rope/JumpRopeLanding'));
+const JumpRopeHub = lazy(() => import('./features/jump-rope/JumpRopeHub'));
+const JumpRopeTraining = lazy(() => import('./features/jump-rope/JumpRopeTraining'));
+const JumpRopeLeaderboard = lazy(() => import('./features/jump-rope/JumpRopeLeaderboard'));
+const JumpRopeHistory = lazy(() => import('./features/jump-rope/JumpRopeHistory'));
+const JumpRopeSettings = lazy(() => import('./features/jump-rope/JumpRopeSettings'));
+const JumpRopeAdmin = lazy(() => import('./features/jump-rope/JumpRopeAdmin'));
+const StrategyWorkplace = lazy(() => import('./features/jump-rope/StrategyWorkplace'));
 
 import { initializeTheme } from './utils/theme';
 import { CurrencyProvider } from './context/CurrencyContext';
@@ -94,6 +105,9 @@ function AppContent() {
   const { i18n } = useTranslation();
   const { settings, userProfile } = useTheme();
 
+  // Activate real-time presence tracking (heartbeat)
+  usePresence();
+
   useEffect(() => {
     if (i18n) {
       document.dir = i18n.dir();
@@ -139,10 +153,11 @@ function AppContent() {
         />
         <Suspense fallback={<PageLoader name={settings?.academy_name} />}>
           <Routes>
-            <Route path="/" element={<LandingPage />} />
+            <Route path="/" element={<Navigate to="/app" replace />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route path="/registration" element={<PublicRegistration />} />
+            <Route path="/book-consultation" element={<BookConsultation />} />
 
             {/* Jump Rope Standalone application route — own branded Suspense */}
             <Route path="/jump-rope/welcome" element={
@@ -177,7 +192,6 @@ function AppContent() {
               <Route path="leaderboard" element={<JumpRopeLeaderboard />} />
               <Route path="history" element={<JumpRopeHistory />} />
               <Route path="settings" element={<JumpRopeSettings />} />
-              <Route path="admin" element={<JumpRopeAdmin />} />
             </Route>
 
             {/* Protected Routes */}
@@ -202,11 +216,20 @@ function AppContent() {
                 <Route path="attendance/pt" element={<PTAttendance />} />
                 <Route path="evaluations" element={<Evaluations />} />
                 <Route path="communications" element={<Communications />} />
+                <Route path="consultations" element={<ConsultationsAdmin />} />
                 <Route path="smart-training" element={<SmartTraining />} />
+                <Route path="strategy-hub" element={<StrategyWorkplace />} />
+                <Route path="book-consultation" element={<BookConsultation />} />
+                
+                {/* Fame Academy - New Features */}
+                <Route path="video-library" element={<VideoLibrary />} />
+                <Route path="pt-booking" element={<PTStudentBookings />} />
+                <Route path="pt-availability" element={<PTAvailabilityAdmin />} />
+                <Route path="pt-my-sessions" element={<PTStudentBookings />} />
               </Route>
             </Route>
 
-            <Route path="*" element={<Navigate to="/" replace />} />
+            <Route path="*" element={<Navigate to="/app" replace />} />
           </Routes>
         </Suspense>
       </Router>

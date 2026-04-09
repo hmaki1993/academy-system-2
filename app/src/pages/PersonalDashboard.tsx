@@ -54,6 +54,11 @@ export default function PersonalDashboard() {
     }, []);
 
     const initializePersonalDashboard = async () => {
+        if (role === 'student') {
+            setIsLoading(false);
+            return;
+        }
+
         try {
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) return;

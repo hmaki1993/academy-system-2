@@ -146,17 +146,6 @@ export function CallProvider({ children, currentUserId }: { children: React.Reac
             } catch (e) {
                 console.warn('[Call] Audio unlock failed:', e);
             }
-
-            // Unlock WebAudio context too
-            try {
-                const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
-                const buf = ctx.createBuffer(1, 1, 22050);
-                const src = ctx.createBufferSource();
-                src.buffer = buf;
-                src.connect(ctx.destination);
-                src.start(0);
-                setTimeout(() => ctx.close(), 500);
-            } catch (_) { }
         };
 
         document.addEventListener('touchstart', unlockAudio, { once: true, passive: true });
@@ -188,8 +177,13 @@ export function CallProvider({ children, currentUserId }: { children: React.Reac
                 Notification.requestPermission();
                 localStorage.setItem('academy_notif_asked', 'true');
             } else if (Notification.permission === 'denied') {
-                console.warn('[Call] Notifications are blocked.');
-                toast.error('علشان يوصلك رنّة لما الموبايل يكون مقفول، لازم توافق على الإشعارات من إعدادات المتصفح.');
+                // Only show constant warning once per session to avoid UI clutter
+                const alreadyWarned = sessionStorage.getItem('academy_notif_warning_shown');
+                if (!alreadyWarned) {
+                    console.warn('[Call] Notifications are blocked.');
+                    toast.error('علشان يوصلك رنّة لما الموبايل يكون مقفول، لازم توافق على الإشعارات من إعدادات المتصفح.');
+                    sessionStorage.setItem('academy_notif_warning_shown', 'true');
+                }
             }
         }
     }, []);

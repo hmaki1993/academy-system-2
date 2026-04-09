@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { supabase } from '../lib/supabase';
 import { calcElapsedSeconds } from '../utils/dateUtils';
+import { toast } from 'react-hot-toast';
 
 // --- Students Hooks ---
 export function useStudents() {
@@ -138,7 +139,223 @@ export function useCoaches() {
 }
 
 
-// --- Finance Hooks ---
+// --- Training Assignments Hooks ---
+export function useTrainingAssignment() {
+    return useQuery({
+        queryKey: ['training_assignment'],
+        queryFn: async () => {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) return null;
+
+            // Get the student ID for this user
+            const { data: student } = await supabase
+                .from('students')
+                .select('id')
+                .eq('profile_id', user.id)
+                .single();
+            
+            if (!student) return null;
+
+            const { data, error } = await supabase
+                .from('training_assignments')
+                .select('*, coaches(full_name)')
+                .eq('student_id', student.id)
+                .eq('status', 'pending')
+                .order('created_at', { ascending: false })
+                .limit(1)
+                .maybeSingle();
+
+            if (error) {
+                console.error('Error fetching assignment:', error);
+                return null;
+            }
+
+            return data;
+        },
+        staleTime: 1000 * 60, // 1 minute
+    });
+}
+
+// --- Training Videos Hooks ---
+export function useTrainingVideos(level?: number | string) {
+    return useQuery({
+        queryKey: ['training_videos', level],
+        queryFn: async () => {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) return [];
+
+            // Get user role with maybeSingle to avoid errors
+            const { data: profile } = await supabase
+                .from('profiles')
+                .select('role')
+                .eq('id', user.id)
+                .maybeSingle();
+
+            const role = profile?.role;
+            const isAdmin = role === 'admin' || role === 'coach' || role === 'head_coach';
+            
+            let targetLevel: any = level;
+
+            // Normalize 'all'/'الكل' to null for all-videos view
+            if (targetLevel === 'all' || targetLevel === 'الكل') {
+                targetLevel = null;
+            }
+
+            // If it's a student and no level specifically selected, default to their current level
+            if (!isAdmin && !targetLevel) {
+                const { data: student } = await supabase
+                    .from('students')
+                    .select('current_training_level')
+                    .eq('profile_id', user.id)
+                    .maybeSingle();
+                targetLevel = student?.current_training_level || 1;
+            }
+
+            let query = supabase
+                .from('training_videos')
+                .select('*')
+                .order('created_at', { ascending: false });
+            
+            if (targetLevel) {
+                const levelNum = typeof targetLevel === 'string' ? parseInt(targetLevel) : targetLevel;
+                if (!isNaN(levelNum)) {
+                    query = query.eq('level_number', levelNum);
+                }
+            }
+
+            const { data, error } = await query;
+            if (error) {
+                console.error('Error fetching training videos:', error);
+                throw error;
+            }
+            return data || [];
+        },
+        staleTime: 1000 * 60 * 5,
+    });
+}
+
+// --- Level Access Hooks ---
+export function useJumpRopeAccess() {
+    return useQuery({
+        queryKey: ['jump_rope_access'],
+        queryFn: async () => {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) return { isLocked: true, reason: 'unauthenticated' };
+
+            // 1. Get user role
+            const { data: profile } = await supabase
+                .from('profiles')
+                .select('role')
+                .eq('id', user.id)
+                .maybeSingle();
+
+            const role = profile?.role;
+            const isAdmin = role === 'admin' || role === 'coach' || role === 'head_coach';
+
+            // Admins/Coaches always have access
+            if (isAdmin) return { isLocked: false, isAdmin: true };
+
+            // 2. For students, check if they have at least one purchase
+            // First get their student ID
+            const { data: student } = await supabase
+                .from('students')
+                .select('id')
+                .eq('profile_id', user.id)
+                .maybeSingle();
+            
+            if (!student || !student.id) return { isLocked: true, reason: 'no_student_record' };
+
+            const { count } = await supabase
+                .from('level_purchases')
+                .select('*', { count: 'exact', head: true })
+                .eq('student_id', student.id);
+            
+            const hasPurchased = (count || 0) > 0;
+            return {
+                isLocked: !hasPurchased,
+                reason: !hasPurchased ? 'no_purchases' : null,
+                studentId: student.id
+            };
+        },
+        staleTime: 1000 * 60 * 5, // 5 minutes
+    });
+}
+
+export function useLevelAccess(studentId?: string | number | null) {
+    return useQuery({
+        queryKey: ['level_access', studentId],
+        queryFn: async () => {
+            if (!studentId || studentId === 'null') return [];
+            const { data, error } = await supabase
+                .from('level_purchases')
+                .select('level_number')
+                .eq('student_id', studentId);
+            
+            if (error) {
+                console.error('Error fetching level access:', error);
+                return [];
+            }
+            return data.map(lp => lp.level_number) as number[];
+        },
+        enabled: !!studentId && studentId !== 'null',
+        staleTime: 1000 * 60 * 10,
+    });
+}
+
+export function useLevelCosts() {
+    return useQuery({
+        queryKey: ['level_costs'],
+        queryFn: async () => {
+            const { data, error } = await supabase
+                .from('level_costs')
+                .select('*')
+                .order('level_number', { ascending: true });
+            
+            if (error) {
+                console.error('Error fetching level costs:', error);
+                return [];
+            }
+            return data;
+        },
+        staleTime: 1000 * 60 * 60,
+    });
+}
+
+export function useUpdateLevelCost() {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: async ({ level_number, price }: { level_number: number, price: number }) => {
+            const { data, error } = await supabase
+                .from('level_costs')
+                .update({ price })
+                .eq('level_number', level_number)
+                .select()
+                .single();
+            if (error) throw error;
+            return data;
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['level_costs'] });
+            toast.success('Price updated successfully');
+        }
+    });
+}
+
+export function useAllLevelPurchases() {
+    return useQuery({
+        queryKey: ['all_level_purchases'],
+        queryFn: async () => {
+            const { data, error } = await supabase
+                .from('level_purchases')
+                .select('*, students(full_name)')
+                .order('purchased_at', { ascending: false });
+            if (error) throw error;
+            return data;
+        },
+        staleTime: 1000 * 60 * 5,
+    });
+}
+
 export function usePayments() {
     return useQuery({
         queryKey: ['payments'],
@@ -221,9 +438,10 @@ export function useUpdatePlan() {
 }
 
 // --- Dashboard Hooks ---
-export function useDashboardStats() {
+export function useDashboardStats(role?: string) {
     return useQuery({
         queryKey: ['dashboardStats'],
+        enabled: !!role && role !== 'student',
         queryFn: async () => {
             const startOfMonthDate = format(new Date(new Date().getFullYear(), new Date().getMonth(), 1), 'yyyy-MM-dd');
 
@@ -485,9 +703,10 @@ export function useDeleteExpense() {
     });
 }
 // --- Financial Trends Hook ---
-export function useFinancialTrends() {
+export function useFinancialTrends(role?: string) {
     return useQuery({
         queryKey: ['financialTrends'],
+        enabled: !!role && role !== 'student',
         queryFn: async () => {
             const today = new Date();
             const last6Months = Array.from({ length: 6 }, (_, i) => {
@@ -637,6 +856,7 @@ export interface JrAdminStat {
     totalJumps: number;
     sessionsCount: number;
     lastSession: string | null;
+    lastActiveAt: string | null;
 }
 
 export function useJumpRopeAdminStats() {
@@ -645,7 +865,7 @@ export function useJumpRopeAdminStats() {
         queryFn: async () => {
             const { data, error } = await supabase
                 .from('jump_rope_sessions')
-                .select('jumps, created_at, user_id, profiles(full_name, avatar_url, role)')
+                .select('jumps, created_at, user_id, profiles(full_name, avatar_url, role, last_active_at)')
                 .order('created_at', { ascending: false });
 
             if (error) throw error;
@@ -665,7 +885,8 @@ export function useJumpRopeAdminStats() {
                         role: prof?.role || 'student',
                         totalJumps: 0,
                         sessionsCount: 0,
-                        lastSession: session.created_at
+                        lastSession: session.created_at,
+                        lastActiveAt: prof?.last_active_at || null
                     };
                 }
                 userStats[uid].totalJumps += session.jumps;
@@ -678,14 +899,34 @@ export function useJumpRopeAdminStats() {
 
             return Object.values(userStats).sort((a, b) => b.totalJumps - a.totalJumps);
         },
-        staleTime: 1000 * 60 * 5,
+        staleTime: 1000 * 10,
+        refetchInterval: 1000 * 30,
+    });
+}
+
+export function useAthleteActivityHistory(userId?: string) {
+    return useQuery({
+        queryKey: ['athlete_activity_history', userId],
+        queryFn: async () => {
+            if (!userId) return [];
+            const { data, error } = await supabase
+                .from('jump_rope_sessions')
+                .select('*')
+                .eq('user_id', userId)
+                .order('created_at', { ascending: false });
+            
+            if (error) throw error;
+            return data;
+        },
+        enabled: !!userId,
+        staleTime: 1000 * 60 * 2, // 2 minutes
     });
 }
 
 export function useAddJumpRopeSession() {
     const queryClient = useQueryClient();
     return useMutation({
-        mutationFn: async (session: { jumps: number; duration: number; rpm: number }) => {
+        mutationFn: async (session: { jumps: number; duration: number; rpm: number; work_duration?: number; rest_duration?: number }) => {
             const sessionsStr = localStorage.getItem(LOCAL_STORAGE_KEY) || '[]';
             const sessions = JSON.parse(sessionsStr);
             
@@ -706,7 +947,9 @@ export function useAddJumpRopeSession() {
                     user_id: user.id,
                     jumps: session.jumps,
                     duration: session.duration,
-                    rpm: session.rpm
+                    rpm: session.rpm,
+                    work_duration: session.work_duration || session.duration, // Fallback to total if not provided
+                    rest_duration: session.rest_duration || 0
                 }]);
             }
             
@@ -748,5 +991,66 @@ export function useDeleteMultipleJumpRopeSessions() {
             queryClient.invalidateQueries({ queryKey: ['jump_rope_history'] });
             queryClient.invalidateQueries({ queryKey: ['jump_rope_stats'] });
         },
+    });
+}
+
+export function useAssignTraining() {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: async (assignment: { student_id: string; target_jumps: number; target_duration_minutes: number }) => {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) throw new Error('Unauthorized');
+
+            // Find the coach ID for this user profile
+            const { data: coach } = await supabase
+                .from('coaches')
+                .select('id')
+                .eq('profile_id', user.id)
+                .maybeSingle();
+
+            const { data, error } = await supabase
+                .from('training_assignments')
+                .insert([{
+                    student_id: assignment.student_id,
+                    coach_id: coach?.id,
+                    target_jumps: assignment.target_jumps,
+                    target_duration_minutes: assignment.target_duration_minutes,
+                    status: 'pending'
+                }])
+                .select()
+                .single();
+
+            if (error) throw error;
+            return data;
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['training_assignment'] });
+            toast.success('تم إرسال التكليف للمتدرب بنجاح');
+        },
+        onError: (error: any) => {
+            console.error('Error assigning training:', error);
+            toast.error('فشل إرسال التكليف: ' + error.message);
+        }
+    });
+}
+
+export function useTrainingPlanHistory(studentId?: string | null) {
+    return useQuery({
+        queryKey: ['training_plan_history', studentId],
+        enabled: !!studentId,
+        queryFn: async () => {
+            const { data, error } = await supabase
+                .from('training_plans')
+                .select('*')
+                .eq('student_id', studentId)
+                .order('created_at', { ascending: false });
+            
+            if (error) {
+                console.error('Error fetching plan history:', error);
+                throw error;
+            }
+            return data;
+        },
+        staleTime: 1000 * 60 * 5,
     });
 }

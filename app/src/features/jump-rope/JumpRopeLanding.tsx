@@ -1,17 +1,20 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Activity, Camera, Mic, BarChart3, ChevronRight, Play, ShieldCheck, Zap } from 'lucide-react';
+import { Activity, Camera, Mic, BarChart3, ChevronRight, Play, ShieldCheck, Zap, Lock, ShoppingBag } from 'lucide-react';
 import { loadJrSettings } from './JumpRopeSettings';
+import { useJumpRopeAccess } from '../../hooks/useData';
 
 export default function JumpRopeLanding() {
     const navigate = useNavigate();
-    const [settings, setSettings] = useState(loadJrSettings());
+    const { data: access, isLoading: isCheckingAccess } = useJumpRopeAccess();
+    const [settings] = useState(loadJrSettings());
     const [isVisible, setIsVisible] = useState(false);
 
     useEffect(() => {
         setIsVisible(true);
-        // Preload any heavy assets here if necessary
     }, []);
+
+    const isLocked = access?.isLocked && !access?.isAdmin;
 
     const features = [
         {
@@ -88,8 +91,14 @@ export default function JumpRopeLanding() {
             <main className="relative z-10 flex-1 flex flex-col w-full px-6 pt-10 pb-6 md:max-w-md mx-auto">
                 <div className={`transition-all duration-1000 delay-100 ${isVisible ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-8'}`}>
                     <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-500/10 border border-blue-500/20 mb-6">
-                        <Zap className="w-3 h-3 text-blue-400 fill-blue-400" />
-                        <span className="text-[9px] font-black uppercase tracking-widest text-blue-400">Next-Gen Fitness Tech</span>
+                        {isLocked ? (
+                            <Lock className="w-3 h-3 text-red-500 fill-red-500" />
+                        ) : (
+                            <Zap className="w-3 h-3 text-blue-400 fill-blue-400" />
+                        )}
+                        <span className={`text-[9px] font-black uppercase tracking-widest ${isLocked ? 'text-red-500' : 'text-blue-400'}`}>
+                            {isLocked ? 'Locked • Requires Active Level' : 'Next-Gen Fitness Tech'}
+                        </span>
                     </div>
 
                     <h2 className="text-4xl font-black uppercase leading-[1.0] tracking-tighter mb-3 text-white">
@@ -109,10 +118,10 @@ export default function JumpRopeLanding() {
                     {features.map((feat, idx) => (
                         <div 
                             key={idx} 
-                            className={`flex flex-col gap-2 p-5 rounded-3xl bg-white/[0.02] border border-white/5 backdrop-blur-md transition-all duration-700`}
+                            className={`flex flex-col gap-2 p-5 rounded-3xl bg-white/[0.02] border border-white/5 backdrop-blur-md transition-all duration-700 ${isLocked ? 'opacity-50 grayscale-[0.5]' : ''}`}
                             style={{ 
                                 transitionDelay: `${200 + (idx * 100)}ms`,
-                                opacity: isVisible ? 1 : 0,
+                                opacity: isVisible ? (isLocked ? 0.4 : 1) : 0,
                                 transform: isVisible ? 'translateY(0)' : 'translateY(20px)'
                             }}
                         >
@@ -131,25 +140,44 @@ export default function JumpRopeLanding() {
 
                 {/* Bottom Section (Pushed to end of screen) */}
                 <div className="mt-auto w-full flex flex-col items-center">
-                    {/* Action Button (Natural Flow) */}
-                    <div className={`w-full flex justify-center transition-all duration-1000 delay-700 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}>
-                        <div className="w-full">
+                    
+                    <div className={`w-full flex flex-col gap-3 justify-center transition-all duration-1000 delay-700 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}>
+                        {isLocked ? (
+                            <button 
+                                onClick={() => navigate('/app/video-library')}
+                                className="w-full relative group overflow-hidden flex items-center justify-center gap-3 py-4 rounded-full bg-gradient-to-r from-fame-gold to-[#B38728] text-black transition-all duration-500 hover:scale-[0.98] active:scale-95 shadow-[0_10px_30px_rgba(212,175,55,0.2)]"
+                            >
+                                <ShoppingBag className="w-4 h-4" />
+                                <span className="font-black uppercase tracking-[0.2em] text-[11px] relative z-10">
+                                    Unlock Training Level
+                                </span>
+                            </button>
+                        ) : (
                             <button 
                                 onClick={() => {
                                     localStorage.setItem('jr_onboarded', 'true');
                                     navigate('/jump-rope');
                                 }}
-                                className="w-full relative group overflow-hidden flex items-center justify-center gap-3 py-3.5 rounded-full bg-white text-black transition-all duration-500 hover:scale-[0.98] active:scale-95 shadow-[0_10px_30px_rgba(255,255,255,0.1)]"
+                                disabled={isCheckingAccess}
+                                className="w-full relative group overflow-hidden flex items-center justify-center gap-3 py-3.5 rounded-full bg-white text-black transition-all duration-500 hover:scale-[0.98] active:scale-95 shadow-[0_10px_30px_rgba(255,255,255,0.1)] disabled:opacity-50"
                             >
                                 <div className="absolute inset-0 bg-gradient-to-r from-black/0 via-black/5 to-black/0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-in-out" />
                                 <span className="font-black uppercase tracking-[0.2em] text-[11px] relative z-10">
-                                    Launch Hub
+                                    {isCheckingAccess ? 'Verifying Access...' : 'Launch Hub'}
                                 </span>
-                                <div className="w-6 h-6 rounded-full bg-black/10 flex items-center justify-center relative z-10 group-hover:translate-x-1 transition-transform">
-                                    <ChevronRight className="w-3 h-3 text-black" />
-                                </div>
+                                {!isCheckingAccess && (
+                                    <div className="w-6 h-6 rounded-full bg-black/10 flex items-center justify-center relative z-10 group-hover:translate-x-1 transition-transform">
+                                        <ChevronRight className="w-3 h-3 text-black" />
+                                    </div>
+                                )}
                             </button>
-                        </div>
+                        )}
+
+                        {isLocked && (
+                            <p className="text-[10px] font-black uppercase text-center text-red-500/60 tracking-widest mt-2 animate-pulse">
+                                Elite Hardware Access Restricted
+                            </p>
+                        )}
                     </div>
                     
                     {/* Safe area spacer for bottom text */}

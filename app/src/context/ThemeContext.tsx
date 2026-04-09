@@ -96,6 +96,7 @@ export interface GymSettings {
     api_keys?: {
         smart?: string;
     };
+    training_levels?: number[];
 }
 
 export const applySettingsToRoot = (settings: GymSettings) => {
@@ -307,7 +308,8 @@ export const defaultSettings: GymSettings = {
     notify_payments: true,
     notify_absences: true,
     notify_registrations: true,
-    notify_browser_push: false
+    notify_browser_push: false,
+    training_levels: [1, 2, 3, 4, 5, 6, 7, 8]
 };
 
 export const GYM_WIDE_KEYS: (keyof GymSettings)[] = [
@@ -331,7 +333,8 @@ export const GYM_WIDE_KEYS: (keyof GymSettings)[] = [
     'login_mobile_bg_blur', 'login_mobile_bg_brightness', 'login_mobile_bg_zoom',
     'login_mobile_bg_x_offset', 'login_mobile_bg_y_offset', 'login_mobile_bg_fit', 'login_mobile_bg_opacity',
     'login_mobile_card_x_offset', 'login_mobile_card_y_offset',
-    'login_card_width', 'login_card_height', 'login_mobile_card_width', 'login_mobile_card_height'
+    'login_card_width', 'login_card_height', 'login_mobile_card_width', 'login_mobile_card_height',
+    'training_levels'
 ];
 
 // Keys that can be customized per user
@@ -353,7 +356,16 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
         if (saved) {
             try {
                 const parsed = JSON.parse(saved);
-                // merge parsed settings with defaults to ensure all keys exist
+                
+                // 🛡️ Proactive Sanitization: Fix legacy logos in localStorage before first render
+                const legacyWords = ['healy', 'fame', 'dark_logo', 'light_logo'];
+                const isLegacy = (url: any) => typeof url === 'string' && legacyWords.some(word => url.toLowerCase().includes(word));
+                
+                if (isLegacy(parsed.logo_url)) parsed.logo_url = '/logo.png';
+                if (isLegacy(parsed.login_logo_url)) parsed.login_logo_url = '/logo.png';
+                if (isLegacy(parsed.login_mobile_logo_url)) parsed.login_mobile_logo_url = '/logo.png';
+
+                // merge parsed settings with defaults
                 return { ...initial, ...parsed };
             } catch (e) { }
         }
@@ -482,11 +494,17 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
                 );
                 
                 // FORCE OVERRIDE: If database logo contains legacy paths, fall back to project default
-                if (filteredGlobal.logo_url && typeof filteredGlobal.logo_url === 'string' && (filteredGlobal.logo_url.toLowerCase().includes('healy') || filteredGlobal.logo_url.toLowerCase().includes('fame'))) {
-                    filteredGlobal.logo_url = '/logo-jumprope.png';
+                const legacyWords = ['healy', 'fame', 'dark_logo', 'light_logo'];
+                const isLegacy = (url: string) => legacyWords.some(word => url.toLowerCase().includes(word));
+
+                if (filteredGlobal.logo_url && typeof filteredGlobal.logo_url === 'string' && isLegacy(filteredGlobal.logo_url)) {
+                    filteredGlobal.logo_url = '/logo.png';
                 }
-                if (filteredGlobal.login_logo_url && typeof filteredGlobal.login_logo_url === 'string' && (filteredGlobal.login_logo_url.toLowerCase().includes('healy') || filteredGlobal.login_logo_url.toLowerCase().includes('fame'))) {
-                    filteredGlobal.login_logo_url = '/logo-jumprope.png';
+                if (filteredGlobal.login_logo_url && typeof filteredGlobal.login_logo_url === 'string' && isLegacy(filteredGlobal.login_logo_url)) {
+                    filteredGlobal.login_logo_url = '/logo.png';
+                }
+                if (filteredGlobal.login_mobile_logo_url && typeof filteredGlobal.login_mobile_logo_url === 'string' && isLegacy(filteredGlobal.login_mobile_logo_url)) {
+                    filteredGlobal.login_mobile_logo_url = '/logo.png';
                 }
 
                 finalSettings = { ...finalSettings, ...filteredGlobal };
@@ -681,6 +699,15 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
         let isPartial = false;
         isUpdatingRef.current = true;
+
+        // 🛡️ Proactive Sanitization: Fix legacy logos in any update before state sync and DB save
+        const legacyWords = ['healy', 'fame', 'dark_logo', 'light_logo'];
+        const isLegacy = (url: any) => typeof url === 'string' && legacyWords.some(word => url.toLowerCase().includes(word));
+        
+        if (isLegacy(newSettings.logo_url)) newSettings.logo_url = '/logo.png';
+        if (isLegacy(newSettings.login_logo_url)) newSettings.login_logo_url = '/logo.png';
+        if (isLegacy(newSettings.login_mobile_logo_url)) newSettings.login_mobile_logo_url = '/logo.png';
+
         // Optimistic update
         setSettings(prev => ({ ...prev, ...newSettings }));
 

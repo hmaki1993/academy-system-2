@@ -877,21 +877,27 @@ export function useJumpRopeAdminStats() {
                 .from('students')
                 .select('profile_id, parent_contact, email');
 
+            // Fetch coaches to know who to EXCLUDE (staff should not be in the athletes hub)
+            const { data: coachesData } = await supabase
+                .from('coaches')
+                .select('profile_id');
+
+            const coachProfileIds = new Set(coachesData?.map(c => c.profile_id).filter(Boolean));
+
             const userStats: Record<string, JrAdminStat> = {};
 
             data?.forEach(session => {
                 const uid = session.user_id;
                 if (!uid) return;
 
-                // 🛡️ STRICT FILTER: Only show registered students (motdarben), EXCLUDE all staff/admin
+                // 🛡️ ACCURATE FILTER: Only show users in students table AND NOT in coaches table
                 const studentInfo = studentsData?.find(s => s.profile_id === uid);
-                const prof = session.profiles as any;
-                const isStaff = ['admin', 'coach', 'head_coach', 'reception', 'cleaner'].includes(prof?.role?.toLowerCase() || '');
+                const isActualCoach = coachProfileIds.has(uid);
                 
-                if (!studentInfo || isStaff) return; 
+                if (!studentInfo || isActualCoach) return; 
                 
                 if (!userStats[uid]) {
-                    
+                    const prof = session.profiles as any;                    
                     userStats[uid] = {
                         userId: uid,
                         name: prof?.full_name || 'Unknown Athlete',

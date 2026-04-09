@@ -865,16 +865,24 @@ export function useJumpRopeAdminStats() {
     return useQuery({
         queryKey: ['jump_rope_admin_stats'],
         queryFn: async () => {
-            // ✅ DEFINITIVE FIX: Use DB-level filter to ONLY retrieve profiles with role='student'
-            // Using inner join (!inner) ensures only students with a matching profile are returned
+            // ✅ RELIABLE APPROACH: Fetch all students with a linked profile
+            // Then exclude anyone whose profile_id is in the COACHES table (staff)
             const { data: studentsData, error: studentsError } = await supabase
                 .from('students')
-                .select('id, full_name, email, parent_contact, profile_id, profiles!inner(full_name, avatar_url, last_active_at, email, role)')
-                .not('profile_id', 'is', null)
-                .eq('profiles.role', 'student');
+                .select('id, full_name, email, parent_contact, profile_id, profiles!inner(full_name, avatar_url, last_active_at, email)')
+                .not('profile_id', 'is', null);
 
             if (studentsError) throw studentsError;
             if (!studentsData || studentsData.length === 0) return [];
+
+            // Get all coach profile IDs to exclude from athletes hub
+            const { data: coachesData } = await supabase
+                .from('coaches')
+                .select('profile_id');
+
+            const staffProfileIds = new Set(
+                coachesData?.map(c => c.profile_id).filter(Boolean)
+            );
 
             // Get all jump rope sessions
             const { data: sessionsData } = await supabase
@@ -890,9 +898,8 @@ export function useJumpRopeAdminStats() {
                 if (!uid) return;
                 const prof = (student as any).profiles as any;
 
-                // 🛡️ FINAL GUARD: Skip staff/admin even if they have a student record
-                const STAFF_ROLES = ['admin', 'coach', 'head_coach', 'reception', 'cleaner'];
-                if (STAFF_ROLES.includes((prof?.role || '').toLowerCase())) return;
+                // 🛡️ FINAL GUARD: Skip if this profile is registered as a staff member (coach/admin)
+                if (staffProfileIds.has(uid)) return;
 
                 userStats[uid] = {
                     userId: uid,

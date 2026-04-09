@@ -865,42 +865,36 @@ export function useJumpRopeAdminStats() {
     return useQuery({
         queryKey: ['jump_rope_admin_stats'],
         queryFn: async () => {
-            // ✅ RELIABLE APPROACH: Fetch all students with a linked profile
-            // Then exclude anyone whose profile_id is in the COACHES table (staff)
+            // Fetch all students with linked profiles
             const { data: studentsData, error: studentsError } = await supabase
                 .from('students')
-                .select('id, full_name, email, parent_contact, profile_id, profiles!inner(full_name, avatar_url, last_active_at, email)')
-                .not('profile_id', 'is', null);
+                .select('id, full_name, email, parent_contact, profile_id, profiles(full_name, avatar_url, last_active_at, email)');
 
             if (studentsError) throw studentsError;
-            if (!studentsData || studentsData.length === 0) return [];
 
-            // Get all coach profile IDs to exclude from athletes hub
+            // Only include students who have completed registration (have a profile_id)
+            const linkedStudents = studentsData?.filter(s => s.profile_id) || [];
+
+            // Fetch coach profile IDs to exclude (staff members)
             const { data: coachesData } = await supabase
-                .from('coaches')
-                .select('profile_id');
+                .from('coaches').select('profile_id');
 
-            const staffProfileIds = new Set(
-                coachesData?.map(c => c.profile_id).filter(Boolean)
-            );
+            const staffProfileIds = new Set(coachesData?.map(c => c.profile_id).filter(Boolean));
 
-            // Get all jump rope sessions
+            // Fetch all jump rope sessions
             const { data: sessionsData } = await supabase
                 .from('jump_rope_sessions')
                 .select('jumps, created_at, user_id')
                 .order('created_at', { ascending: false });
 
-            // Build stats map: seed ALL students first (even with 0 sessions)
+            // Build athlete stats — seed all real students first
             const userStats: Record<string, JrAdminStat> = {};
 
-            studentsData.forEach(student => {
+            linkedStudents.forEach(student => {
                 const uid = student.profile_id as string;
-                if (!uid) return;
+                if (!uid || staffProfileIds.has(uid)) return;
+
                 const prof = (student as any).profiles as any;
-
-                // 🛡️ FINAL GUARD: Skip if this profile is registered as a staff member (coach/admin)
-                if (staffProfileIds.has(uid)) return;
-
                 userStats[uid] = {
                     userId: uid,
                     name: prof?.full_name || student.full_name || 'Unknown Athlete',
@@ -915,14 +909,12 @@ export function useJumpRopeAdminStats() {
                 };
             });
 
-            // Now accumulate sessions data — only for known students
+            // Accumulate session data for known students
             sessionsData?.forEach(session => {
                 const uid = session.user_id;
                 if (!uid || !userStats[uid]) return;
-
                 userStats[uid].totalJumps += session.jumps;
                 userStats[uid].sessionsCount += 1;
-
                 if (!userStats[uid].lastSession || new Date(session.created_at) > new Date(userStats[uid].lastSession!)) {
                     userStats[uid].lastSession = session.created_at;
                 }

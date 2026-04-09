@@ -362,7 +362,13 @@ const AthleteDetailModal = ({ athlete, onClose, autoOpenGenerator = false }: { a
                             </div>
                             <div className="flex flex-col justify-center text-center sm:text-left">
                                 <h3 className="text-xl sm:text-2xl font-black tracking-tighter text-white uppercase leading-none">{athlete.name}</h3>
-                                <span className="text-[7px] sm:text-[8px] font-black text-orange-500 uppercase tracking-[0.3em] mt-1">Athlete Profile</span>
+                                <div className="flex flex-col mt-1.5 gap-1">
+                                    <span className="text-[7px] sm:text-[8px] font-black text-orange-500 uppercase tracking-[0.3em]">Athlete Profile</span>
+                                    <div className="flex items-center gap-4 text-[7px] font-black text-white/30 uppercase tracking-widest">
+                                        {athlete.email && <span>{athlete.email}</span>}
+                                        {athlete.phone && <span className="text-green-500/50">WhatsApp: {athlete.phone}</span>}
+                                    </div>
+                                </div>
                             </div>
                         </div>
 

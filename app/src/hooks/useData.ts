@@ -883,12 +883,14 @@ export function useJumpRopeAdminStats() {
                 const uid = session.user_id;
                 if (!uid) return;
 
-                // 🛡️ SECURITY & FILTER: Only show registered students (motdarben), not staff
+                // 🛡️ STRICT FILTER: Only show registered students (motdarben), EXCLUDE all staff/admin
                 const studentInfo = studentsData?.find(s => s.profile_id === uid);
-                if (!studentInfo) return; 
+                const prof = session.profiles as any;
+                const isStaff = ['admin', 'coach', 'head_coach', 'reception', 'cleaner'].includes(prof?.role?.toLowerCase() || '');
+                
+                if (!studentInfo || isStaff) return; 
                 
                 if (!userStats[uid]) {
-                    const prof = session.profiles as any;
                     
                     userStats[uid] = {
                         userId: uid,

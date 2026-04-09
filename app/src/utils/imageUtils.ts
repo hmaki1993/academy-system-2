@@ -76,3 +76,29 @@ export async function getCroppedImg(
     }, 'image/jpeg');
   });
 }
+
+/**
+ * Extracts the dominant color from an image URL for premium aesthetic synchronization.
+ * Returns a hex or rgb string.
+ */
+export async function getDominantColor(imageUrl: string): Promise<string | null> {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.setAttribute('crossOrigin', 'anonymous');
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return resolve(null);
+      
+      canvas.width = 1;
+      canvas.height = 1;
+      ctx.drawImage(img, 0, 0, 1, 1);
+      
+      const [r, g, b] = ctx.getImageData(0, 0, 1, 1).data;
+      const hex = '#' + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
+      resolve(hex);
+    };
+    img.onerror = () => resolve(null);
+    img.src = imageUrl;
+  });
+}

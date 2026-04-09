@@ -61,8 +61,8 @@ const InlineSmartPlan = ({ studentId, studentName, onClose }: { studentId: strin
         const finalPlan = { 
             ...plan, 
             weeklyPlan: editablePlan,
-            targetJumps,
-            targetTime
+            targetJumps: targetJumps === '' ? undefined : targetJumps,
+            targetTime: targetTime === '' ? undefined : targetTime
         };
         await sendPlan(studentId, finalPlan);
         onClose();

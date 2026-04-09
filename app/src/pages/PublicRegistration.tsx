@@ -152,7 +152,7 @@ export default function PublicRegistration() {
     // Dynamic Smart engine: Extract color from logo
     useEffect(() => {
         if (logoUrl) {
-            getDominantColor(logoUrl).then(color => {
+            getDominantColor(logoUrl).then((color: string | null) => {
                 if (color) {
                     console.log('🎨 Smart Engine: Extracted dominant color from logo:', color);
                     setExtractedColor(color);

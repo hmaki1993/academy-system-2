@@ -872,6 +872,11 @@ export function useJumpRopeAdminStats() {
 
             if (error) throw error;
 
+            // Fetch students to get contact info (WhatsApp/Parent Contact)
+            const { data: studentsData } = await supabase
+                .from('students')
+                .select('profile_id, parent_contact, email');
+
             const userStats: Record<string, JrAdminStat> = {};
 
             data?.forEach(session => {
@@ -880,12 +885,14 @@ export function useJumpRopeAdminStats() {
                 
                 if (!userStats[uid]) {
                     const prof = session.profiles as any;
+                    const studentInfo = studentsData?.find(s => s.profile_id === uid);
+                    
                     userStats[uid] = {
                         userId: uid,
                         name: prof?.full_name || 'Unknown Athlete',
                         avatarUrl: prof?.avatar_url || '',
-                        email: prof?.email || '',
-                        phone: '',
+                        email: studentInfo?.email || prof?.email || '',
+                        phone: studentInfo?.parent_contact || '',
                         role: prof?.role || 'student',
                         totalJumps: 0,
                         sessionsCount: 0,

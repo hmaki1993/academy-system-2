@@ -37,19 +37,24 @@ export default function Dashboard() {
     }, [selectedMetric, analytics]);
 
     // HEALING REDIRECTION: Check if user exists in Students table regardless of profile role
-    useState(() => {
+    useEffect(() => {
         const checkStudentStatus = async () => {
             if (!userId) return;
-            const { data } = await supabase
-                .from('students')
-                .select('id')
-                .eq('profile_id', userId)
-                .maybeSingle();
-            
-            setIsVerifiedStudent(!!data);
+            try {
+                const { data } = await supabase
+                    .from('students')
+                    .select('id')
+                    .eq('profile_id', userId)
+                    .maybeSingle();
+                
+                setIsVerifiedStudent(!!data);
+            } catch (err) {
+                console.error('Error verifying student status:', err);
+                setIsVerifiedStudent(false); // Fallback to role-based
+            }
         };
         checkStudentStatus();
-    });
+    }, [userId]);
 
     // RESTORE ROLE-BASED REDIRECTION (+ Student Fail-safe)
     if (!role || isVerifiedStudent === null) {

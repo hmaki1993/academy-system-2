@@ -9,8 +9,8 @@ interface PageHeaderProps {
 
 export default function PageHeader({ title, subtitle, titleSuffix, children }: PageHeaderProps) {
     return (
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-6 mb-2">
-            <div className="flex flex-col gap-1">
+        <div className="flex flex-row items-center justify-between gap-4 pb-6 mb-2 flex-wrap">
+            <div className="flex flex-col gap-1 flex-1 min-w-[150px]">
                 <div className="flex items-center gap-3 flex-wrap">
                     <h1 className="text-xl md:text-2xl font-black text-white uppercase tracking-tight leading-none">
                         <span className="premium-gradient-text">

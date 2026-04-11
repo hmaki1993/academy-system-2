@@ -16,5 +16,15 @@ if (supabaseUrl) console.log('Project Ref:', supabaseUrl.split('//')[1]?.split('
 console.log('---------------------------------');
 
 export const supabase = (supabaseUrl && supabaseUrl.startsWith('http')) 
-    ? createClient(supabaseUrl, supabaseAnonKey) 
+    ? createClient(supabaseUrl, supabaseAnonKey, {
+        realtime: {
+            params: {
+                events_per_second: 10,
+            },
+        },
+        auth: {
+            persistSession: true,
+            autoRefreshToken: true,
+        }
+    }) 
     : createClient('https://placeholder.supabase.co', 'placeholder'); // Dummy to prevent evaluation crash

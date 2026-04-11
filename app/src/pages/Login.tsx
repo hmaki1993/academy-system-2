@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react'; // [HMR-RECOVERY-T21]
 import { supabase } from '../lib/supabase';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -10,10 +10,17 @@ interface LoginProps {
     isPreview?: boolean;
     isFullScreen?: boolean;
     previewSettings?: any;
+    activeSettings?: any;
     forcedDesignMode?: 'desktop' | 'mobile';
 }
 
-export default function Login({ isPreview = false, isFullScreen = false, previewSettings, forcedDesignMode }: LoginProps) {
+export default function Login({ 
+    isPreview = false, 
+    isFullScreen = false, 
+    previewSettings, 
+    activeSettings: propActiveSettings,
+    forcedDesignMode 
+}: LoginProps) {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
@@ -36,12 +43,15 @@ export default function Login({ isPreview = false, isFullScreen = false, preview
     }, []);
 
     const isMobileView = forcedDesignMode ? forcedDesignMode === 'mobile' : autoIsMobileView;
-    const activeRawSettings = previewSettings || settings;
+    const activeRawSettings = propActiveSettings || previewSettings || settings;
 
     // Resolve settings based on viewport (Desktop vs Mobile customization)
+    // CRITICAL: When in preview mode, previewSettings is already resolved by SettingsContainer
+    // via getResponsiveLoginSettings. Running it again would double-process and lose mobile values.
     const activeSettings = useMemo(() => {
+        if (isPreview && (propActiveSettings || previewSettings)) return propActiveSettings || previewSettings;
         return getResponsiveLoginSettings(activeRawSettings, isMobileView);
-    }, [activeRawSettings, isMobileView]);
+    }, [activeRawSettings, isMobileView, isPreview, propActiveSettings, previewSettings]);
 
     useEffect(() => {
         if (isPreview) return; // Skip session redirect when rendering as a preview
@@ -86,7 +96,7 @@ export default function Login({ isPreview = false, isFullScreen = false, preview
     };
 
     return (
-        <div className={`relative ${isPreview ? 'h-full' : 'h-[100dvh]'} w-full overflow-hidden bg-black`}>
+        <div className={isPreview ? 'relative h-full w-full overflow-hidden bg-black' : 'fixed inset-0 w-full overflow-hidden bg-black'}>
             <LoginRenderer
                 activeSettings={activeSettings}
                 designMode={isMobileView ? 'mobile' : 'desktop'}

@@ -27,7 +27,8 @@ import {
     Sparkles,
     Search,
     Loader2,
-    Film
+    Film,
+    Medal
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import toast from 'react-hot-toast';
@@ -49,8 +50,8 @@ export default function DashboardLayout() {
     // Derived states from unified userProfile
     const userId = userProfile?.id || null; // Wait, I didn't add id to userProfile in ThemeContext. I should.
     const role = userProfile?.role || null;
-    const fullName = userProfile?.full_name || null;
-    const userEmail = userProfile?.email || null; // I should add email too.
+    const fullName = userProfile?.full_name?.trim() || null;
+    const userEmail = userProfile?.email?.trim() || null;
     const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
     const [userStatus, setUserStatus] = useState<'online' | 'busy'>('online');
     const [notificationsOpen, setNotificationsOpen] = useState(false);
@@ -406,13 +407,12 @@ export default function DashboardLayout() {
 
     const normalizedRole = role?.toLowerCase().trim().replace(/\s+/g, '_');
 
-    const allNavItems = [
+    const allNavItems: { to: string; icon: any; label: string; roles: string[]; isPremium?: boolean; }[] = [
         { to: '/app', icon: LayoutDashboard, label: t('common.dashboard'), roles: ['admin', 'head_coach', 'coach', 'reception', 'cleaner', 'student'] },
         { to: (normalizedRole === 'admin' || normalizedRole === 'head_coach' || normalizedRole === 'coach') ? '/app/pt-availability' : '/app/pt-booking', 
           icon: CreditCard, 
           label: (normalizedRole === 'admin' || normalizedRole === 'head_coach' || normalizedRole === 'coach') ? t('common.ptManagement', 'PT Management') : t('common.ptHub', 'PT HUB'), 
           roles: ['admin', 'head_coach', 'coach', 'reception', 'student'] },
-        { to: '/app/evaluations', icon: ClipboardCheck, label: t('common.evaluations', 'Evaluations'), roles: ['admin', 'head_coach'] },
         { to: '/app/my-work', icon: UserCircle, label: t('dashboard.myWork', 'My Work'), roles: ['head_coach'] },
         { to: '/app/communications', icon: MessageSquare, label: t('common.communications', 'Chats'), roles: ['admin', 'head_coach', 'coach', 'reception', 'cleaner', 'student'] },
         { to: (normalizedRole === 'student') ? '/app/book-consultation' : '/app/consultations', 
@@ -426,9 +426,12 @@ export default function DashboardLayout() {
     ];
 
     const navItems = allNavItems.filter(item => {
-        if (!normalizedRole) return false; // Show nothing while loading to avoid flickering
+        if (!normalizedRole) return false; 
+        // Debug: console.log('Checking item:', item.to, 'for role:', normalizedRole);
         return item.roles.includes(normalizedRole);
     });
+
+    console.log('🛡️ Sidebar debug:', { normalizedRole, navCount: navItems.length });
 
     // Filter notifications based on role and user_id
     const filteredNotifications = notifications.filter(note => {
@@ -603,104 +606,131 @@ export default function DashboardLayout() {
                 {/* Intrinsic Sidebar Glow */}
                 <div className="absolute inset-0 pointer-events-none z-0 opacity-[0.03]" style={{ background: 'radial-gradient(circle at 50% 30%, var(--color-primary), transparent 65%)' }} />
 
-                {/* ---- MOBILE LAYOUT: Full-Screen Glassy Grid ---- */}
-                <div className="lg:hidden flex flex-col h-[100dvh] bg-black/40 backdrop-blur-3xl pt-safe pb-safe overflow-hidden">
-                    {/* Mobile Header: Centered Logo + Drag Indicator */}
-                    <div className="relative flex flex-col items-center justify-center pt-5 pb-3 shrink-0">
+                {/* ---- MOBILE LAYOUT: Full-Screen Elite Glass Navigation ---- */}
+                <div className="lg:hidden flex flex-col h-[100dvh] bg-black/60 backdrop-blur-3xl pt-safe pb-safe overflow-hidden border-t border-white/5">
+                    {/* Mobile Header: Signature Branding + Drag Indicator */}
+                    <div className="relative flex flex-col items-center justify-center pt-3 pb-2 shrink-0 px-6">
                         {/* Center Drag Indicator */}
-                        <div className="w-10 h-1 bg-white/10 rounded-full cursor-pointer mb-3" onClick={() => setSidebarOpen(false)} />
+                        <div className="w-12 h-1.5 bg-white/10 rounded-full cursor-pointer mb-6 active:bg-white/20 transition-colors" onClick={() => setSidebarOpen(false)} />
 
-                        {/* Logo */}
-                        <button onClick={() => setIsLogoModalOpen(true)} className="flex items-center">
-                            <img
-                                src={settings.logo_url || "/logo.png"}
-                                alt="Logo"
-                                className="h-20 w-20 object-contain mix-blend-screen drop-shadow-2xl"
-                            />
-                        </button>
+                        {/* Signature Brand Identity - High Authority Transformation */}
+                        <div className="flex flex-col items-center animate-in fade-in slide-in-from-top-4 duration-1000">
+                            <h1 className="flex flex-col items-center gap-1 font-[var(--font-orbitron)] leading-none text-center">
+                                <span className="text-[28px] font-black uppercase tracking-[0.4em] text-white drop-shadow-[0_10px_30px_rgba(255,255,255,0.3)]">SKIPPY</span>
+                                <div className="h-[2px] w-32 bg-gradient-to-r from-transparent via-primary to-transparent my-2" />
+                                <span className="text-[10px] font-black uppercase tracking-[0.8em] text-primary/80">TOES Q8</span>
+                            </h1>
+                        </div>
                     </div>
 
-                    {/* Main Content Area - Fits all cards without scroll */}
-                    <div className="flex flex-col justify-center px-4 py-2 flex-grow min-h-0">
-                        {/* 2-Column or 3-Column Grid of Nav Cards depending on screen height/width */}
-                        <div className="grid grid-cols-2 gap-2 h-full content-center">
-                            {navItems.map((item) => {
+                    {/* Main Nav List - Minimalist elite sequence */}
+                    <div className="flex-1 overflow-y-auto no-scrollbar px-6 py-4">
+                        <div className="flex flex-col pb-8">
+                            {navItems.map((item, index) => {
                                 const Icon = item.icon;
                                 const isActive = location.pathname === item.to;
                                 return (
-                                    <Link
-                                        key={item.to}
-                                        to={item.to}
-                                        onClick={() => setSidebarOpen(false)}
-                                        className={`flex flex-col items-center justify-center gap-2 px-3 py-4 rounded-3xl transition-all duration-500 active:scale-90 group relative overflow-hidden
-                                            ${isActive ? 'bg-white/5 border border-white/10 shadow-[0_0_20px_rgba(255,255,255,0.05)]' : 'bg-white/[0.02] border border-white/[0.03]'}`}
-                                    >
-                                        {isActive && (
-                                            <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-transparent pointer-events-none" />
+                                    <React.Fragment key={item.to}>
+                                        <Link
+                                            to={item.to}
+                                            onClick={() => setSidebarOpen(false)}
+                                            style={{ 
+                                                animationDelay: `${index * 40}ms`,
+                                                opacity: 0,
+                                                animation: 'mobile-item-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards'
+                                            }}
+                                            className={`flex items-center gap-5 px-4 py-4 rounded-2xl transition-all duration-500 active:scale-98 group relative
+                                                ${isActive ? 'bg-white/[0.08] shadow-[0_0_20px_rgba(255,255,255,0.03)]' : 'hover:bg-white/[0.02]'}`}
+                                        >
+                                            {/* Active Side Indicator */}
+                                            {isActive && (
+                                                <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-primary rounded-full blur-[1px] animate-pulse" />
+                                            )}
+                                            
+                                            {/* Icon Layout */}
+                                            <div className="relative shrink-0 flex items-center justify-center w-8 h-8 z-10 transition-transform duration-500 group-active:scale-110">
+                                                {isActive && (
+                                                    <div className="absolute inset-0 blur-xl opacity-30 bg-primary scale-125" />
+                                                )}
+                                                <Icon className={`w-6 h-6 transition-all duration-500 relative z-10 ${isActive ? 'text-primary' : 'text-white/30'}`} />
+                                            </div>
+
+                                            {/* Label Layout */}
+                                            <div className="flex flex-col">
+                                                <span className={`font-black text-[12px] uppercase tracking-[0.3em] leading-none transition-all duration-500 relative z-10
+                                                    ${isActive ? 'text-white' : 'text-white/40 group-active:text-white/70'}`}>
+                                                    {item.label}
+                                                </span>
+                                                {item.isPremium && (
+                                                    <span className="text-[7px] font-black uppercase tracking-[0.4em] text-primary mt-1 opacity-80">Premium Access</span>
+                                                )}
+                                            </div>
+
+                                            {/* Right Indicator (Minimal) */}
+                                            <div className={`ml-auto transition-opacity duration-500 ${isActive ? 'opacity-100' : 'opacity-0 group-active:opacity-30'}`}>
+                                                <div className="w-1.5 h-1.5 rounded-full bg-primary/40 blur-[1px]"></div>
+                                            </div>
+                                        </Link>
+                                        
+                                        {/* Minimalist Divider */}
+                                        {index < navItems.length - 1 && (
+                                            <div className="w-full h-px bg-white/[0.04] mx-4" />
                                         )}
-                                        <div className="shrink-0 flex items-center justify-center h-8 relative z-10">
-                                            <Icon className={`w-7 h-7 transition-all duration-500 ${isActive ? 'text-primary scale-110 drop-shadow-[0_0_12px_rgba(var(--primary-rgb,16,185,129),0.6)]' : 'text-white/30 group-hover:text-white/80'}`} />
-                                        </div>
-                                        <span className={`font-black text-[9px] uppercase tracking-[0.2em] leading-none truncate transition-all duration-500 relative z-10
-                                            ${isActive ? 'text-white' : 'text-white/20 group-hover:text-white/40'}`}>
-                                            {item.label}
-                                        </span>
-                                    </Link>
+                                    </React.Fragment>
                                 );
                             })}
                         </div>
                     </div>
 
-                    {/* Mobile Footer Actions */}
-                    <div className="px-4 pb-6 flex items-center gap-2.5 shrink-0">
-                        <button
-                            onClick={() => {
-                                const newLang = i18n.language === 'en' ? 'ar' : 'en';
-                                i18n.changeLanguage(newLang);
-                                document.dir = newLang === 'ar' ? 'rtl' : 'ltr';
-                                updateSettings({ language: newLang });
-                            }}
-                            className="flex-1 flex flex-col items-center justify-center gap-1.5 px-3 py-2 bg-transparent hover:bg-white/5 rounded-2xl active:scale-95 transition-all text-white/60 hover:text-white"
-                        >
-                            <div className="shrink-0 flex items-center justify-center h-6">
-                                <Globe className="w-5 h-5" />
-                            </div>
-                            <span className="font-bold text-[10px] uppercase tracking-widest truncate">
-                                {i18n.language === 'en' ? 'Arabic' : 'English'}
-                            </span>
-                        </button>
-                        <button
-                            onClick={handleLogout}
-                            className="flex-1 flex flex-col items-center justify-center gap-1.5 px-3 py-2 bg-transparent hover:bg-rose-500/10 rounded-2xl active:scale-95 transition-all text-rose-400/80 hover:text-rose-400"
-                        >
-                            <div className="shrink-0 flex items-center justify-center h-6">
-                                <LogOut className="w-5 h-5" />
-                            </div>
-                            <span className="font-bold text-[10px] uppercase tracking-widest truncate">
-                                {t('common.logout')}
-                            </span>
-                        </button>
+                    {/* Elite Mobile Footer - Minimalist Actions */}
+                    <div className="px-6 pb-12 pt-6 flex flex-col gap-2 shrink-0 bg-gradient-to-t from-black/60 to-transparent border-t border-white/[0.05]">
+                        <div className="flex items-center gap-2">
+                            <button
+                                onClick={() => {
+                                    const newLang = i18n.language === 'en' ? 'ar' : 'en';
+                                    i18n.changeLanguage(newLang);
+                                    document.dir = newLang === 'ar' ? 'rtl' : 'ltr';
+                                    updateSettings({ language: newLang });
+                                }}
+                                className="flex-1 flex items-center justify-center gap-3 py-3 hover:bg-white/[0.03] rounded-xl active:scale-95 transition-all group"
+                            >
+                                <Globe className="w-4 h-4 text-white/30 group-active:text-white transition-colors" />
+                                <span className="font-black text-[10px] uppercase tracking-[0.4em] text-white/40 group-active:text-white">
+                                    {i18n.language === 'en' ? 'Arabic' : 'English'}
+                                </span>
+                            </button>
+                            
+                            <div className="w-px h-4 bg-white/[0.05]" />
+
+                            <button
+                                onClick={handleLogout}
+                                className="flex-1 flex items-center justify-center gap-3 py-3 hover:bg-rose-500/[0.03] rounded-xl active:scale-95 transition-all group"
+                            >
+                                <LogOut className="w-4 h-4 text-rose-500/30 group-active:text-rose-500 transition-colors" />
+                                <span className="font-black text-[10px] uppercase tracking-[0.4em] text-rose-500/40 group-active:text-rose-500">
+                                    {t('common.logout')}
+                                </span>
+                            </button>
+                        </div>
                     </div>
                 </div>
 
                 {/* ---- DESKTOP LAYOUT: Unchanged sidebar ---- */}
                 <div className="hidden lg:flex w-full flex-1 flex-col relative no-scrollbar pb-6 lg:pb-0">
-                    {/* Sidebar Header - Compact Logo */}
-                    <div className="pt-1 lg:pt-4 pb-1 shrink-0 w-full grid place-items-center">
-                        <button
-                            onClick={() => setIsLogoModalOpen(true)}
-                            onMouseEnter={playHoverSound}
-                            className="relative group grid place-items-center focus:outline-none z-10 w-full"
-                        >
-                            <img
-                                src={settings.logo_url || "/logo.png"}
-                                alt="Logo"
-                                className="relative z-10 h-14 w-14 lg:h-12 lg:w-12 object-contain mx-auto cursor-pointer mix-blend-screen block"
-                            />
-                        </button>
+                    {/* Sidebar Header - logo/branding removed for elite minimalism */}
+                    <div className={`flex flex-col items-center transition-all duration-700 ${isHoveringSidebar ? 'pt-12 mb-10 min-h-[100px]' : 'pt-8 mb-4 min-h-[40px]'}`}>
+                        {isHoveringSidebar && (
+                            <div className="flex flex-col items-center animate-in fade-in zoom-in-95 duration-1000">
+                                <h1 className="flex flex-col items-center gap-1 font-[var(--font-orbitron)] leading-none text-center">
+                                    <span className="text-[24px] font-black uppercase tracking-[0.4em] text-white drop-shadow-[0_10px_30px_rgba(255,255,255,0.2)]">SKIPPY</span>
+                                    <div className="h-[1px] w-24 bg-gradient-to-r from-transparent via-primary to-transparent my-3" />
+                                    <span className="text-[9px] font-black uppercase tracking-[0.9em] text-primary/70">TOES Q8</span>
+                                </h1>
+                            </div>
+                        )}
                     </div>
 
-                    <div className="flex-1 flex flex-col items-center py-1 lg:py-1 px-0 space-y-0.5 lg:space-y-1 w-full overflow-y-auto no-scrollbar">
+                    <div className={`flex-1 flex flex-col items-center py-4 px-0 w-full overflow-y-auto no-scrollbar transition-all duration-700 ${isHoveringSidebar ? 'space-y-1' : 'space-y-4'}`}>
                         {navItems.map((item) => {
                             const Icon = item.icon;
                             const isActive = location.pathname === item.to;
@@ -716,7 +746,8 @@ export default function DashboardLayout() {
                                         to={item.to}
                                         onClick={() => setSidebarOpen(false)}
                                         onMouseEnter={playHoverSound}
-                                        className={`relative group grid w-full ${isHoveringSidebar ? 'grid-cols-[80px_1fr] items-center' : 'place-items-center'} p-2 rounded-2xl transition-all duration-500 ${isActive ? 'bg-white/5 border-l-2 border-primary' : 'hover:bg-white/[0.03]'}`}
+                                        className={`relative group grid w-full ${isHoveringSidebar ? 'grid-cols-[80px_1fr] items-center' : 'place-items-center'} p-2 rounded-2xl transition-all duration-500 
+                                            ${isActive ? 'bg-white/5 border-l-2 border-primary' : 'hover:bg-white/[0.03]'}`}
                                     >
                                         {/* Neon Glimmer for Active State */}
                                         {isActive && (
@@ -724,7 +755,9 @@ export default function DashboardLayout() {
                                         )}
 
                                         <div
-                                            className={`nav-icon-container shrink-0 w-8 h-8 rounded-xl flex items-center justify-center transition-all duration-500 mx-auto relative z-10 ${isActive ? 'text-primary scale-110 drop-shadow-[0_0_10px_rgba(var(--primary-rgb,16,185,129),0.4)]' : 'text-white/20 group-hover:text-white group-hover:scale-110'}`}
+                                            className={`nav-icon-container shrink-0 w-8 h-8 rounded-xl flex items-center justify-center transition-all duration-500 mx-auto relative z-10 
+                                                ${isActive ? 'text-primary scale-110 drop-shadow-[0_0_10px_rgba(var(--primary-rgb,16,185,129),0.4)]' 
+                                                : 'text-white/20 group-hover:text-white group-hover:scale-110'}`}
                                             style={{ color: isActive ? 'var(--color-primary)' : '' }}
                                         >
                                             <Icon className={`w-4 h-4 transition-all duration-500 ${isActive ? 'rotate-[360deg]' : 'opacity-40 group-hover:opacity-100 group-hover:rotate-12'}`} />
@@ -732,7 +765,8 @@ export default function DashboardLayout() {
 
                                         {/* Desktop Label - Elite Typography */}
                                         <span 
-                                            className={`font-black uppercase tracking-[0.3em] text-[10px] transition-all duration-700 whitespace-nowrap overflow-hidden relative z-10 ${isHoveringSidebar ? 'w-40 opacity-100 translate-x-0' : 'w-0 opacity-0 -translate-x-4'} ${isActive ? 'text-white' : 'text-white/10 group-hover:text-white/40 group-hover:translate-x-1'}`}
+                                            className={`font-black uppercase tracking-[0.3em] text-[10px] transition-all duration-700 whitespace-nowrap overflow-hidden relative z-10 ${isHoveringSidebar ? 'w-40 opacity-100 translate-x-0' : 'w-0 opacity-0 -translate-x-4'} 
+                                            ${isActive ? 'text-white' : 'text-white/10 group-hover:text-white/40 group-hover:translate-x-1'}`}
                                         >
                                             {item.label}
                                         </span>
@@ -794,7 +828,7 @@ export default function DashboardLayout() {
                 {!location.pathname.includes('/communications') && (
                     <header className={`premium-header-strip relative z-20 w-full pt-4 lg:pt-0 px-4 sm:px-6 lg:px-0 flex flex-col items-center lg:items-center`}>
                         <div className="w-full max-w-7xl lg:max-w-none h-18 lg:h-12 flex items-center justify-between px-2 sm:px-6 relative">
-                            {/* Left Side Section - Clock & Mobile Toggle */}
+                            {/* Left Side Section - Minimal Mobile Toggle Only */}
                             <div className="flex items-center gap-4 lg:w-72">
                                 <button
                                     onClick={() => setSidebarOpen(true)}
@@ -802,33 +836,11 @@ export default function DashboardLayout() {
                                 >
                                     <Menu className="w-6 h-6" />
                                 </button>
-
-                                {/* Premium Clock - Now on the left side */}
-                                <div className="hidden lg:flex items-center">
-                                    <PremiumClock className="!bg-transparent !border-none !shadow-none !px-0 !backdrop-blur-none scale-75 origin-left" />
-                                </div>
                             </div>
 
-                            {/* Center Section - Minimal Transparent Search Bar (Hidden on Mobile) */}
-                            <div className="hidden lg:flex flex-1 justify-center px-4">
-                                <div className="w-full max-w-xs group/search" ref={searchRef}>
-                                    <div className="flex items-center gap-3 px-4 py-2 bg-transparent border-none transition-all">
-                                        <Search className={`w-4 h-4 ${isSearching ? 'text-primary animate-spin' : 'text-primary/40'} shrink-0 group-focus-within/search:text-primary transition-colors`} />
-                                        <input
-                                            type="text"
-                                            value={searchTerm}
-                                            onChange={(e) => setSearchTerm(e.target.value)}
-                                            onFocus={() => searchTerm.trim() && setShowResults(true)}
-                                            placeholder={t('common.search') || "Search..."}
-                                            className="bg-transparent border-none focus:ring-0 text-xs font-bold text-white/60 focus:text-white w-full p-0 h-auto uppercase tracking-widest placeholder:text-white/20 transition-all"
-                                        />
-                                        {searchTerm && (
-                                            <button onClick={() => setSearchTerm('')} className="p-1 hover:bg-white/5 rounded-full transition-colors">
-                                                <X className="w-3 h-3 text-white/20 hover:text-white/60" />
-                                            </button>
-                                        )}
-                                    </div>
-                                </div>
+                            {/* Center Section - Free Horizontal Space (Branding moved to Sidebar) */}
+                            <div className="absolute left-1/2 -translate-x-1/2 flex flex-col items-center pointer-events-none w-fit z-10 opacity-0 lg:opacity-0">
+                                {/* Brand removed from center to reduce clutter in elite view */}
                             </div>
 
                             {/* Right Section - Profile/Actions */}
@@ -911,10 +923,10 @@ export default function DashboardLayout() {
 
                                 <div className={`flex items-center gap-2 sm:gap-4 group/header relative ${isRtl ? 'flex-row-reverse' : 'flex-row'}`}>
                                     {/* Quick Action Hub - Reveal on Hover (Desktop) / Always Visible (Mobile) */}
-                                    <div className={`flex items-center gap-1.5 sm:gap-2 transition-all duration-700 ease-out ${notificationsOpen ? 'opacity-100 translate-x-0 pointer-events-auto' : `opacity-100 md:opacity-0 ${isRtl ? 'translate-x-0 md:-translate-x-10' : 'translate-x-0 md:translate-x-10'} pointer-events-auto md:pointer-events-none group-hover/header:opacity-100 group-hover/header:translate-x-0 group-hover/header:pointer-events-auto translate-z-0`}`}>
+                                    <div className={`flex items-center gap-1.5 sm:gap-2 transition-all duration-700 ease-out ${notificationsOpen ? 'opacity-100 translate-x-0 pointer-events-auto' : `opacity-100 lg:opacity-0 ${isRtl ? 'lg:translate-x-10' : 'lg:-translate-x-10'} lg:pointer-events-none lg:group-hover/header:opacity-100 lg:group-hover/header:translate-x-0 lg:group-hover/header:pointer-events-auto translate-z-0`}`}>
                                         {role === 'admin' && (
                                             <a
-                                                href="#/registration"
+                                                href="/register"
                                                 target="_blank"
                                                 rel="noopener noreferrer"
                                                 onMouseEnter={playHoverSound}
@@ -978,7 +990,7 @@ export default function DashboardLayout() {
                 {/* Page Content */}
                 <main className={`flex-1 min-h-0 ${location.pathname.includes('/communications') ? 'p-0 overflow-hidden' : 'p-3 sm:p-5 overflow-y-auto overflow-x-hidden'}`}>
                     <div key={location.pathname} className="page-content h-full">
-                        <Outlet context={{ role, fullName, userId }} />
+                        <Outlet context={{ role, fullName, userId, userEmail }} />
                     </div>
                 </main>
             </div >
@@ -1134,6 +1146,30 @@ export default function DashboardLayout() {
             }
 
 
+            <style>{`
+                @keyframes float {
+                    0%, 100% { transform: translateY(0); }
+                    50% { transform: translateY(-8px); }
+                }
+                .animate-float {
+                    animation: float 4s ease-in-out infinite;
+                }
+                .perspective-1000 {
+                    perspective: 1000px;
+                }
+                @keyframes mobile-item-in {
+                    from { 
+                        opacity: 0; 
+                        transform: translateY(20px) scale(0.95); 
+                        filter: blur(10px);
+                    }
+                    to { 
+                        opacity: 1; 
+                        transform: translateY(0) scale(1); 
+                        filter: blur(0);
+                    }
+                }
+            `}</style>
         </div >
     );
 }

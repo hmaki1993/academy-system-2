@@ -1,5 +1,5 @@
 import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
-import { Play, Square, RefreshCcw, Activity, Pause, Camera, Volume2, VolumeX, TrendingUp, Trophy, Clock, Zap, ArrowLeft, X, Loader2, AlertTriangle, Sparkles, Calendar, Users } from 'lucide-react';
+import { Play, Square, RefreshCcw, Activity, Pause, Camera, Volume2, VolumeX, TrendingUp, Trophy, Clock, Zap, ArrowLeft, X, Loader2, AlertTriangle, Sparkles, Calendar, Users, RotateCcw, Timer } from 'lucide-react';
 import Webcam from 'react-webcam';
 import { useAddJumpRopeSession, useTrainingAssignment, useJumpRopeAccess, useStudents, useAssignTraining } from '../../hooks/useData';
 import { useSmartPlan } from '../../hooks/useSmartPlan';
@@ -39,12 +39,16 @@ export default function JumpRopeTraining() {
     const [currentRestSecs, setCurrentRestSecs] = useState(0);
     const [isSessionActive, setIsSessionActive] = useState(false);
     const isSessionActiveRef = useRef(false);
-    
+
     // Plan & Admin States
     const [showPlanModal, setShowPlanModal] = useState(false);
     const [activePlan, setActivePlan] = useState<any>(null);
-    const [targetJumps, setTargetJumps] = useState<number | null>(null);
     const [selectedStudentId, setSelectedStudentId] = useState<string>('');
+    const [isRemotePaused, setIsRemotePaused] = useState(false);
+    const [resolvedStudentId, setResolvedStudentId] = useState<string>('');
+    const { updateSessionStatus } = useSmartPlan();
+    const [targetJumps, setTargetJumps] = useState<number | null>(null);
+    const [targetTime, setTargetTime] = useState<number | null>(null);
 
     // Countdown Timer State
     const [countdownMins, setCountdownMins] = useState(0);
@@ -52,11 +56,13 @@ export default function JumpRopeTraining() {
     const [timerRemaining, setTimerRemaining] = useState<number | null>(null);
     const [isTimerActive, setIsTimerActive] = useState(false);
     const [showTimerPicker, setShowTimerPicker] = useState(false);
+    const lastPlanIdRef = useRef<string | null>(null);
     const minsScrollRef = useRef<HTMLDivElement>(null);
     const secsScrollRef = useRef<HTMLDivElement>(null);
+    const [scheduledRemaining, setScheduledRemaining] = useState<number | null>(null);
     const ITEM_H = 44;
-    const MIN_OPTIONS = Array.from({length: 21}, (_, i) => i);
-    const SEC_OPTIONS = Array.from({length: 12}, (_, i) => i * 5);
+    const MIN_OPTIONS = Array.from({ length: 21 }, (_, i) => i);
+    const SEC_OPTIONS = Array.from({ length: 12 }, (_, i) => i * 5);
 
     const { data: assignmentData } = useTrainingAssignment();
     const { data: access } = useJumpRopeAccess();
@@ -65,98 +71,269 @@ export default function JumpRopeTraining() {
     const user = (access as any)?.user;
     const assignment = assignmentData as any;
 
-    // 1. Fetch Personal Training Plan (AI) and Listen to Realtime Broadcasts
+    const speak = useCallback((text: string) => {
+        if (!voiceEnabled || !window.speechSynthesis) return;
+        window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.rate = 1.2;
+        utterance.pitch = 1.1;
+        window.speechSynthesis.speak(utterance);
+    }, [voiceEnabled]);
+
+    const handleFinish = useCallback(async () => {
+        setIsSessionActive(false);
+        isSessionActiveRef.current = false;
+        const totalWork = workTimeRef.current;
+        const totalRest = restTimeRef.current;
+        const totalJumps = jumpCountRef.current;
+        const finalRpm = Math.round(totalJumps / ((totalWork || 1) / 60)) || 0;
+
+        // Guarantee session delivery to Admin Hub
+        if (totalJumps > 0) {
+            addSession({
+                jumps: totalJumps,
+                duration: totalWork + totalRest,
+                rpm: finalRpm,
+                student_id: resolvedStudentId,
+                work_duration: totalWork,
+                rest_duration: totalRest
+            });
+        }
+
+        setFinalRestSecs(totalRest);
+        setJumps(totalJumps);
+        setRpm(finalRpm);
+        setTotalSeconds(totalWork + totalRest);
+
+        // Auto-lock session on completion for "Remote Control" experience
+        if (resolvedStudentId) {
+            await updateSessionStatus(resolvedStudentId, 'idle');
+        }
+
+        setShowSummary(true);
+        speak(`${totalJumps} jumps completed.`);
+    }, [addSession, speak, resolvedStudentId, updateSessionStatus]);
+
+    const handleRestart = useCallback(() => {
+        // Reset everything to deep zero
+        setJumps(0);
+        jumpCountRef.current = 0;
+        setRpm(0);
+        setTotalSeconds(0);
+        setActiveSeconds(0);
+        workTimeRef.current = 0;
+        restTimeRef.current = 0;
+        lastActivityTimeRef.current = 0;
+        setIntensityStatus('READY');
+        setCurrentRestSecs(0);
+
+        // Timer Reset Logic
+        const total = (countdownMins * 60) + countdownSecs;
+        setTimerRemaining(total > 0 ? total : null);
+        timerRemainingRef.current = total > 0 ? total : null;
+
+        setIsTimerActive(false);
+        isTimerActiveRef.current = false;
+        isTimerStartedRef.current = false;
+
+        // Return to "Start Training" state
+        setIsSessionActive(false);
+        setIsTracking(false);
+
+        speak("Session Reset. Ready for a new start!");
+    }, [speak, countdownMins, countdownSecs]);
+
+    // Admins are never locked; students start locked until coach sends 'live'
+    const [isRemoteLocked, setIsRemoteLocked] = useState(true);
     useEffect(() => {
+        if (isAdmin) setIsRemoteLocked(false);
+    }, [isAdmin]);
+
+    // 1. Fetch Personal Training Plan and Poll for Status Changes
+    const applyPlanTargets = useCallback((plan: any) => {
+        if (!plan) return;
+        setActivePlan(plan);
+
+        const isNewPlan = lastPlanIdRef.current !== plan.id;
+
+        if (plan.status === 'live') {
+            setIsRemoteLocked(false);
+            setIsRemotePaused(false);
+
+            // Auto-set session as active if live, but don't start timer yet
+            if (plan.target_time && !isSessionActiveRef.current) {
+                const totalSecs = Number(plan.target_time) * 60;
+                setCountdownMins(Number(plan.target_time));
+                setCountdownSecs(0);
+                setTimerRemaining(totalSecs);
+                timerRemainingRef.current = totalSecs;
+
+                // Auto-launch the session structure
+                setIsSessionActive(true);
+                isSessionActiveRef.current = true;
+
+                // START MOD: Keep timer inactive initially
+                setIsTimerActive(false);
+                isTimerActiveRef.current = false;
+
+                isTimerStartedRef.current = true;
+                jumpCountRef.current = 0;
+                workTimeRef.current = 0;
+                restTimeRef.current = 0;
+                lastActivityTimeRef.current = 0;
+                intensityHistoryRef.current = [];
+                speak('Session ready. Jump to start the timer!');
+            }
+        } else if (plan.status === 'scheduled') {
+            setIsRemoteLocked(true); // Keep locked until time reached
+        } else if (plan.status === 'paused') {
+            setIsRemotePaused(true);
+        } else if (plan.status === 'idle') {
+            setIsRemoteLocked(true);
+        } else if (plan.status === 'restarting') {
+            setIsRemoteLocked(false);
+            setIsRemotePaused(false);
+            const restartKey = plan.updated_at || plan.id || plan.created_at || 'once';
+            if ((window as any).__lastRestartKey !== restartKey) {
+                (window as any).__lastRestartKey = restartKey;
+                handleRestart();
+            }
+        }
+
+        // Always update targets if the coach sends a new plan or a sync command
+        if (plan.target_jumps != null) setTargetJumps(Number(plan.target_jumps));
+        if (plan.target_time != null) {
+            const total = Number(plan.target_time) * 60;
+            setCountdownMins(Number(plan.target_time));
+            setCountdownSecs(0);
+            setTimerRemaining(total);
+            timerRemainingRef.current = total;
+        }
+        lastPlanIdRef.current = plan.id;
+    }, [handleRestart, speak]);
+
+    const fetchLatestPlan = useCallback(async () => {
         if (!user?.id) return;
-
-        let activeStudentId = user.id;
-
-        const setupTrainingPlan = async () => {
-            console.log('📡 Realtime: Setting up for user:', user.id);
-            
-            // First, resolve the actual student ID matching this profile
-            const { data: stData, error: stError } = await supabase
+        try {
+            // Step 1: Get the student's integer ID using their profile UUID
+            const { data: stData } = await supabase
                 .from('students')
                 .select('id')
                 .eq('profile_id', user.id)
                 .maybeSingle();
 
-            if (stError) {
-                console.error('❌ Realtime: Error resolving student ID:', stError);
-                return;
-            }
+            if (!stData?.id) return; // Student not registered yet
 
-            if (stData?.id) {
-                activeStudentId = stData.id;
-                console.log('✅ Realtime: Resolved Student ID:', activeStudentId);
-            } else {
-                console.warn('⚠️ Realtime: No student record found for profile, using profile_id as fallback');
-            }
-
-            // Fetch the latest active plan
-            const { data } = await supabase
+            // Step 2: Fetch their training plan by integer student_id
+            const { data: planData } = await supabase
                 .from('training_plans')
                 .select('*')
-                .eq('student_id', activeStudentId)
+                .eq('student_id', stData.id)
                 .order('created_at', { ascending: false })
                 .limit(1);
-            
-            if (data && data.length > 0) {
-                console.log('📋 Realtime: Initial plan found:', data[0].id);
-                applyPlanTargets(data[0]);
+
+            if (planData && planData.length > 0) {
+                setResolvedStudentId(stData.id);
+                applyPlanTargets(planData[0]);
             }
+        } catch (e) {
+            console.error('fetchLatestPlan error:', e);
+        }
+    }, [user?.id, applyPlanTargets]);
 
-            // Set up Realtime Listener for Live Broadcasts!
-            console.log('🔄 Realtime: Subscribing to channel for student_id:', activeStudentId);
-            const channel = supabase.channel(`direct_broadcasts_${activeStudentId}`)
-                .on(
-                    'postgres_changes',
-                    { 
-                        event: '*', 
-                        schema: 'public', 
-                        table: 'training_plans', 
-                        filter: `student_id=eq.${activeStudentId}` 
-                    },
-                    (payload) => {
-                        console.log('⚡ Realtime: Received event:', payload.eventType, payload.new);
-                        applyPlanTargets(payload.new);
-                    }
-                )
-                .subscribe((status) => {
-                    console.log('📡 Realtime: Subscription status:', status);
-                });
+    // 2. Automated Scheduled Start Checker
+    useEffect(() => {
+        if (!activePlan || activePlan.status !== 'scheduled' || !activePlan.scheduled_start) {
+            setScheduledRemaining(null);
+            return;
+        }
 
-            return () => {
-                console.log('🔌 Realtime: Terminating subscription for:', activeStudentId);
-                supabase.removeChannel(channel);
-            };
+        const checkTime = setInterval(async () => {
+            const now = new Date();
+            const [targetH, targetM] = activePlan.scheduled_start.split(':').map(Number);
+            const targetDate = new Date();
+            targetDate.setHours(targetH, targetM, 0, 0);
+
+            // Calculate diff. If it's negative by a lot (e.g. > 12h), maybe it was meant for "today" but coach set it late.
+            // Existing logic currentTime >= activePlan.scheduled_start is effectively same-day focused.
+            let diffSeconds = Math.ceil((targetDate.getTime() - now.getTime()) / 1000);
+
+            // If target is more than 1 minute in the past, and we are in 'scheduled' status, 
+            // it should probably just trigger now (consistency with existing logic).
+            if (diffSeconds <= 0) {
+                console.log("SCHEDULED TIME REACHED! AUTO-STARTING...");
+                clearInterval(checkTime);
+                setScheduledRemaining(0);
+
+                // Transition to 'live' atomically
+                try {
+                    await supabase
+                        .from('training_plans')
+                        .update({ status: 'live' })
+                        .eq('id', activePlan.id);
+
+                    // Refresh local state to trigger the standard 'live' logic
+                    fetchLatestPlan();
+                } catch (err) {
+                    console.error("Failed to auto-transition scheduled session:", err);
+                }
+            } else {
+                setScheduledRemaining(diffSeconds);
+            }
+        }, 1000); // Check every 1 second for smooth countdown
+
+        return () => clearInterval(checkTime);
+    }, [activePlan, fetchLatestPlan]);
+
+    // 1. Fetch Personal Training Plan and Poll for Status Changes
+    useEffect(() => {
+        if (!user?.id) return;
+
+        let pollInterval: any = null;
+
+        const init = async () => {
+            // Resolve student_id for handleFinish auto-lock
+            const { data: stData } = await supabase
+                .from('students')
+                .select('id')
+                .eq('profile_id', user.id)
+                .maybeSingle();
+            if (stData?.id) setResolvedStudentId(stData.id);
+
+            // Initial fetch
+            await fetchLatestPlan();
+
+            // Poll every 3 seconds for status changes from coach
+            pollInterval = setInterval(() => {
+                fetchLatestPlan();
+            }, 3000);
         };
 
-        const applyPlanTargets = (plan: any) => {
-            setActivePlan(plan);
-            
-            // Auto-set targets from plan if they exist
-            if (plan.target_jumps) {
-                setTargetJumps(plan.target_jumps);
-                speak('New jump targets received from coach.');
-            }
-            if (plan.target_time) {
-                const total = plan.target_time * 60;
-                setCountdownMins(plan.target_time);
-                setCountdownSecs(0);
-                setTimerRemaining(total);
-                timerRemainingRef.current = total;
-                speak('New time targets received from coach.');
-            }
-        };
-
-        let cleanupFn: any = null;
-        setupTrainingPlan().then(cleanup => cleanupFn = cleanup);
+        init();
 
         return () => {
-            if (cleanupFn) cleanupFn();
+            if (pollInterval) clearInterval(pollInterval);
         };
-    }, [user?.id]);
+    }, [fetchLatestPlan, user?.id]);
+
+    // 1b. Real-time Broadcast Listener for instant plan delivery
+    useEffect(() => {
+        if (!user?.id) return;
+
+        const channel = supabase.channel(`direct_broadcasts_${user.id}`)
+            .on('broadcast', { event: 'session_update' }, (payload) => {
+                console.log('REAL-TIME PLAN SYNC:', payload);
+                // If it's a full plan update ('sent' status or explicit refresh flag)
+                if (payload.payload?.status === 'sent' || payload.payload?.refresh_plan) {
+                    fetchLatestPlan();
+                }
+            })
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    }, [resolvedStudentId, fetchLatestPlan]);
 
     // 2. Handle Training Assignments
     useEffect(() => {
@@ -191,16 +368,6 @@ export default function JumpRopeTraining() {
         setCountdownSecs(SEC_OPTIONS[Math.min(idx, SEC_OPTIONS.length - 1)] ?? 0);
     };
 
-    // --- Voice Synthesis ---
-    const speak = useCallback((text: string) => {
-        if (!voiceEnabled || !window.speechSynthesis) return;
-        window.speechSynthesis.cancel();
-        const utterance = new SpeechSynthesisUtterance(text);
-        utterance.rate = 1.2;
-        utterance.pitch = 1.1;
-        window.speechSynthesis.speak(utterance);
-    }, [voiceEnabled]);
-
     // --- Detection Refs ---
     const jumpCountRef = useRef(0);
     const isJumpingRef = useRef(false);
@@ -217,7 +384,7 @@ export default function JumpRopeTraining() {
     const isStableRef = useRef(false);
     const stabilityStartRef = useRef<number | null>(null);
     const trackingLossStartRef = useRef<number | null>(null);
-    const lastValidTimeRef = useRef<number>(0); 
+    const lastValidTimeRef = useRef<number>(0);
     const velocityRef = useRef(0);
     const lastFrameTime = useRef(Date.now());
     const lastActivityTimeRef = useRef(0);
@@ -227,10 +394,10 @@ export default function JumpRopeTraining() {
     const intensityHistoryRef = useRef<any[]>([]);
     const cooldownRef = useRef(false);
     const isTimerStartedRef = useRef(false);
-    const isTimerActiveRef = useRef(false); 
+    const isTimerActiveRef = useRef(false);
     const setupStatusRef = useRef<'READY' | 'TOO_CLOSE' | 'STEP_BACK' | 'MOVING' | 'STABLE'>('READY');
-    const smoothedVelXRef = useRef(0); 
-    const smoothedScaleVelRef = useRef(0); 
+    const smoothedVelXRef = useRef(0);
+    const smoothedScaleVelRef = useRef(0);
 
     useEffect(() => {
         if (webcamRef.current && webcamRef.current.video) {
@@ -295,11 +462,11 @@ export default function JumpRopeTraining() {
         smoothedScaleVelRef.current = (smoothedScaleVelRef.current * 0.8) + (rawScaleVelocity * 0.2);
 
         const wasTooClose = setupStatusRef.current === 'TOO_CLOSE';
-        const isTooClose = wasTooClose ? (shoulderW > W * 0.35) : (shoulderW > W * 0.40); 
-        const isApproaching = smoothedScaleVelRef.current > (W * 0.08); 
-        const isWalking = smoothedVelXRef.current > (W * 0.15); 
+        const isTooClose = wasTooClose ? (shoulderW > W * 0.35) : (shoulderW > W * 0.40);
+        const isApproaching = smoothedScaleVelRef.current > (W * 0.08);
+        const isWalking = smoothedVelXRef.current > (W * 0.15);
         const isCurrentlyMoving = frameVelocityY > 400 || smoothedVelXRef.current > 200 || isApproaching;
-        
+
         lastCenterY.current = noseY;
         lastCenterX.current = noseX;
         lastShoulderWidth.current = shoulderW;
@@ -378,7 +545,7 @@ export default function JumpRopeTraining() {
         setMovementPct(Math.round(pct));
 
         canvasCtx.globalAlpha = 0.8;
-        canvasCtx.fillStyle = '#ff3b30'; 
+        canvasCtx.fillStyle = '#ff3b30';
         canvasCtx.beginPath(); canvasCtx.arc(noseX, noseY, 6, 0, Math.PI * 2); canvasCtx.fill();
         if (hMidX !== null && hMidY !== null) {
             canvasCtx.fillStyle = '#10b981';
@@ -411,6 +578,15 @@ export default function JumpRopeTraining() {
                 if (peakY.current > jumpMinThreshold && isSessionActiveRef.current) {
                     jumpCountRef.current++;
                     setJumps(jumpCountRef.current);
+
+                    // Start timer on FIRST JUMP - Only if established and READY
+                    if (jumpCountRef.current === 1 && !isTimerActiveRef.current && setupStatusRef.current === 'READY') {
+                        console.log("Timer started by first jump detection");
+                        setIsTimerActive(true);
+                        isTimerActiveRef.current = true;
+                        speak("Timer started!");
+                    }
+
                     if (jumpCountRef.current % 10 === 0) speak(jumpCountRef.current.toString());
                     if ('vibrate' in navigator) navigator.vibrate(50);
                     lastActivityTimeRef.current = now;
@@ -448,7 +624,7 @@ export default function JumpRopeTraining() {
         if (!isSessionActive) return;
         const interval = setInterval(() => {
             const now = Date.now();
-            if (!isTimerActiveRef.current) return;
+            if (!isTimerActiveRef.current || isRemotePaused) return;
             setTotalSeconds(s => s + 1);
             const isWorking = lastActivityTimeRef.current > 0 && (now - lastActivityTimeRef.current) < 4000;
             if (isWorking) {
@@ -472,38 +648,32 @@ export default function JumpRopeTraining() {
                 const nextValue = Math.max(0, timerRemainingRef.current - 1);
                 timerRemainingRef.current = nextValue;
                 setTimerRemaining(nextValue);
+
+                // AUDIO COUNTDOWN 10-0
+                if (nextValue <= 10 && nextValue > 0) {
+                    speak(nextValue.toString());
+                }
+
                 if (nextValue === 0) handleFinish();
             }
         }, 1000);
         return () => clearInterval(interval);
     }, [isSessionActive, isTracking]);
 
-    const handleFinish = useCallback(() => {
-        setIsSessionActive(false);
-        isSessionActiveRef.current = false;
-        const totalWork = workTimeRef.current;
-        const totalRest = restTimeRef.current;
-        const totalJumps = jumpCountRef.current;
-        const finalRpm = Math.round(totalJumps / ((totalWork || 1) / 60)) || 0;
-        setFinalRestSecs(totalRest);
-        setJumps(totalJumps);
-        setRpm(finalRpm);
-        setTotalSeconds(totalWork + totalRest);
-        addSession({ jumps: totalJumps, duration: totalWork + totalRest, rpm: finalRpm });
-        setShowSummary(true);
-        speak(`${totalJumps} jumps completed.`);
-    }, [addSession, speak]);
+
+
+
 
     const handleStart = () => {
         const total = (countdownMins * 60) + countdownSecs;
         setTimerRemaining(total > 0 ? total : null);
         timerRemainingRef.current = total > 0 ? total : null;
-        setIsTracking(true); 
+        setIsTracking(true);
         setIsSessionActive(true);
         isSessionActiveRef.current = true;
-        setIsTimerActive(true); 
+        setIsTimerActive(true);
         isTimerActiveRef.current = true;
-        isTimerStartedRef.current = true; 
+        console.log("Timer started manually via button");
         speak("Session ready. Start jumping now!");
         jumpCountRef.current = 0; setJumps(0); setRpm(0); setTotalSeconds(0);
         workTimeRef.current = 0; restTimeRef.current = 0; lastActivityTimeRef.current = 0;
@@ -520,187 +690,336 @@ export default function JumpRopeTraining() {
             </div>
 
             {/* 2. Professional HUD Logic Header */}
-            <div className="relative z-[60] px-4 sm:px-8 pt-2">
-                <PageHeader title={t('common.performanceTracker')} subtitle="AI POWERED PERFORMANCE MONITORING">
-                    <div className="flex flex-wrap items-center gap-4 sm:gap-6">
+            <div className="relative z-[60] px-4 sm:px-8 pt-2 sm:pt-4 flex flex-col gap-2 sm:gap-4">
+                <PageHeader title={t('common.performanceTracker')} subtitle="AI PERFORMANCE MONITOR">
+                    <div className="flex items-center gap-3 sm:gap-6">
                         {!isSessionActive && (
-                            <div className="flex items-center gap-3">
-                                <div className="flex items-center gap-2 px-1 py-1 bg-transparent">
-                                    <Trophy size={12} className="text-accent/60" />
-                                    <div className="flex flex-col">
-                                        <span className="text-[7px] font-black text-white/20 uppercase tracking-[0.2em] mb-0.5">Target</span>
-                                        <input type="number" value={targetJumps || ''} onChange={(e) => setTargetJumps(e.target.value ? parseInt(e.target.value) : null)} placeholder="Target" className="bg-transparent border-none text-[10px] font-black text-white focus:ring-0 p-0 w-8" />
-                                    </div>
+                            <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-transparent border border-white/10">
+                                    <Trophy size={10} className="text-accent/60" />
+                                    <input
+                                        type="number"
+                                        value={targetJumps || ''}
+                                        onChange={(e) => setTargetJumps(e.target.value ? parseInt(e.target.value) : null)}
+                                        placeholder="0"
+                                        readOnly={!isAdmin}
+                                        className="bg-transparent border-none text-[10px] font-black text-white focus:ring-0 p-0 w-8 placeholder:text-white/10"
+                                    />
                                 </div>
-                                <button onClick={openTimerPicker} className="flex items-center gap-2 px-1 py-1 bg-transparent hover:opacity-70">
-                                    <Clock size={12} className="text-blue-400/60" />
-                                    <div className="flex flex-col items-start">
-                                        <span className="text-[7px] font-black text-white/20 uppercase tracking-[0.2em] mb-0.5">Timer</span>
-                                        <span className="text-[10px] font-black text-white leading-none">{String(countdownMins).padStart(2,'0')}:{String(countdownSecs).padStart(2,'0')}</span>
-                                    </div>
+                                <button onClick={isAdmin ? openTimerPicker : undefined} className={`flex items-center gap-1.5 px-2 py-1 rounded-lg bg-transparent border border-white/10 ${isAdmin ? 'hover:bg-white/5 active:scale-95 cursor-pointer' : 'cursor-default'}`}>
+                                    <Clock size={10} className="text-blue-400/60" />
+                                    <span className="text-[10px] font-black text-white">{String(countdownMins).padStart(2, '0')}:{String(countdownSecs).padStart(2, '0')}</span>
                                 </button>
                             </div>
                         )}
-                        <button onClick={() => setVoiceEnabled(!voiceEnabled)} className={`w-8 h-8 flex items-center justify-center ${voiceEnabled ? 'text-primary' : 'text-white/40'}`}>
-                            {voiceEnabled ? <Volume2 size={18} /> : <VolumeX size={18} />}
+                        <button onClick={() => setVoiceEnabled(!voiceEnabled)} className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${voiceEnabled ? 'bg-primary/10 text-primary' : 'bg-white/5 text-white/40'}`}>
+                            {voiceEnabled ? <Volume2 size={16} /> : <VolumeX size={16} />}
                         </button>
                     </div>
                 </PageHeader>
             </div>
 
-            {/* 3. Primary HUD Counter Layer */}
+            {/* 3. Primary HUD Counter Layer (Zoned for Mobile) */}
             {!showSummary && (
-                <div className="absolute inset-0 z-40 flex flex-col items-center justify-center pointer-events-none">
-                    <div className="relative flex flex-col items-center pt-8">
-                        <div className="absolute inset-0 bg-blue-400/10 blur-[130px] rounded-full scale-150" />
-                        <span className="text-blue-400 text-[10px] font-black uppercase tracking-[0.8em] mb-1 drop-shadow-[0_0_12px_rgba(96,165,250,0.5)] relative z-10">JUMPS</span>
-                        <span className="text-[180px] font-black leading-none tracking-tighter drop-shadow-[0_20px_60px_rgba(0,0,0,0.9)] relative z-10 select-none text-white">{jumps}</span>
-                        
-                        <div className="mt-4 flex items-center gap-3 relative z-10">
-                            <div className="px-5 py-1.5 rounded-full border backdrop-blur-3xl flex items-center gap-2" style={{ background: 'rgba(255,255,255,0.06)', borderColor: 'rgba(255,255,255,0.15)' }}>
-                                <Activity size={10} className="text-blue-400" />
-                                <span className="font-black text-[11px] tracking-[0.1em] text-white">{rpm} RPM</span>
-                            </div>
-                            {!isSessionActive && setupStatus !== 'READY' && (
-                                <div className="px-5 py-1.5 rounded-full border border-red-500/30 bg-red-500/10 backdrop-blur-3xl flex items-center gap-2">
-                                    <AlertTriangle size={10} className="text-red-400" />
-                                    <span className="text-[8px] font-black uppercase tracking-[0.2em] text-red-400">{setupStatus}</span>
-                                </div>
-                            )}
-                        </div>
-                    </div>
+                <div className="relative flex-1 flex flex-col justify-between pointer-events-none z-[50] pt-2 pb-0 sm:pt-12 sm:pb-2 px-4">
 
-                    <div className="absolute bottom-6 pb-safe inset-x-0 flex flex-col items-center gap-5 px-10 pointer-events-auto">
-                        {!isSessionActive ? (
-                            <button 
-                                onClick={handleStart} 
-                                className="w-full max-w-[240px] h-11 rounded-full border border-blue-400/30 bg-blue-400/5 backdrop-blur-md text-blue-400 font-black uppercase tracking-[0.3em] text-[10px] shadow-[0_10px_30px_rgba(96,165,250,0.1)] transition-all active:scale-95 hover:bg-blue-400/10 flex items-center justify-center gap-3"
-                            >
-                                <Play size={12} fill="currentColor" /> START TRAINING
-                            </button>
-                        ) : (
-                            <button 
-                                onClick={handleFinish} 
-                                className="w-full max-w-[240px] h-11 rounded-full border border-white/10 bg-white/5 backdrop-blur-md font-black uppercase tracking-[0.3em] text-[10px] transition-all active:scale-95 flex items-center justify-center gap-3 text-white"
-                            >
-                                <div className="w-2 h-2 bg-blue-400 rounded-sm shadow-[0_0_10px_rgba(96,165,250,0.5)]" /> FINISH SESSION
-                            </button>
+                    {/* TOP ZONE */}
+                    <div className="flex justify-center min-h-[30px] pointer-events-auto">
+                        {!isAdmin && !isRemoteLocked && targetJumps && targetJumps > 0 && (
+                            <div className="flex justify-center transition-all animate-in slide-in-from-top duration-500">
+                                <div className="flex items-center gap-3 px-4 py-1.5 rounded-full bg-black/60 backdrop-blur-xl border border-white/5 shadow-xl">
+                                    <div className="flex items-center gap-3">
+                                        <span className="text-[10px] font-black text-white tabular-nums">
+                                            {jumps} <span className="text-white/20 mx-0.5">/</span> <span className="text-blue-400">{targetJumps}</span>
+                                        </span>
+                                        <div className="w-16 sm:w-24 h-1.5 bg-white/10 rounded-full overflow-hidden">
+                                            <div
+                                                className="h-full bg-blue-400 rounded-full transition-all duration-700"
+                                                style={{ width: `${Math.min(100, (jumps / targetJumps) * 100)}%` }}
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         )}
                     </div>
-                </div>
-            )}
 
+                    {/* CENTER ZONE */}
+                    <div className="relative flex-col flex items-center justify-center pt-2">
+                        <div className="absolute inset-0 bg-blue-400/5 blur-[80px] rounded-full" />
+                        <span className="text-blue-400 text-[8px] font-black uppercase tracking-[0.8em] mb-0 relative z-10 opacity-30">JUMPS</span>
+                        <span className="text-[7.5rem] sm:text-[180px] font-black leading-none tracking-tighter relative z-10 select-none text-white drop-shadow-2xl">
+                            {jumps}
+                        </span>
 
-            {/* 2. Integrated Training Plan Display (Student View Only) */}
-            {!isAdmin && activePlan && (
-                <div className="relative z-[60] px-4 sm:px-8 pb-10 mt-4 animate-in fade-in slide-in-from-bottom-10 duration-700">
-                    <div className="w-full max-w-4xl mx-auto bg-black/60 backdrop-blur-3xl border border-white/10 rounded-[3rem] p-10 shadow-[0_40px_120px_rgba(0,0,0,0.8)]">
-                        <div className="flex items-center justify-between mb-10 border-b border-white/5 pb-8">
-                            <div className="flex flex-col">
-                                <h3 className="text-3xl font-black tracking-[.2em] uppercase text-white leading-none">
-                                    {activePlan.status === 'direct_target' ? 'Direct Protocol' : 'Your Strategy'}
-                                </h3>
-                                <p className="text-xs font-black uppercase tracking-[0.5em] text-orange-500 mt-3 flex items-center gap-2">
-                                    <Sparkles size={12} /> {activePlan.status === 'direct_target' ? 'Custom Session Goal' : 'Personalized AI Workout'}
-                                </p>
-                            </div>
-                            <div className="flex gap-8">
-                                <div className="text-right">
-                                    <span className="block text-[10px] font-black uppercase tracking-widest text-white/30 mb-2 font-mono italic">Daily Burn Goal</span>
-                                    <span className="text-3xl font-black text-orange-500 tracking-tighter">{activePlan.target_calories || 0} KCAL</span>
-                                </div>
+                        <div className="mt-1 flex items-center gap-2 relative z-10">
+                            <div className="px-3 py-1 rounded-full border border-white/5 bg-white/[0.03] backdrop-blur-3xl flex items-center gap-2">
+                                <Activity size={9} className="text-blue-400/50" />
+                                <span className="font-black text-[9px] tracking-[0.1em] text-white/80">{rpm} RPM</span>
                             </div>
                         </div>
+                    </div>
 
-                        {activePlan.plan_content && activePlan.plan_content.length > 0 ? (
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                                {activePlan.plan_content.map((day: any, i: number) => (
-                                    <div key={i} className="p-8 rounded-[2.5rem] bg-white/[0.03] border border-white/10 space-y-6 hover:bg-white/[0.06] transition-all duration-500 shadow-xl">
-                                        <div className="flex items-center justify-between">
-                                            <span className="text-xs font-black text-orange-500 uppercase tracking-[0.2em]">{day.day}</span>
-                                            <div className="w-2 h-2 rounded-full bg-orange-500 shadow-[0_0_15px_rgba(249,115,22,1)]" />
+                    {/* BOTTOM ZONE: Actions + Secondary Stats */}
+                    <div className="relative flex flex-col items-center gap-3 sm:gap-8 pointer-events-auto">
+
+                        {/* Status text */}
+                        {!isTimerActive && (
+                            <span className="text-[7px] font-black uppercase tracking-[0.5em] text-white/30 animate-pulse">
+                                {setupStatus === 'READY' ? 'Jump to start timer' : `Positioning: ${setupStatus}`}
+                            </span>
+                        )}
+
+                        <div className="w-full flex flex-col items-center gap-3">
+                            {isSessionActive && timerRemaining !== null && (
+                                <div className="flex flex-col items-center gap-1 scale-90 sm:scale-100">
+                                    <span className={`text-4xl sm:text-6xl font-black tabular-nums leading-none transition-all ${!isTimerActive ? 'text-white/10' : (timerRemaining <= 10 ? 'text-red-400 animate-pulse' : 'text-blue-400')}`}>
+                                        {String(Math.floor(timerRemaining / 60)).padStart(2, '0')}:{String(timerRemaining % 60).padStart(2, '0')}
+                                    </span>
+                                    <div className="flex items-center gap-6">
+                                        <div className="flex flex-col items-center">
+                                            <span className="text-[7px] font-black uppercase tracking-widest text-white/30">Work</span>
+                                            <span className="text-sm font-black text-green-400/90 tabular-nums leading-none">
+                                                {String(Math.floor(activeSeconds / 60)).padStart(2, '0')}:{String(activeSeconds % 60).padStart(2, '0')}
+                                            </span>
                                         </div>
-                                        <div className="space-y-4">
-                                            {day.details.map((ex: any, j: number) => (
-                                                <div key={j} className="flex flex-col gap-1 border-l-2 border-orange-500/20 pl-4 py-1">
-                                                    <span className="text-xs font-black text-white uppercase tracking-tight leading-none drop-shadow-lg">{ex}</span>
-                                                </div>
+                                        <div className="w-px h-5 bg-white/10" />
+                                        <div className="flex flex-col items-center">
+                                            <span className="text-[7px] font-black uppercase tracking-widest text-white/30">Rest</span>
+                                            <span className="text-sm font-black text-orange-400/90 tabular-nums leading-none">
+                                                {String(Math.floor(currentRestSecs / 60)).padStart(2, '0')}:{String(currentRestSecs % 60).padStart(2, '0')}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            <div className="w-full max-w-[280px] flex flex-col gap-3">
+                                {isSessionActive && isAdmin && (
+                                    <div className="flex gap-2 w-full animate-in slide-in-from-bottom-2 duration-300">
+                                        <button
+                                            onClick={handleRestart}
+                                            className="flex-1 h-10 rounded-2xl border border-red-500/20 bg-red-500/5 backdrop-blur-md text-red-400 font-black uppercase tracking-[0.2em] text-[8px] flex items-center justify-center gap-2 active:scale-95 transition-all"
+                                        >
+                                            <RotateCcw size={12} /> Restart
+                                        </button>
+                                        <button
+                                            onClick={() => setIsRemotePaused(!isRemotePaused)}
+                                            className={`flex-1 h-10 rounded-2xl border backdrop-blur-md font-black uppercase tracking-[0.2em] text-[8px] flex items-center justify-center gap-2 active:scale-95 transition-all ${isRemotePaused ? 'border-green-500/30 bg-green-500/10 text-green-400' : 'border-yellow-500/30 bg-yellow-500/10 text-yellow-500'}`}
+                                        >
+                                            {isRemotePaused ? <><Play size={12} fill="currentColor" /> Play</> : <><Pause size={12} fill="currentColor" /> Pause</>}
+                                        </button>
+                                    </div>
+                                )}
+
+                                {!isSessionActive ? (
+                                    <div className="w-full flex flex-col gap-3">
+                                        <button
+                                            onClick={handleStart}
+                                            disabled={isRemoteLocked}
+                                            className="w-full h-10 rounded-full border border-blue-400/20 bg-blue-400/5 backdrop-blur-md text-blue-400/80 font-black uppercase tracking-[0.2em] text-[10px] shadow-2xl transition-all active:scale-95 flex items-center justify-center gap-2"
+                                        >
+                                            <Play size={14} fill="currentColor" /> START TRAINING
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <button
+                                        onClick={handleFinish}
+                                        className="w-full h-10 rounded-full border border-white/10 bg-white/10 backdrop-blur-md font-black uppercase tracking-[0.2em] text-[9px] transition-all active:scale-95 flex items-center justify-center gap-2 text-white/80 hover:text-white"
+                                    >
+                                        <div className="w-2.5 h-2.5 bg-blue-400 rounded-sm shadow-[0_0_15px_rgba(96,165,250,0.6)]" /> FINISH SESSION
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Session Lock / Scheduled Overlay (Perfectly Centered) */}
+                    {isRemoteLocked && !isAdmin && (
+                        <div className="absolute inset-0 z-[100] backdrop-blur-2xl flex flex-col items-center justify-center gap-8 text-center p-6 pointer-events-auto" style={{ background: 'rgba(10,10,20,0.55)' }}>
+                            {activePlan?.status === 'scheduled' ? (
+                                /* Emerald Mission Control / Scheduled Overlay */
+                                <div className="w-full max-w-[380px] aspect-square flex flex-col items-center justify-center p-8 rounded-[2.5rem] border border-emerald-500/20 shadow-2xl animate-in zoom-in-95 duration-700 saturate-[1.2]" style={{ background: 'rgba(16,185,129,0.04)', backdropFilter: 'blur(40px)' }}>
+                                    <div className="relative">
+                                        <div className="absolute -inset-6 bg-emerald-500/15 rounded-full blur-2xl animate-pulse" />
+                                        <Timer size={56} className="text-emerald-400 drop-shadow-[0_0_20px_rgba(16,185,129,0.4)]" />
+                                    </div>
+                                    <div className="flex flex-col gap-4 max-w-xs items-center">
+                                        <h2 className="text-white font-black text-xl uppercase tracking-[0.3em] leading-none drop-shadow-lg">Scheduled Start</h2>
+                                        <div className="flex flex-col items-center gap-1">
+                                            <p className="text-emerald-400 text-[8px] font-black uppercase tracking-[0.4em] leading-relaxed opacity-60">
+                                                Starting In
+                                            </p>
+                                            {scheduledRemaining !== null && (
+                                                <span className="text-5xl font-black text-white tabular-nums tracking-tighter drop-shadow-[0_0_20px_rgba(255,255,255,0.3)] animate-in fade-in zoom-in-90 duration-500">
+                                                    {Math.floor(scheduledRemaining / 60)}:{(scheduledRemaining % 60).toString().padStart(2, '0')}
+                                                </span>
+                                            )}
+                                            <p className="text-white/30 text-[7px] font-black uppercase tracking-[0.2em] mt-1">
+                                                Target: <span className="text-white/60">{activePlan.scheduled_start}</span>
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-4 w-full pt-4 border-t border-white/5">
+                                        <div className="flex flex-col gap-1">
+                                            <span className="text-[7px] font-black text-white/20 uppercase tracking-[0.2em]">Goal Jumps</span>
+                                            <span className="text-lg font-black text-white">{activePlan.target_jumps || '∞'}</span>
+                                        </div>
+                                        <div className="flex flex-col gap-1">
+                                            <span className="text-[7px] font-black text-white/20 uppercase tracking-[0.2em]">Goal Time</span>
+                                            <span className="text-lg font-black text-white">{activePlan.target_time ? `${activePlan.target_time}m` : '∞'}</span>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex flex-col items-center gap-3">
+                                        <div className="text-[8px] font-black text-white/10 uppercase tracking-[0.5em]">System Ready</div>
+                                        <div className="flex items-center gap-2">
+                                            {[0, 1, 2].map(i => (
+                                                <div key={i} className="w-1.5 h-1.5 rounded-full bg-emerald-500/40 animate-pulse" style={{ animationDelay: `${i * 300}ms` }} />
                                             ))}
                                         </div>
                                     </div>
-                                ))}
-                            </div>
-                        ) : (
-                            <div className="p-12 rounded-[3rem] bg-white/[0.02] border border-white/5 flex flex-col items-center justify-center text-center gap-6">
-                                <div className="p-6 rounded-3xl bg-cyan-500/10 text-cyan-400">
-                                    <Zap size={40} fill="currentColor" />
                                 </div>
-                                <div className="space-y-2">
-                                    <h4 className="text-xl font-black text-white uppercase tracking-widest">Targets Synced</h4>
-                                    <p className="text-[10px] font-black text-white/40 uppercase tracking-[0.4em] max-w-sm mx-auto">
-                                        Your coach has broadcasted a direct session goal. Launch the tracker above to begin your objective.
-                                    </p>
+                            ) : (
+                                /* Standard Orange Lock UI */
+                                <div className="flex flex-col items-center gap-8 px-10 py-12 rounded-[2.5rem] border border-white/10 shadow-2xl" style={{ background: 'rgba(255,255,255,0.04)', backdropFilter: 'blur(40px)' }}>
+                                    <div className="relative">
+                                        <div className="absolute -inset-6 bg-orange-500/15 rounded-full blur-2xl animate-pulse" />
+                                        <div className="relative drop-shadow-[0_0_20px_rgba(249,115,22,0.4)]" style={{ fontSize: 56 }}>🔒</div>
+                                    </div>
+                                    <div className="flex flex-col gap-3 max-w-xs">
+                                        <h2 className="text-white font-black text-xl uppercase tracking-[0.3em] leading-none drop-shadow-lg">Waiting for Coach</h2>
+                                        <p className="text-white/40 text-[9px] font-black uppercase tracking-[0.4em] leading-relaxed">
+                                            Your session will start automatically when activated
+                                        </p>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        {[0, 1, 2].map(i => (
+                                            <div key={i} className="w-1.5 h-1.5 rounded-full bg-orange-500/60 animate-pulse" style={{ animationDelay: `${i * 300}ms` }} />
+                                        ))}
+                                    </div>
                                 </div>
+                            )}
+                        </div>
+                    )}
+
+                    {isRemotePaused && (
+                        <div className="absolute inset-0 z-[100] backdrop-blur-2xl flex flex-col items-center justify-center gap-4 text-center pointer-events-auto" style={{ background: 'rgba(10,10,20,0.45)' }}>
+                            <div className="flex flex-col items-center gap-6 px-10 py-10 rounded-[2.5rem] border border-white/10 shadow-2xl" style={{ background: 'rgba(255,255,255,0.04)', backdropFilter: 'blur(40px)' }}>
+                                <Pause size={36} className="text-yellow-400 drop-shadow-[0_0_20px_rgba(250,204,21,0.5)]" fill="currentColor" />
+                                <p className="text-white font-black text-base uppercase tracking-widest">Session Paused</p>
                             </div>
-                        )}
-                    </div>
+                        </div>
+                    )}
                 </div>
             )}
 
-            {/* 4. Timer Picker Sidebar (Simplified Overlay) */}
+            {/* 4. Timer Picker Sidebar (Interactive Overlay) */}
             {showTimerPicker && (
                 <div className="fixed inset-0 z-[200] flex items-center justify-center" onClick={() => setShowTimerPicker(false)}>
-                    <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-                    <div className="relative z-10 rounded-3xl border overflow-hidden" style={{ background: 'rgba(10,10,12,0.98)', borderColor: 'rgba(255,255,255,0.08)', width: 220 }} onClick={e => e.stopPropagation()}>
-                        <div className="px-5 py-3 flex flex-col gap-2">
-                             <span className="text-[11px] font-black uppercase tracking-[0.3em] opacity-25 text-white">SET TIMER</span>
-                             {/* iOS Style Scroll Implementation Placeholder (simplified for this write) */}
-                             <div className="flex justify-center gap-4 py-6">
-                                <div className="flex flex-col items-center">
-                                    <span className="text-[7px] font-bold text-white/20 mb-2">MIN</span>
-                                    <span className="text-2xl font-black text-white">{String(countdownMins).padStart(2,'0')}</span>
+                    <div className="absolute inset-0 bg-black/60 backdrop-blur-md" />
+                    <div className="relative z-10 rounded-3xl border overflow-hidden shadow-2xl" style={{ background: 'rgba(10,10,12,0.98)', borderColor: 'rgba(255,255,255,0.08)', width: 280 }} onClick={e => e.stopPropagation()}>
+                        <div className="px-6 py-5 flex flex-col gap-4">
+                            <span className="text-[11px] font-black uppercase tracking-[0.3em] opacity-40 text-white text-center">SET TIMER</span>
+                            <div className="flex justify-center gap-6 py-6">
+                                <div className="flex flex-col items-center gap-3">
+                                    <button onClick={() => setCountdownMins(m => Math.min(60, m + 1))} className="w-10 h-10 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-white/50 hover:text-white transition-colors relative">
+                                        <div className="w-3 h-0.5 bg-current absolute" /><div className="w-0.5 h-3 bg-current absolute" />
+                                    </button>
+                                    <div className="flex flex-col items-center">
+                                        <span className="text-4xl font-black text-white tabular-nums">{String(countdownMins).padStart(2, '0')}</span>
+                                        <span className="text-[9px] font-bold text-white/30 mb-1 tracking-widest uppercase">MIN</span>
+                                    </div>
+                                    <button onClick={() => setCountdownMins(m => Math.max(0, m - 1))} className="w-10 h-10 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-white/50 hover:text-white transition-colors relative">
+                                        <div className="w-3 h-0.5 bg-current absolute" />
+                                    </button>
                                 </div>
-                                <span className="text-2xl font-black text-white/20">:</span>
-                                <div className="flex flex-col items-center">
-                                    <span className="text-[7px] font-bold text-white/20 mb-2">SEC</span>
-                                    <span className="text-2xl font-black text-white">{String(countdownSecs).padStart(2,'0')}</span>
+                                <span className="text-4xl font-black text-white/20 pt-10">:</span>
+                                <div className="flex flex-col items-center gap-3">
+                                    <button onClick={() => setCountdownSecs(s => (s + 5 >= 60 ? 0 : s + 5))} className="w-10 h-10 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-white/50 hover:text-white transition-colors relative">
+                                        <div className="w-3 h-0.5 bg-current absolute" /><div className="w-0.5 h-3 bg-current absolute" />
+                                    </button>
+                                    <div className="flex flex-col items-center">
+                                        <span className="text-4xl font-black text-white tabular-nums">{String(countdownSecs).padStart(2, '0')}</span>
+                                        <span className="text-[9px] font-bold text-white/30 mb-1 tracking-widest uppercase">SEC</span>
+                                    </div>
+                                    <button onClick={() => setCountdownSecs(s => (s - 5 < 0 ? 55 : s - 5))} className="w-10 h-10 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-white/50 hover:text-white transition-colors relative">
+                                        <div className="w-3 h-0.5 bg-current absolute" />
+                                    </button>
                                 </div>
-                             </div>
-                             <button onClick={() => setShowTimerPicker(false)} className="w-full py-3 bg-blue-400 rounded-xl text-black font-black text-[10px]">DONE</button>
+                            </div>
+                            <button onClick={() => setShowTimerPicker(false)} className="w-full py-4 mt-2 bg-blue-500 hover:bg-blue-400 transition-colors rounded-xl text-black font-black text-xs tracking-widest uppercase shadow-[0_0_20px_rgba(59,130,246,0.3)]">
+                                Confirm Time
+                            </button>
                         </div>
                     </div>
                 </div>
             )}
 
-            {/* 5. Summary Report Overlay */}
+            {/* 5. Summary Report Overlay (Compact & Refined Version) */}
             {showSummary && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/80 backdrop-blur-xl animate-in fade-in duration-500">
-                    <div className="w-full max-w-[340px] border rounded-[2rem] p-6 shadow-2xl relative flex flex-col gap-5" style={{ background: 'rgba(10,10,10,0.98)', borderColor: 'rgba(255,255,255,0.08)' }}>
-                        <div className="flex items-center justify-between">
-                            <h2 className="text-lg font-black text-white uppercase">Workout Report</h2>
-                            <button onClick={() => setShowSummary(false)} className="w-7 h-7 rounded-full bg-white/5 text-white/30 flex items-center justify-center"><X size={14}/></button>
-                        </div>
-                        <div className="grid grid-cols-2 gap-2">
-                            <div className="p-4 rounded-xl bg-white/5 text-center">
-                                <span className="block text-2xl font-black text-white">{jumps}</span>
-                                <span className="text-[7px] font-bold text-white/20 uppercase tracking-widest">Jumps</span>
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-xl animate-in fade-in duration-300">
+                    <div className="w-full max-w-[300px] relative">
+                        <div className="relative bg-white/[0.02] border border-white/10 rounded-[2rem] p-6 shadow-2xl flex flex-col gap-6 backdrop-blur-md">
+                            <div className="flex items-center justify-between">
+                                <div className="space-y-0.5">
+                                    <h2 className="text-sm font-black uppercase tracking-tighter bg-clip-text text-transparent bg-gradient-to-r from-blue-400 via-primary to-cyan-400">
+                                        Workout Results
+                                    </h2>
+                                    <p className="text-[7px] font-bold text-white/20 uppercase tracking-[0.3em]">Session Summary</p>
+                                </div>
+                                <button onClick={() => setShowSummary(false)} className="text-white/20 hover:text-white/40"><X size={14} /></button>
                             </div>
-                            <div className="p-4 rounded-xl bg-blue-400/10 text-center">
-                                <span className="block text-2xl font-black text-blue-400">{rpm}</span>
-                                <span className="text-[7px] font-bold text-white/20 uppercase tracking-widest">Avg RPM</span>
+                            <div className="grid grid-cols-2 gap-3">
+                                <div className="col-span-2 p-4 rounded-2xl bg-white/[0.02] border border-white/5 flex flex-col items-center gap-1">
+                                    <span className="text-[140px] font-black text-white leading-none tracking-tighter drop-shadow-2xl">{jumps}</span>
+                                    <span className="text-[8px] font-black text-blue-400 uppercase tracking-[0.4em] -mt-2">Total Jumps</span>
+                                </div>
+                                <div className="p-3 rounded-xl bg-white/[0.01] border border-white/5 flex flex-col items-center">
+                                    <span className="text-xs font-black text-white">{Math.floor(activeSeconds / 60)}:{String(activeSeconds % 60).padStart(2, '0')}</span>
+                                    <span className="text-[6px] font-bold text-green-400/30 uppercase tracking-widest mt-1">Work Time</span>
+                                </div>
+                                <div className="p-3 rounded-xl bg-white/[0.01] border border-white/5 flex flex-col items-center">
+                                    <span className="text-xs font-black text-white">{Math.floor(finalRestSecs / 60)}:{String(finalRestSecs % 60).padStart(2, '0')}</span>
+                                    <span className="text-[6px] font-bold text-orange-400/30 uppercase tracking-widest mt-1">Rest Time</span>
+                                </div>
+                                <div className="p-3 rounded-xl bg-white/[0.01] border border-white/5 flex flex-col items-center">
+                                    <span className="text-xs font-black text-white">{rpm}</span>
+                                    <span className="text-[6px] font-bold text-blue-400/30 uppercase tracking-widest mt-1">Avg RPM</span>
+                                </div>
+                                <div className="p-3 rounded-xl bg-white/[0.01] border border-white/5 flex flex-col items-center">
+                                    <span className="text-xs font-black text-white">{Math.floor(totalSeconds / 60)}:{String(totalSeconds % 60).padStart(2, '0')}</span>
+                                    <span className="text-[6px] font-bold text-white/10 uppercase tracking-widest mt-1">Total Time</span>
+                                </div>
+                            </div>
+                            <div className="flex flex-col items-center gap-4">
+                                <button
+                                    onClick={() => setShowSummary(false)}
+                                    className="px-6 py-2.5 bg-transparent border border-white/10 rounded-full font-black uppercase text-[8px] text-white/60 tracking-[0.2em] hover:bg-white/5 transition-all self-center"
+                                >
+                                    Finish Workout
+                                </button>
+                                {isAdmin && (
+                                    <button
+                                        onClick={() => navigate('/jump-rope-hub')}
+                                        className="text-[7px] font-black text-white/20 uppercase tracking-widest hover:text-white transition-colors flex items-center gap-1"
+                                    >
+                                        <ArrowLeft size={8} /> Trainer Hub
+                                    </button>
+                                )}
                             </div>
                         </div>
-                        <button onClick={() => setShowSummary(false)} className="w-full py-4 bg-white/5 border border-white/10 rounded-2xl text-[10px] font-black uppercase text-white tracking-widest">Dismiss</button>
                     </div>
                 </div>
             )}
 
-            {/* 6. Admin Generator Modal */}
+            {/* 7. Admin Generator Modal */}
             {isAdmin && showPlanModal && (
-                <SmartPlanModal 
-                    studentId={selectedStudentId} 
+                <SmartPlanModal
+                    studentId={selectedStudentId}
                     studentName={students?.find((s: any) => s.id === selectedStudentId)?.full_name || 'Athlete'}
-                    isOpen={showPlanModal} onClose={() => setShowPlanModal(false)} 
+                    isOpen={showPlanModal} onClose={() => setShowPlanModal(false)}
                 />
             )}
         </div>

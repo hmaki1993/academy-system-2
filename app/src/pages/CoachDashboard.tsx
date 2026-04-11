@@ -18,6 +18,7 @@ import AssessmentHistoryModal from '../components/AssessmentHistoryModal';
 import PremiumCalendarModal from '../components/PremiumCalendarModal';
 import CoachPTCalendar from '../features/zoom-pt/CoachPTCalendar';
 import FinancialProgressChart from '../components/FinancialProgressChart';
+import { usePresence } from '../hooks/usePresence';
 import PerformanceAnalyticsCard from '../components/PerformanceAnalyticsCard';
 import { useFinancialTrends } from '../hooks/useData';
 import PageHeader from '../components/PageHeader';
@@ -63,6 +64,7 @@ export default function CoachDashboard() {
     const [attendanceHistory, setAttendanceHistory] = useState<any[]>([]);
     const [loadingAttendanceHistory, setLoadingAttendanceHistory] = useState(false);
     const { data: financialTrends } = useFinancialTrends();
+    const { onlineStudents } = usePresence();
 
     // History Modal State
     // No longer need interval here as PremiumClock handles it
@@ -885,7 +887,7 @@ export default function CoachDashboard() {
 
                 {/* Live Floor Widget */}
                 <div className="col-span-1 lg:col-span-2 h-full">
-                    <LiveStudentsWidget coachId={coachId} />
+                    <LiveStudentsWidget onlineStudents={onlineStudents} />
                 </div>
             </div>
 

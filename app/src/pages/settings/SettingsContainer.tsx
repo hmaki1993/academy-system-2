@@ -59,7 +59,9 @@ export default function Settings() {
         const saved = localStorage.getItem('academy_settings_secret_revealed');
         return saved === 'true';
     });
-    const [designMode, setDesignMode] = useState<'desktop' | 'mobile'>('desktop');
+    const [designMode, setDesignMode] = useState<'desktop' | 'mobile'>(() => {
+        return window.innerWidth < 768 || /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ? 'mobile' : 'desktop';
+    });
     const [activeTab, setActiveTab] = useState<'appearance' | 'profile' | 'academy' | 'login' | 'notifications'>(() => {
         const savedSecret = localStorage.getItem('academy_settings_secret_revealed');
         if (role !== 'admin') return 'appearance';
@@ -76,7 +78,9 @@ export default function Settings() {
                 const { width, height } = previewParentRef.current.getBoundingClientRect();
                 const targetW = designMode === 'mobile' ? 390 : 1920;
                 const targetH = designMode === 'mobile' ? 844 : 1080;
-                const s = Math.min(width / targetW, height / targetH) * 0.98;
+                const s = designMode === 'mobile' 
+                    ? (width / targetW) * 0.98 
+                    : Math.min(width / targetW, height / targetH) * 0.98;
                 setPreviewScale(s);
             }
         };
@@ -561,13 +565,19 @@ export default function Settings() {
 
             const { error: profileSyncError } = await supabase
                 .from('profiles')
-                .update({
+                .upsert({
+                    id: user.id,
                     full_name: userData.full_name,
-                    ...(isEmailChange ? { email: inputEmail } : {})
-                })
-                .eq('id', user.id);
+                    ...(isEmailChange ? { email: inputEmail } : {}),
+                    updated_at: new Date().toISOString()
+                });
 
             if (profileSyncError) throw profileSyncError;
+
+            // 3. Sync with Auth Metadata for robust fallbacks
+            await supabase.auth.updateUser({
+                data: { full_name: userData.full_name }
+            });
 
             if (isEmailChange && role === 'admin') {
                 // For admin users, we rely on the database trigger 'on_profile_email_update' 
@@ -579,7 +589,7 @@ export default function Settings() {
                 toast.success(t('common.saveSuccess'));
             }
 
-            window.dispatchEvent(new Event('userProfileUpdated'));
+            window.dispatchEvent(new CustomEvent('userProfileUpdated', { detail: { full_name: userData.full_name } }));
         } catch (error: any) {
             console.error('Error updating profile:', error);
             toast.error(error.message || 'Error updating profile');
@@ -915,24 +925,31 @@ export default function Settings() {
                 {/* Appearance & Branding Settings */}
                 {activeTab === 'appearance' && (
                     <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-500 pb-20">
-                        <div className="glass-card p-6 md:p-8 rounded-[2rem] border border-white/10 shadow-premium relative overflow-hidden">
-                            <div className="absolute -top-24 -right-24 w-64 h-64 bg-primary/5 rounded-full blur-3xl"></div>
+                        <div className="space-y-12">
                             <div className="relative z-10">
-                                <h2 className="text-lg md:text-xl font-black text-white uppercase tracking-tight flex items-center gap-3 mb-6">
-                                    <div className="p-2.5 bg-primary/20 rounded-xl text-primary">
-                                        <Palette className="w-5 h-5" />
+                                <div className="flex items-center gap-4 mb-4">
+                                    <div className="p-3 bg-primary/20 rounded-2xl text-primary shadow-lg shadow-primary/10">
+                                        <Palette className="w-6 h-6" />
                                     </div>
-                                    {t('settings.theme')}
+                                    <div className="flex flex-col">
+                                        <h2 className="text-xl md:text-2xl font-black text-white uppercase tracking-[0.2em] leading-tight">
+                                            {t('settings.theme')}
+                                        </h2>
+                                        <div className="flex items-center gap-3 mt-1">
+                                            <div className="h-[1px] w-12 md:w-24 bg-gradient-to-r from-primary/50 to-transparent"></div>
+                                            <p className="text-[9px] font-black text-white/20 uppercase tracking-[0.4em] whitespace-nowrap">Visual Identity & Schemes</p>
+                                        </div>
+                                    </div>
                                     <button
                                         onClick={() => setShowPaletteImport(true)}
-                                        className="ml-auto flex items-center gap-2 px-4 py-2 rounded-xl bg-purple-500/10 border border-purple-500/30 hover:bg-purple-500/20 hover:border-purple-500/50 transition-all text-purple-400 text-[9px] font-black uppercase tracking-widest hover:scale-105 active:scale-95"
+                                        className="ml-auto hidden sm:flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-purple-500/10 border border-purple-500/30 hover:bg-purple-500/20 hover:border-purple-500/50 transition-all text-purple-400 text-[9px] font-black uppercase tracking-widest hover:scale-105 shadow-xl shadow-purple-500/5"
                                     >
-                                        <Pipette className="w-3.5 h-3.5" />
+                                        <Pipette className="w-4 h-4" />
                                         Import Palette
                                     </button>
-                                </h2>
+                                </div>
 
-                                <div className="mb-8 p-4 bg-white/5 rounded-2xl border border-white/5 flex flex-col sm:flex-row items-center justify-between gap-4">
+                                <div className="mb-8 p-6 bg-white/[0.02] rounded-[2rem] border border-white/[0.03] flex flex-col sm:flex-row items-center justify-between gap-4">
                                     <div className="text-center sm:text-left">
                                         <h3 className="text-xs font-black text-white uppercase tracking-widest">{t('settings.baseAppearance')}</h3>
                                         <p className="text-[9px] text-white/50 font-bold uppercase tracking-wider mt-0.5">{t('settings.themeDescription')}</p>
@@ -990,7 +1007,7 @@ export default function Settings() {
                                                     applyPreset(theme);
                                                 }
                                             }}
-                                            className={`group relative p-3 rounded-2xl border-2 transition-all duration-500 hover:scale-[1.05] active:scale-95 cursor-pointer outline-none ${currentTheme === theme.id
+                                            className={`group relative p-3 rounded-2xl border-2 transition-all duration-500 hover:scale-[1.05] cursor-pointer outline-none ${currentTheme === theme.id
                                                 ? 'border-primary bg-primary/10 shadow-lg shadow-primary/20'
                                                 : 'border-white/5 bg-white/5 hover:bg-white/10 hover:border-white/20'}`}
                                         >
@@ -1006,7 +1023,7 @@ export default function Settings() {
                                                 <div className="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300">
                                                     <button
                                                         onClick={(e) => { e.stopPropagation(); applyMagicTheme(theme.id); }}
-                                                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[7px] font-black uppercase tracking-widest text-black shadow-lg transition-all hover:scale-110 active:scale-95"
+                                                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[7px] font-black uppercase tracking-widest text-black shadow-lg transition-all hover:scale-110"
                                                         style={{ backgroundColor: theme.primary }}
                                                         title="Apply to full app + login page"
                                                     >
@@ -1022,15 +1039,22 @@ export default function Settings() {
                                     ))}
                                 </div>
                             </div>
-                        </div>
 
-                        <div className="glass-card p-6 md:p-8 rounded-[2rem] border border-white/10 shadow-premium relative overflow-hidden">
-                            <h2 className="text-lg md:text-xl font-black text-white uppercase tracking-tight flex items-center gap-3 mb-8">
-                                <div className="p-2.5 bg-purple-500/20 rounded-xl text-purple-500">
-                                    <Palette className="w-5 h-5" />
+                            <div className="relative z-10 pt-12 border-t border-white/5">
+                                <div className="flex items-center gap-4 mb-8">
+                                    <div className="p-3 bg-purple-500/20 rounded-2xl text-purple-500 shadow-lg shadow-purple-500/10">
+                                        <Wand2 className="w-6 h-6" />
+                                    </div>
+                                    <div className="flex flex-col">
+                                        <h2 className="text-xl md:text-2xl font-black text-white uppercase tracking-[0.2em] leading-tight">
+                                            {t('settings.designCustomization')}
+                                        </h2>
+                                        <div className="flex items-center gap-3 mt-1">
+                                            <div className="h-[1px] w-12 md:w-24 bg-gradient-to-r from-purple-500/50 to-transparent"></div>
+                                            <p className="text-[9px] font-black text-white/20 uppercase tracking-[0.4em] whitespace-nowrap">Fine Tuning & Experience</p>
+                                        </div>
+                                    </div>
                                 </div>
-                                {t('settings.designCustomization')}
-                            </h2>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
                                 <div className="space-y-10 border-r border-white/5 pr-0 md:pr-12">
                                     {/* Left Column: ALL Colors */}
@@ -1121,7 +1145,7 @@ export default function Settings() {
                                             </div>
 
                                             {/* Experience Sliders */}
-                                            <div className="grid grid-cols-1 gap-6 bg-white/5 p-6 rounded-3xl border border-white/5">
+                                            <div className="grid grid-cols-1 gap-6 bg-white/[0.01] p-6 rounded-[2.5rem] border border-white/[0.02]">
                                                 <div className="space-y-3">
                                                     <div className="flex justify-between">
                                                         <label className="text-[9px] text-white/60 font-black uppercase tracking-widest">Fine Tuning</label>
@@ -1158,11 +1182,11 @@ export default function Settings() {
                                     </div>
                                 </div>
                             </div>
-                            <div className="flex flex-col sm:flex-row justify-center gap-4 mt-8 bg-black/20 p-6 rounded-[2.5rem] border border-white/5 backdrop-blur-sm">
+                            <div className="flex flex-col sm:flex-row justify-center gap-4 mt-12 pb-12">
                                 <button
                                     onClick={handleSaveTheme}
                                     disabled={isPublishing}
-                                    className={`relative group overflow-hidden bg-gradient-to-r from-primary via-accent to-primary bg-size-200 bg-pos-0 hover:bg-pos-100 text-white px-6 py-3 rounded-xl font-black uppercase tracking-[0.2em] text-[10px] flex items-center justify-center gap-2 transition-all duration-500 shadow-[0_0_20px_rgba(var(--color-primary),0.2)] hover:shadow-[0_0_40px_rgba(var(--color-primary),0.4)] hover:scale-105 active:scale-95 border border-white/20 min-w-[140px] ${isPublishing ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                    className={`relative group overflow-hidden bg-gradient-to-r from-primary via-accent to-primary bg-size-200 bg-pos-0 hover:bg-pos-100 text-white px-6 py-3 rounded-xl font-black uppercase tracking-[0.2em] text-[10px] flex items-center justify-center gap-2 transition-all duration-500 shadow-[0_0_20px_rgba(var(--color-primary),0.2)] hover:shadow-[0_0_40px_rgba(var(--color-primary),0.4)] hover:scale-105 border border-white/20 min-w-[140px] ${isPublishing ? 'opacity-50 cursor-not-allowed' : ''}`}
                                 >
                                     <div className="absolute inset-0 bg-white/10 translate-y-full group-hover:translate-y-0 transition-transform duration-500"></div>
                                     {isPublishing ? (
@@ -1179,10 +1203,11 @@ export default function Settings() {
                                 </button>
                                 <button
                                     onClick={() => setDraftSettings(defaultSettings)}
-                                    className="bg-white/[0.03] hover:bg-white/[0.08] text-white/40 hover:text-white px-6 py-3 rounded-xl font-black uppercase tracking-[0.2em] text-[10px] transition-all hover:scale-105 active:scale-95 border border-white/5 hover:border-white/20 backdrop-blur-md flex items-center justify-center gap-2 min-w-[120px]"
+                                    className="bg-white/[0.03] hover:bg-white/[0.08] text-white/40 hover:text-white px-6 py-3 rounded-xl font-black uppercase tracking-[0.2em] text-[10px] transition-all hover:scale-105 border border-white/5 hover:border-white/20 backdrop-blur-md flex items-center justify-center gap-2 min-w-[120px]"
                                 >
                                     RESET
                                 </button>
+                            </div>
                             </div>
                         </div>
                     </div>
@@ -1191,7 +1216,7 @@ export default function Settings() {
                 {/* Notifications Settings */}
                 {activeTab === 'notifications' && (
                     <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-500 pb-20">
-                        <div className="glass-card p-6 md:p-8 rounded-[2rem] border border-white/10 shadow-premium relative overflow-hidden max-w-2xl mx-auto">
+                        <div className="p-2 md:p-4 h-fit relative overflow-hidden max-w-2xl mx-auto">
                             <h2 className="text-lg md:text-xl font-black text-white uppercase tracking-tight flex items-center gap-3 mb-8">
                                 <div className="p-2.5 bg-blue-500/20 rounded-xl text-blue-500">
                                     <Bell className="w-5 h-5" />
@@ -1200,7 +1225,7 @@ export default function Settings() {
                             </h2>
 
                             <div className="space-y-6">
-                                <div className="p-6 bg-white/5 rounded-[2rem] border border-white/5 space-y-6">
+                                <div className="p-8 bg-white/[0.02] rounded-[2.5rem] border border-white/[0.03] space-y-6">
                                     <h3 className="text-[10px] font-black text-white/30 uppercase tracking-[0.3em] mb-4">
                                         Preferences
                                     </h3>
@@ -1262,7 +1287,7 @@ export default function Settings() {
                                 <div className="flex justify-center pt-8">
                                     <button
                                         onClick={handleSaveTheme}
-                                        className="relative group overflow-hidden bg-gradient-to-r from-primary via-accent to-primary bg-size-200 bg-pos-0 hover:bg-pos-100 text-white px-10 py-4 rounded-2xl font-black uppercase tracking-[0.2em] text-[10px] flex items-center justify-center gap-3 transition-all duration-500 shadow-xl hover:shadow-primary/40 hover:scale-105 active:scale-95 border border-white/20"
+                                        className="relative group overflow-hidden bg-gradient-to-r from-primary via-accent to-primary bg-size-200 bg-pos-0 hover:bg-pos-100 text-white px-10 py-4 rounded-2xl font-black uppercase tracking-[0.2em] text-[10px] flex items-center justify-center gap-3 transition-all duration-500 shadow-xl hover:shadow-primary/40 hover:scale-105 border border-white/20"
                                     >
                                         <Save className="w-4 h-4" />
                                         {t('common.save', 'SAVE PREFERENCES')}
@@ -1277,73 +1302,86 @@ export default function Settings() {
                 {activeTab === 'academy' && role === 'admin' && (
                     <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-500 pb-20">
                         {/* Currency */}
-                        <div className="glass-card p-6 md:p-8 rounded-[2rem] border border-white/10 shadow-premium relative overflow-hidden">
-                            <h2 className="text-lg md:text-xl font-black text-white uppercase tracking-tight flex items-center gap-3 mb-6">
-                                <div className="p-2.5 bg-emerald-500/20 rounded-xl text-emerald-500">
+                        <div className="space-y-8">
+                            <div className="flex items-center gap-3 mb-2">
+                                <div className="p-2 bg-emerald-500/20 rounded-xl text-emerald-500 shadow-lg shadow-emerald-500/10">
                                     <Globe className="w-5 h-5" />
                                 </div>
-                                Currency
-                            </h2>
-                            <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                                <div className="flex flex-col">
+                                    <h2 className="text-lg font-black text-white uppercase tracking-[0.2em] leading-tight">Currency</h2>
+                                    <div className="h-[1px] w-24 bg-gradient-to-r from-emerald-500/50 to-transparent mt-1"></div>
+                                </div>
+                            </div>
+                            <div className="flex flex-wrap gap-4">
                                 {(Object.keys(CURRENCIES) as CurrencyCode[]).map((code) => (
                                     <button
                                         key={code}
                                         onClick={() => setCurrency(code)}
-                                        className={`p-4 rounded-2xl border transition-all ${currency.code === code ? 'bg-emerald-500/20 border-emerald-500/50' : 'bg-white/5 border-white/5'}`}
+                                        className={`group relative px-8 py-5 rounded-2xl transition-all duration-500 border ${currency.code === code ? 'bg-emerald-500/10 border-emerald-500/30 shadow-[0_0_30px_rgba(16,185,129,0.1)] scale-105' : 'bg-white/[0.01] border-white/[0.03] hover:bg-white/[0.04] hover:border-white/10'}`}
                                     >
-                                        <div className="text-lg mb-1 text-white">{CURRENCIES[code].symbol}</div>
-                                        <div className="text-[8px] font-black uppercase tracking-widest text-white/50">{CURRENCIES[code].name}</div>
+                                        <div className={`text-2xl font-black mb-1 transition-all duration-500 ${currency.code === code ? 'text-emerald-400' : 'text-white/40 group-hover:text-white/60'}`}>{CURRENCIES[code].symbol}</div>
+                                        <div className={`text-[9px] font-black uppercase tracking-[0.2em] transition-all duration-500 ${currency.code === code ? 'text-emerald-400/60' : 'text-white/20 group-hover:text-white/40'}`}>{CURRENCIES[code].name}</div>
+                                        {currency.code === code && (
+                                            <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-8 h-1 bg-emerald-500/40 blur-[4px] rounded-full"></div>
+                                        )}
                                     </button>
                                 ))}
                             </div>
                         </div>
 
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 pt-8">
                             {/* Gym Profile */}
-                            <div className="glass-card p-6 md:p-8 rounded-[2rem] border border-white/10 shadow-premium h-fit">
-                                <h2 className="text-lg md:text-xl font-black text-white uppercase tracking-tight flex items-center gap-3 mb-6">
-                                    <div className="p-2.5 bg-primary/20 rounded-xl text-primary">
+                            <div className="space-y-8">
+                                <div className="flex items-center gap-3 mb-2">
+                                    <div className="p-2 bg-primary/20 rounded-xl text-primary shadow-lg shadow-primary/10">
                                         <Building2 className="w-5 h-5" />
                                     </div>
-                                    {t('settings.gymProfile')}
-                                </h2>
+                                    <div className="flex flex-col">
+                                        <h2 className="text-lg font-black text-white uppercase tracking-[0.2em] leading-tight">{t('settings.gymProfile')}</h2>
+                                        <div className="h-[1px] w-32 bg-gradient-to-r from-primary/50 to-transparent mt-1"></div>
+                                    </div>
+                                </div>
 
-                                <form onSubmit={handleSaveProfile} className="space-y-4">
-                                    <div className="space-y-3">
-                                        <div className="space-y-1.5">
-                                            <label className="text-[9px] font-black uppercase tracking-widest text-white/40 ml-2">{t('settings.gymName')}</label>
+                                <form onSubmit={handleSaveProfile} className="space-y-10">
+                                    <div className="space-y-8">
+                                        <div className="space-y-3 group/input">
+                                            <label className="text-[10px] font-black uppercase tracking-[0.3em] text-white/20 ml-1 group-focus-within/input:text-primary transition-colors">{t('settings.gymName')}</label>
                                             <input
                                                 type="text"
                                                 value={draftSettings.academy_name || ''}
                                                 onChange={e => setDraftSettings({ ...draftSettings, academy_name: e.target.value })}
-                                                className="w-full px-4 py-3 rounded-xl border border-white/10 bg-white/5 text-white outline-none focus:border-primary/50 transition-all font-bold text-sm"
+                                                placeholder="Enter Gym Name"
+                                                className="w-full bg-transparent border-b-2 border-white/5 py-4 text-white text-lg font-black tracking-tight outline-none focus:border-primary transition-all placeholder:text-white/5"
                                             />
                                         </div>
-                                        <div className="space-y-1.5">
-                                            <label className="text-[9px] font-black uppercase tracking-widest text-white/40 ml-2">{t('common.phone')}</label>
+                                        <div className="space-y-3 group/input">
+                                            <label className="text-[10px] font-black uppercase tracking-[0.3em] text-white/20 ml-1 group-focus-within/input:text-primary transition-colors">{t('common.phone')}</label>
                                             <input
                                                 type="text"
                                                 value={draftSettings.gym_phone || ''}
                                                 onChange={e => setDraftSettings({ ...draftSettings, gym_phone: e.target.value })}
-                                                className="w-full px-4 py-3 rounded-xl border border-white/10 bg-white/5 text-white outline-none focus:border-primary/50 transition-all font-bold text-sm"
+                                                placeholder="+00 000 0000"
+                                                className="w-full bg-transparent border-b-2 border-white/5 py-4 text-white text-lg font-black tracking-tight outline-none focus:border-primary transition-all placeholder:text-white/5"
                                             />
                                         </div>
-                                        <div className="space-y-1.5">
-                                            <label className="text-[9px] font-black uppercase tracking-widest text-white/40 ml-2">{t('settings.address')}</label>
+                                        <div className="space-y-3 group/input">
+                                            <label className="text-[10px] font-black uppercase tracking-[0.3em] text-white/20 ml-1 group-focus-within/input:text-primary transition-colors">{t('settings.address')}</label>
                                             <input
                                                 type="text"
                                                 value={draftSettings.gym_address || ''}
                                                 onChange={e => setDraftSettings({ ...draftSettings, gym_address: e.target.value })}
-                                                className="w-full px-4 py-3 rounded-xl border border-white/10 bg-white/5 text-white outline-none focus:border-primary/50 transition-all font-bold text-sm"
+                                                placeholder="City, Country"
+                                                className="w-full bg-transparent border-b-2 border-white/5 py-4 text-white text-lg font-black tracking-tight outline-none focus:border-primary transition-all placeholder:text-white/5"
                                             />
                                         </div>
                                     </div>
                                     <button
                                         type="submit"
                                         disabled={loading}
-                                        className="w-full bg-primary hover:bg-primary/90 text-white py-3 rounded-xl font-black uppercase tracking-widest text-[10px] transition-all shadow-lg shadow-primary/20"
+                                        className="relative group w-fit px-12 py-4 bg-primary text-white rounded-2xl font-black uppercase tracking-[0.3em] text-[10px] transition-all hover:scale-105 shadow-xl shadow-primary/20 overflow-hidden"
                                     >
-                                        {loading ? 'Saving...' : t('common.save')}
+                                        <div className="absolute inset-0 bg-white/10 translate-y-full group-hover:translate-y-0 transition-transform duration-300"></div>
+                                        <span className="relative z-10">{loading ? 'Saving...' : t('common.save')}</span>
                                     </button>
                                 </form>
                             </div>
@@ -1361,17 +1399,46 @@ export default function Settings() {
                 {/* Login Page Customization */}
                 {activeTab === 'login' && (role === 'admin' || isSecretRevealed) && (
                     <div className="space-y-8 pb-20">
-                        <div className={`transition-all duration-300 ${designMode === 'mobile' ? 'space-y-6' : 'glass-card p-6 md:p-8 rounded-[2rem] border border-white/10 shadow-premium h-fit'}`}>
-                            <div className={`flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 ${designMode === 'mobile' ? 'glass-card p-6' : ''}`}>
-                                <h2 className="text-lg md:text-xl font-black text-white uppercase tracking-tight flex items-center gap-3">
-                                    <div className="p-2.5 bg-amber-500/20 rounded-xl text-amber-500">
-                                        <Layout className="w-5 h-5" />
+                        <div className={`${designMode === 'mobile' ? 'space-y-6' : 'p-2 md:p-4 h-fit'}`}>
+                            <div className={`flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-10 ${designMode === 'mobile' ? 'no-border-card p-6' : 'px-4'}`}>
+                                <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                                    <h2 className="text-lg md:text-xl font-black text-white uppercase tracking-tight flex items-center gap-3">
+                                        <div className="p-2.5 bg-amber-500/20 rounded-xl text-amber-500">
+                                            <Layout className="w-5 h-5" />
+                                        </div>
+                                        {t('settings.loginDesigner')}
+                                    </h2>
+
+                                    {/* ── Device Mode Toggle ── */}
+                                    <div className="flex items-center gap-1 p-1 rounded-2xl bg-white/5 border border-white/10">
+                                        <button
+                                            onClick={() => setDesignMode('desktop')}
+                                            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all duration-300 ${
+                                                designMode === 'desktop'
+                                                    ? 'bg-amber-500 text-black shadow-lg shadow-amber-500/20'
+                                                    : 'text-white/40 hover:text-white/70'
+                                            }`}
+                                        >
+                                            <Monitor className="w-3.5 h-3.5" />
+                                            Desktop
+                                        </button>
+                                        <button
+                                            onClick={() => setDesignMode('mobile')}
+                                            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all duration-300 ${
+                                                designMode === 'mobile'
+                                                    ? 'bg-amber-500 text-black shadow-lg shadow-amber-500/20'
+                                                    : 'text-white/40 hover:text-white/70'
+                                            }`}
+                                        >
+                                            <Smartphone className="w-3.5 h-3.5" />
+                                            Mobile
+                                        </button>
                                     </div>
-                                    {t('settings.loginDesigner')}
-                                </h2>
+                                </div>
+
                                 <button
                                     onClick={() => setShowMediaLibrary(true)}
-                                    className="px-6 py-2.5 rounded-2xl bg-primary text-white text-[10px] font-black uppercase tracking-[0.2em] hover:scale-105 active:scale-95 transition-all shadow-xl shadow-primary/20 flex items-center gap-3 border border-white/10"
+                                    className="px-6 py-2.5 rounded-2xl bg-primary text-white text-[10px] font-black uppercase tracking-[0.2em] hover:scale-105 transition-all shadow-xl shadow-primary/20 flex items-center gap-3 border border-white/10"
                                 >
                                     <Clock className="w-4 h-4" />
                                     Open Media Library
@@ -1379,46 +1446,17 @@ export default function Settings() {
                             </div>
 
                             <div className="flex flex-col lg:grid lg:grid-cols-12 gap-8 relative items-start">
-                                {/* Live Preview Column - Forced Fixed for Mobile Scrolling */}
-                                <div className={`lg:col-span-5 z-[1000] transition-all duration-300
+                                {/* Preview Column (Sticky) */}
+                                <div className={`lg:col-span-5 z-[50] w-full
                                     ${designMode === 'mobile'
-                                        ? (isMiniPreview ? 'fixed top-16 left-0 right-0 pointer-events-none' : 'fixed top-16 left-0 right-0 bg-background/90 backdrop-blur-2xl border-b border-white/10 p-4 shadow-2xl pointer-events-auto')
-                                        : 'sticky top-20 lg:top-32 h-fit relative order-first lg:order-2 lg:h-full'}`}>
-                                    <div
-                                        className={`flex flex-col gap-3 transition-all duration-300 z-[1000] 
-                                            lg:sticky top-16 md:top-20 lg:top-32 h-fit
-                                            ${isMiniPreview && designMode === 'mobile' ? 'fixed !rounded-[3rem] p-1 shadow-2xl overflow-hidden pointer-events-auto' : ''}`}
-                                        style={isMiniPreview && designMode === 'mobile' ? {
-                                            bottom: '24px',
-                                            right: '24px',
-                                            width: '140px',
-                                            transform: `translate(${previewPos.x}px, ${previewPos.y}px)`,
-                                            opacity: 1,
-                                            cursor: isDragging ? 'grabbing' : 'grab'
-                                        } : {}}
-                                        onMouseDown={handleDragStart}
-                                        onTouchStart={handleDragStart}
-                                    >
-                                        <div className="flex items-center justify-between ml-2">
+                                        ? 'sticky top-2 z-[2000] pointer-events-auto flex flex-col items-center gap-2 max-w-[400px] mx-auto mb-8 bg-transparent order-first'
+                                        : 'sticky top-28 lg:top-32 h-fit flex flex-col gap-4 order-last lg:order-2'}`}>
+                                    
+                                    {/* Desktop Toolbar */}
+                                    {designMode !== 'mobile' && (
+                                        <div className="flex items-center justify-between ml-2 mb-1">
                                             <div className="flex items-center gap-2">
-                                                <div className="flex flex-col">
-                                                    <label className="text-[9px] font-black uppercase tracking-widest text-white/40">{t('settings.liveScreenPreview')}</label>
-                                                    {isMiniPreview && designMode === 'mobile' && <span className="text-[7px] font-bold text-primary/60 uppercase">{t('settings.holdDragToMove')}</span>}
-                                                </div>
-                                                {/* Mini Toggle - Mobile Design Mode Only */}
-                                                {designMode === 'mobile' && (
-                                                    <button
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            setIsMiniPreview(!isMiniPreview);
-                                                            if (isMiniPreview) setPreviewPos({ x: 0, y: 0 });
-                                                        }}
-                                                        className="lg:hidden p-1 rounded-md bg-white/5 border border-white/10 hover:bg-white/10 transition-all text-white/40 hover:text-white pointer-events-auto"
-                                                        title={isMiniPreview ? "Maximize Preview" : "Minimize Preview"}
-                                                    >
-                                                        {isMiniPreview ? <Box className="w-2.5 h-2.5" /> : <Minimize className="w-2.5 h-2.5" />}
-                                                    </button>
-                                                )}
+                                                <label className="text-[9px] font-black uppercase tracking-widest text-white/40">{t('settings.liveScreenPreview')}</label>
                                             </div>
                                             <div className="flex items-center gap-2">
                                                 <button
@@ -1437,41 +1475,29 @@ export default function Settings() {
                                                 </div>
                                             </div>
                                         </div>
+                                    )}
 
-                                        <div className={`flex-1 relative transition-all duration-500 ${designMode === 'mobile' ? 'aspect-[9/19.5] w-full max-w-[280px] mx-auto border-[12px] border-zinc-900 ring-4 ring-white/5' : 'aspect-video w-full border-4 border-white/5'} ${isMiniPreview && designMode === 'mobile' ? '!max-w-full !border-[6px] !ring-2 !rounded-[1.5rem]' : ''} rounded-[2.5rem] overflow-hidden bg-black shadow-2xl`}>
-                                            {/* ... (Existing Preview Content remains the same) */}
-                                            {/* Mobile Device Aesthetics */}
-                                            {designMode === 'mobile' && (
-                                                <>
-                                                    {/* Notch */}
-                                                    <div className="absolute top-0 left-1/2 -translate-x-1/2 w-24 h-6 bg-zinc-900 rounded-b-2xl z-[60] flex items-center justify-center gap-1.5">
-                                                        <div className="w-8 h-1 bg-white/10 rounded-full"></div>
-                                                        <div className="w-1 h-1 bg-white/10 rounded-full"></div>
-                                                    </div>
-                                                    {/* Status Bar */}
-                                                    <div className="absolute top-1.5 left-0 right-0 px-6 flex justify-between items-center z-50 pointer-events-none opacity-40">
-                                                        <span className="text-[8px] font-black text-white">9:41</span>
-                                                        <div className="flex items-center gap-1">
-                                                            <div className="w-2.5 h-1.5 bg-white rounded-[1px]"></div>
-                                                            <div className="w-2 h-2 rounded-full border border-white"></div>
-                                                        </div>
-                                                    </div>
-                                                </>
-                                            )}
-
+                                    {/* The Display Screen Container */}
+                                    <div className={`relative transition-all duration-500 overflow-hidden bg-black shadow-2xl shrink-0
+                                        ${designMode === 'mobile' 
+                                            ? 'w-full h-[220px] border-[2px] border-white/20 rounded-3xl' 
+                                            : 'aspect-video w-full max-w-full border-4 border-white/5 rounded-[2.5rem]'}`}>
+                                            
                                             <div className="absolute inset-0 w-full h-full overflow-hidden pointer-events-none" ref={previewParentRef}>
                                                 <div 
                                                     className="w-full h-full relative"
                                                     style={{
-                                                        transform: `scale(${previewScale})`,
-                                                        transformOrigin: 'top left',
+                                                        transform: `translate(-50%, -50%) scale(${previewScale})`,
+                                                        transformOrigin: 'center center',
+                                                        top: '50%',
+                                                        left: '50%',
                                                         width: designMode === 'mobile' ? '390px' : '1920px',
                                                         height: designMode === 'mobile' ? '844px' : '1080px',
                                                         pointerEvents: 'none'
                                                     }}
                                                 >
                                                     <Login
-                                                        previewSettings={previewSettings}
+                                                        activeSettings={previewSettings}
                                                         forcedDesignMode={designMode}
                                                         isPreview={true}
                                                         isFullScreen={false}
@@ -1485,27 +1511,28 @@ export default function Settings() {
                                         <FullScreenPreview
                                             show={showFullPreview}
                                             onClose={() => setShowFullPreview(false)}
-                                            previewSettings={previewSettings}
+                                            activeSettings={previewSettings}
                                             designMode={designMode}
                                         />
 
-                                        {/* Global Save Button in Sticky/Fixed Header */}
+                                        {/* Global Save Button */}
                                         {!isMiniPreview && (
                                             <button
-                                                onClick={handleSaveLoginCustomization}
+                                                onClick={handleSaveTheme}
                                                 disabled={loading}
-                                                className="w-full mt-1 bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-black py-2.5 rounded-xl font-black uppercase tracking-widest text-[10px] transition-all shadow-lg flex items-center justify-center gap-2 pointer-events-auto"
+                                                className="w-full mt-2 bg-[#fbbf24] hover:bg-[#f59e0b] disabled:opacity-50 text-black py-3 rounded-[1.25rem] font-black uppercase tracking-widest text-[11px] transition-all shadow-xl shadow-amber-500/10 flex items-center justify-center gap-2 pointer-events-auto"
                                             >
                                                 {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                                                <span className="relative z-10 drop-shadow-md">{t('settings.saveLoginPageDesign')}</span>
+                                                <span className="relative z-10 drop-shadow-md">
+                                                    {designMode === 'mobile' ? 'Save Design' : t('settings.saveLoginPageDesign')}
+                                                </span>
                                             </button>
                                         )}
-                                    </div>
                                 </div>
 
 
-                                {/* Controls Column - Added margin for fixed mobile preview */}
-                                <div className={`space-y-6 lg:col-span-7 transition-all duration-300 ${designMode === 'mobile' ? 'order-last glass-card p-6 mt-[420px]' : 'order-1 lg:order-1'}`}>
+                                {/* Controls Column (Settings) */}
+                                <div className={`space-y-6 lg:col-span-7 ${designMode === 'mobile' ? 'order-last no-border-card p-6' : 'order-first lg:order-1'}`}>
                                     {/* Login Background Section Removed - Now in Media Library */}
 
                                     {/* SECTION: BRANDING ASSETS */}
@@ -1516,7 +1543,7 @@ export default function Settings() {
                                         </div>
 
                                         {/* Master Logo Upload Section */}
-                                        <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/5 group/logo transition-all hover:bg-white/[0.05]">
+                                        <div className="p-4 rounded-2xl bg-white/[0.02] group/logo hover:bg-white/[0.04]">
                                             <div className="flex flex-col sm:flex-row sm:items-center gap-4">
                                                 {/* Minimal Preview */}
                                                 <div className="relative w-12 h-12 shrink-0 rounded-xl bg-black/20 border border-white/10 flex items-center justify-center overflow-hidden group-hover/logo:border-primary/50 transition-all">
@@ -1555,7 +1582,7 @@ export default function Settings() {
                                             <span className="text-[10px] font-black uppercase text-white tracking-[0.2em]">{t('settings.environmentPerspective')}</span>
                                         </div>
 
-                                        <div className="space-y-3 p-4 bg-white/5 rounded-2xl border border-white/5">
+                                        <div className="space-y-3 p-6 bg-white/[0.01] rounded-[2rem]">
                                             <div className="flex justify-between items-center mb-2">
                                                 <label className="text-[9px] text-white/60 font-black uppercase tracking-widest block">{t('settings.backgroundControl')}</label>
                                                 <button
@@ -1564,7 +1591,7 @@ export default function Settings() {
                                                         [getLoginKey('login_bg_x_offset')]: 0,
                                                         [getLoginKey('login_bg_y_offset')]: 0
                                                     })}
-                                                    className="p-1 px-2 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20 transition-all flex items-center gap-1.5 text-[7px] font-black text-white/40 hover:text-white"
+                                                    className="p-1 px-2 rounded-lg bg-white/5 hover:bg-white/10 flex items-center gap-1.5 text-[7px] font-black text-white/40 hover:text-white"
                                                     title="Center Background"
                                                 >
                                                     <Target className="w-3 h-3" />
@@ -1615,12 +1642,12 @@ export default function Settings() {
                                                     <div className="flex justify-between">
                                                         <span className="text-[8px] text-white/40 uppercase font-bold">{t('settings.fitMode')}</span>
                                                     </div>
-                                                    <div className="flex bg-white/5 p-0.5 rounded-lg border border-white/10">
+                                                    <div className="flex bg-white/[0.02] p-0.5 rounded-lg">
                                                         {(['cover', 'contain', 'fill'] as const).map((mode) => (
                                                             <button
                                                                 key={mode}
                                                                 onClick={() => setDraftSettings({ ...draftSettings, [getLoginKey('login_bg_fit')]: mode })}
-                                                                className={`flex-1 py-1 rounded-md text-[8px] font-black uppercase tracking-widest transition-all ${(draftSettings[getLoginKey('login_bg_fit')] || 'cover') === mode
+                                                                className={`flex-1 py-1 rounded-md text-[8px] font-black uppercase tracking-widest ${(draftSettings[getLoginKey('login_bg_fit')] || 'cover') === mode
                                                                     ? 'bg-amber-500 text-black shadow-lg'
                                                                     : 'text-white/40 hover:text-white hover:bg-white/5'
                                                                     }`}
@@ -1659,7 +1686,7 @@ export default function Settings() {
                                             </div>
                                         </div>
 
-                                        <div className="space-y-4 p-4 bg-white/5 rounded-2xl border border-white/5">
+                                        <div className="space-y-4 p-4 bg-white/5 rounded-2xl">
                                             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
                                                 <label className="text-[9px] text-white/60 font-black uppercase tracking-widest block">{t('settings.logoAppearance')}</label>
                                                 <div className="flex items-center gap-3">
@@ -1669,7 +1696,7 @@ export default function Settings() {
                                                             [getLoginKey('login_logo_x_offset')]: 0,
                                                             [getLoginKey('login_logo_y_offset')]: 0
                                                         })}
-                                                        className="p-1 px-2 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20 transition-all flex items-center gap-1.5 text-[7px] font-black text-white/40 hover:text-white"
+                                                        className="p-1 px-2 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20 flex items-center gap-1.5 text-[7px] font-black text-white/40 hover:text-white"
                                                         title="Center Logo"
                                                     >
                                                         <Target className="w-3 h-3" />
@@ -1684,7 +1711,7 @@ export default function Settings() {
                                                 </div>
                                             </div>
 
-                                            <div className={`grid grid-cols-1 sm:grid-cols-2 gap-4 transition-all duration-500 ${(draftSettings[getLoginKey('login_show_logo')] === false || draftSettings[getLoginKey('login_show_logo')] === undefined) ? 'opacity-20 pointer-events-none grayscale' : 'opacity-100'}`}>
+                                            <div className={`grid grid-cols-1 sm:grid-cols-2 gap-4 ${(draftSettings[getLoginKey('login_show_logo')] === false || draftSettings[getLoginKey('login_show_logo')] === undefined) ? 'opacity-20 pointer-events-none grayscale' : 'opacity-100'}`}>
                                                 <div className="space-y-1.5">
                                                     <div className="flex justify-between">
                                                         <span className="text-[8px] text-white/40 uppercase font-bold">{t('settings.scale')}</span>
@@ -1740,7 +1767,7 @@ export default function Settings() {
                                             </div>
                                         </div>
 
-                                        <div className="space-y-3 p-4 bg-white/5 rounded-2xl border border-white/5">
+                                        <div className="space-y-3 p-4 bg-white/5 rounded-2xl">
                                             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-2">
                                                 <label className="text-[9px] text-white/60 font-black uppercase tracking-widest block">{t('settings.cardPositionLayout')}</label>
                                                 <button
@@ -1749,7 +1776,7 @@ export default function Settings() {
                                                         [getLoginKey('login_card_x_offset')]: 0,
                                                         [getLoginKey('login_card_y_offset')]: 0
                                                     })}
-                                                    className="p-1 px-2 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20 transition-all flex items-center gap-1.5 text-[7px] font-black text-white/40 hover:text-white"
+                                                    className="p-1 px-2 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20 flex items-center gap-1.5 text-[7px] font-black text-white/40 hover:text-white"
                                                     title="Center Card"
                                                 >
                                                     <Target className="w-3 h-3" />
@@ -1788,7 +1815,7 @@ export default function Settings() {
                                                         <span className="text-[8px] text-amber-500 font-bold">{Number(draftSettings[getLoginKey('login_card_width')]) || (designMode === 'mobile' ? 340 : 448)}px</span>
                                                     </div>
                                                     <input
-                                                        type="range" min="200" max="1440" step="5"
+                                                        type="range" min="200" max="4000" step="5"
                                                         value={Number(draftSettings[getLoginKey('login_card_width')]) || (designMode === 'mobile' ? 340 : 448)}
                                                         onChange={(e) => setDraftSettings({ ...draftSettings, [getLoginKey('login_card_width')]: parseInt(e.target.value) })}
                                                         className="w-full h-1 bg-white/10 rounded-lg appearance-none cursor-pointer accent-amber-500"
@@ -1800,24 +1827,24 @@ export default function Settings() {
                                                         <span className="text-[8px] text-amber-500 font-bold">{Number(draftSettings[getLoginKey('login_card_height')]) || (designMode === 'mobile' ? 500 : 600)}px</span>
                                                     </div>
                                                     <input
-                                                        type="range" min="200" max="1200" step="5"
+                                                        type="range" min="200" max="4000" step="5"
                                                         value={Number(draftSettings[getLoginKey('login_card_height')]) || (designMode === 'mobile' ? 500 : 600)}
                                                         onChange={(e) => setDraftSettings({ ...draftSettings, [getLoginKey('login_card_height')]: parseInt(e.target.value) })}
                                                         className="w-full h-1 bg-white/10 rounded-lg appearance-none cursor-pointer accent-amber-500"
                                                     />
                                                 </div>
-                                                <div className="space-y-1.5 col-span-1 sm:col-span-2">
-                                                    <div className="flex justify-between">
-                                                        <span className="text-[8px] text-white/40 uppercase font-bold">Card Scale</span>
-                                                        <span className="text-[8px] text-amber-500 font-bold">{Math.round((Number(draftSettings[getLoginKey('login_card_scale')]) || 1.0) * 100)}%</span>
+                                                    <div className="space-y-1.5 col-span-1 sm:col-span-2">
+                                                        <div className="flex justify-between">
+                                                            <span className="text-[8px] text-white/40 uppercase font-bold">Card Scale</span>
+                                                            <span className="text-[8px] text-amber-500 font-bold">{Math.round((Number(draftSettings[getLoginKey('login_card_scale')]) || 1.0) * 100)}%</span>
+                                                        </div>
+                                                        <input
+                                                            type="range" min="0.1" max="5.0" step="0.05"
+                                                            value={Number(draftSettings[getLoginKey('login_card_scale')]) || 1.0}
+                                                            onChange={(e) => setDraftSettings({ ...draftSettings, [getLoginKey('login_card_scale')]: parseFloat(e.target.value) })}
+                                                            className="w-full h-1 bg-white/10 rounded-lg appearance-none cursor-pointer accent-amber-500"
+                                                        />
                                                     </div>
-                                                    <input
-                                                        type="range" min="0.1" max="1.5" step="0.05"
-                                                        value={Number(draftSettings[getLoginKey('login_card_scale')]) ?? 1.0}
-                                                        onChange={(e) => setDraftSettings({ ...draftSettings, [getLoginKey('login_card_scale')]: parseFloat(e.target.value) })}
-                                                        className="w-full h-1 bg-white/10 rounded-lg appearance-none cursor-pointer accent-amber-500"
-                                                    />
-                                                </div>
                                             </div>
                                         </div>
                                     </div>
@@ -1943,7 +1970,7 @@ export default function Settings() {
                                             </div>
                                         </div>
 
-                                        <div className="space-y-3 p-4 bg-white/5 rounded-2xl border border-white/5">
+                                        <div className="space-y-3 p-4 bg-white/5 rounded-2xl">
                                             <div className="flex justify-between items-center mb-1">
                                                 <label className="text-[9px] text-white/60 font-black uppercase tracking-widest flex items-center gap-2">
                                                     <Sparkles className="w-3 h-3 text-amber-500" />
@@ -2030,68 +2057,98 @@ export default function Settings() {
                 )}
 
                 {activeTab === 'profile' && (
-                    <div className="space-y-8 animate-in fade-in slide-in-from-left-4 duration-500 pb-20">
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                            <div className="glass-card p-6 md:p-8 rounded-[2rem] border border-white/10 shadow-premium">
-                                <h2 className="text-lg md:text-xl font-black text-white uppercase tracking-tight flex items-center gap-3 mb-6">
-                                    <div className="p-2.5 bg-secondary/20 rounded-xl text-primary">
-                                        <User className="w-5 h-5" />
+                    <div className="space-y-12 animate-in fade-in slide-in-from-left-4 duration-500 pb-20">
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+                            {/* MY PROFILE SECTION */}
+                            <div className="relative">
+                                <div className="flex items-center gap-4 mb-8">
+                                    <div className="p-3 bg-secondary/20 rounded-2xl text-primary shadow-lg shadow-primary/10">
+                                        <User className="w-6 h-6" />
                                     </div>
-                                    {t('settings.myProfile')}
-                                </h2>
-                                <form onSubmit={handleUpdateProfile} className="space-y-4">
-                                    <div className="space-y-1.5">
-                                        <label className="text-[9px] font-black uppercase tracking-widest text-white/40 ml-2">{t('settings.displayName')}</label>
-                                        <input
-                                            type="text"
-                                            value={userData.full_name}
-                                            onChange={e => setUserData({ ...userData, full_name: e.target.value })}
-                                            className="w-full px-4 py-3 rounded-xl border border-white/10 bg-white/5 text-white outline-none font-bold text-sm"
-                                        />
+                                    <div className="flex flex-col">
+                                        <h2 className="text-xl md:text-2xl font-black text-white uppercase tracking-[0.2em] leading-tight">
+                                            {t('settings.myProfile')}
+                                        </h2>
+                                        <div className="flex items-center gap-3 mt-1">
+                                            <div className="h-[1px] w-12 md:w-24 bg-gradient-to-r from-primary/50 to-transparent"></div>
+                                            <p className="text-[9px] font-black text-white/20 uppercase tracking-[0.4em] whitespace-nowrap">Identity & Credentials</p>
+                                        </div>
                                     </div>
-                                    <div className="space-y-1.5">
-                                        <label className="text-[9px] font-black uppercase tracking-widest text-white/40 ml-2">{t('settings.emailAddress')}</label>
-                                        <input
-                                            type="email"
-                                            value={userData.email}
-                                            onChange={e => setUserData({ ...userData, email: e.target.value })}
-                                            disabled={role !== 'admin'}
-                                            className={`w-full px-4 py-3 rounded-xl border border-white/10 bg-white/5 text-white outline-none font-bold text-sm ${role !== 'admin' ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                        />
+                                </div>
+
+                                <form onSubmit={handleUpdateProfile} className="space-y-8">
+                                    <div className="space-y-4">
+                                        <div className="space-y-1.5 px-1">
+                                            <label className="text-[10px] font-black uppercase tracking-[0.3em] text-white/30 ml-1">{t('settings.displayName')}</label>
+                                            <input
+                                                type="text"
+                                                value={userData.full_name}
+                                                onChange={e => setUserData({ ...userData, full_name: e.target.value })}
+                                                className="w-full bg-transparent border-b border-white/[0.08] py-4 text-white text-lg font-bold placeholder:text-white/10 focus:border-primary/50 transition-all outline-none"
+                                            />
+                                        </div>
+                                        <div className="space-y-1.5 px-1">
+                                            <label className="text-[10px] font-black uppercase tracking-[0.3em] text-white/30 ml-1">{t('settings.emailAddress')}</label>
+                                            <input
+                                                type="email"
+                                                value={userData.email}
+                                                onChange={e => setUserData({ ...userData, email: e.target.value })}
+                                                disabled={role !== 'admin'}
+                                                className={`w-full bg-transparent border-b border-white/[0.08] py-4 text-white text-lg font-bold placeholder:text-white/10 focus:border-primary/50 transition-all outline-none ${role !== 'admin' ? 'opacity-30 cursor-not-allowed' : ''}`}
+                                            />
+                                        </div>
                                     </div>
-                                    <button type="submit" className="w-full bg-white/5 hover:bg-white/10 text-white py-3 rounded-xl border border-white/10 font-black uppercase tracking-widest text-[10px]">
+                                    <button 
+                                        type="submit" 
+                                        className="w-full py-4 rounded-[2rem] bg-white/[0.02] border border-white/[0.05] hover:bg-white/[0.05] hover:border-white/20 transition-all text-white font-black uppercase tracking-[0.2em] text-[10px] shadow-xl shadow-black/20 hover:scale-[1.02]"
+                                    >
                                         {profileLoading ? t('common.saving') : t('settings.updateProfile')}
                                     </button>
                                 </form>
                             </div>
 
-                            <div className="glass-card p-6 md:p-8 rounded-[2rem] border border-white/10 shadow-premium">
-                                <h2 className="text-lg md:text-xl font-black text-white uppercase tracking-tight flex items-center gap-3 mb-6">
-                                    <div className="p-2.5 bg-rose-500/20 rounded-xl text-rose-400">
-                                        <LockIcon className="w-5 h-5" />
+                            {/* CHANGE PASSWORD SECTION */}
+                            <div className="relative lg:pl-12">
+                                <div className="flex items-center gap-4 mb-8">
+                                    <div className="p-3 bg-rose-500/20 rounded-2xl text-rose-400 shadow-lg shadow-rose-500/10">
+                                        <LockIcon className="w-6 h-6" />
                                     </div>
-                                    {t('settings.changePassword')}
-                                </h2>
-                                <form onSubmit={handleUpdatePassword} className="space-y-4">
-                                    <div className="space-y-1.5">
-                                        <label className="text-[9px] font-black uppercase tracking-widest text-white/40 ml-2">{t('settings.newPassword')}</label>
-                                        <input
-                                            type="password"
-                                            value={passwordData.newPassword}
-                                            onChange={e => setPasswordData({ ...passwordData, newPassword: e.target.value })}
-                                            className="w-full px-4 py-3 rounded-xl border border-white/10 bg-white/5 text-white outline-none font-bold text-sm"
-                                        />
+                                    <div className="flex flex-col">
+                                        <h2 className="text-xl md:text-2xl font-black text-white uppercase tracking-[0.2em] leading-tight">
+                                            {t('settings.changePassword')}
+                                        </h2>
+                                        <div className="flex items-center gap-3 mt-1">
+                                            <div className="h-[1px] w-12 md:w-24 bg-gradient-to-r from-rose-500/50 to-transparent"></div>
+                                            <p className="text-[9px] font-black text-white/20 uppercase tracking-[0.4em] whitespace-nowrap">Security & Protection</p>
+                                        </div>
                                     </div>
-                                    <div className="space-y-1.5">
-                                        <label className="text-[9px] font-black uppercase tracking-widest text-white/40 ml-2">{t('settings.confirmPassword')}</label>
-                                        <input
-                                            type="password"
-                                            value={passwordData.confirmPassword}
-                                            onChange={e => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
-                                            className="w-full px-4 py-3 rounded-xl border border-white/10 bg-white/5 text-white outline-none font-bold text-sm"
-                                        />
+                                </div>
+
+                                <form onSubmit={handleUpdatePassword} className="space-y-8">
+                                    <div className="space-y-4">
+                                        <div className="space-y-1.5 px-1">
+                                            <label className="text-[10px] font-black uppercase tracking-[0.3em] text-white/30 ml-1">{t('settings.newPassword')}</label>
+                                            <input
+                                                type="password"
+                                                value={passwordData.newPassword}
+                                                onChange={e => setPasswordData({ ...passwordData, newPassword: e.target.value })}
+                                                className="w-full bg-transparent border-b border-white/[0.08] py-4 text-white text-lg font-bold placeholder:text-white/10 focus:border-rose-500/50 transition-all outline-none"
+                                            />
+                                        </div>
+                                        <div className="space-y-1.5 px-1">
+                                            <label className="text-[10px] font-black uppercase tracking-[0.3em] text-white/30 ml-1">{t('settings.confirmPassword')}</label>
+                                            <input
+                                                type="password"
+                                                value={passwordData.confirmPassword}
+                                                onChange={e => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
+                                                className="w-full bg-transparent border-b border-white/[0.08] py-4 text-white text-lg font-bold placeholder:text-white/10 focus:border-rose-500/50 transition-all outline-none"
+                                            />
+                                        </div>
                                     </div>
-                                    <button type="submit" className="w-full bg-rose-500 hover:bg-rose-600 text-white py-3 rounded-xl shadow-lg font-black uppercase tracking-widest text-[10px]">
+                                    <button 
+                                        type="submit" 
+                                        className="w-full py-4 rounded-[2rem] bg-rose-500/10 border border-white/[0.03] hover:bg-rose-500/20 transition-all text-rose-400 font-black uppercase tracking-[0.2em] text-[10px] shadow-xl shadow-rose-500/10 hover:scale-[1.02]"
+                                    >
                                         {passwordLoading ? t('common.saving') : t('settings.changePassword')}
                                     </button>
                                 </form>

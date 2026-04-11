@@ -73,7 +73,7 @@ export function MediaLibraryModal({ isOpen, onClose, history, isLoading, onSelec
                         <button
                             onClick={() => fileInputRef.current?.click()}
                             disabled={isUploading}
-                            className="hidden sm:flex items-center gap-2 px-4 py-2 bg-primary/10 hover:bg-primary/20 text-primary rounded-xl transition-all active:scale-95 border border-primary/20 disabled:opacity-50"
+                            className="hidden sm:flex items-center gap-2 px-4 py-2 bg-primary/10 hover:bg-primary/20 text-primary rounded-xl transition-all border border-primary/20 disabled:opacity-50"
                         >
                             {isUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
                             <span className="text-[10px] font-black uppercase tracking-widest">Upload New</span>
@@ -103,7 +103,7 @@ export function MediaLibraryModal({ isOpen, onClose, history, isLoading, onSelec
                                 }
                             }}
                         />
-                        <button onClick={onClose} className="p-2.5 bg-white/5 hover:bg-white/10 rounded-xl transition-all active:scale-95">
+                        <button onClick={onClose} className="p-2.5 bg-white/5 hover:bg-white/10 rounded-xl transition-all">
                             <X className="w-5 h-5 text-white/40" />
                         </button>
                     </div>
@@ -1021,7 +1021,7 @@ export function LogoEditorModal({ isOpen, onClose, logo, onSave }: any) {
                             </section>
                         </div>
                         <div className="p-6 md:p-8 border-t border-white/5 bg-black/40 space-y-4">
-                            <button onClick={handleSave} disabled={isProcessing} className="w-full py-5 rounded-[2.5rem] bg-emerald-500 text-white text-[11px] font-black uppercase tracking-[0.3em] hover:scale-[1.02] active:scale-95 transition-all shadow-[0_20px_40px_rgba(16,185,129,0.2)] flex items-center justify-center gap-3 group disabled:opacity-50">Save & Apply Identity</button>
+                            <button onClick={handleSave} disabled={isProcessing} className="w-full py-5 rounded-[2.5rem] bg-emerald-500 text-white text-[11px] font-black uppercase tracking-[0.3em] hover:scale-[1.02] transition-all shadow-[0_20px_40px_rgba(16,185,129,0.2)] flex items-center justify-center gap-3 group disabled:opacity-50">Save & Apply Identity</button>
                         </div>
                     </div>
                 </div>

@@ -170,10 +170,17 @@ export default function LandingPage() {
                             <div className="absolute inset-0 bg-gradient-to-tr from-[var(--brand-primary)]/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity rounded-full blur-xl"></div>
                         </div>
                         <div className="flex flex-col">
-                            <span className="text-[14px] lg:text-[16px] font-black uppercase tracking-[0.2em] leading-tight">
-                                {branding.academy_name.split(' ')[0]} <span className="text-[var(--brand-primary)]">{branding.academy_name.split(' ').slice(1).join(' ')}</span>
-                            </span>
-                            <span className="text-[7px] lg:text-[9px] font-bold text-white/30 uppercase tracking-[0.4em]">Excellence Defined</span>
+                            <h1 className="flex flex-col items-start gap-1 font-[var(--font-orbitron)] leading-none mb-1">
+                                <span className="text-[28px] lg:text-[48px] font-black uppercase tracking-[0.2em] text-white drop-shadow-[0_0_30px_rgba(255,255,255,0.3)]">SKIPPY</span>
+                                <div className="flex items-center gap-3">
+                                    <div className="w-8 h-px bg-gradient-to-r from-transparent via-[var(--brand-primary)]/50 to-transparent" />
+                                    <span className="text-[10px] lg:text-[14px] font-black uppercase tracking-[0.6em] text-[var(--brand-primary)]">TOES Q8</span>
+                                </div>
+                            </h1>
+                            <div className="flex items-center gap-3 mt-4">
+                                <div className="w-12 h-[1px] bg-[var(--brand-primary)]/40 text-left" />
+                                <span className="text-[9px] lg:text-[11px] font-black text-white/30 uppercase tracking-[0.5em]">Elite Infrastructure</span>
+                            </div>
                         </div>
                     </div>
 

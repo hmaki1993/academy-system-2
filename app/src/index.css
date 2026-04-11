@@ -1,6 +1,8 @@
 @import "tailwindcss";
 
 @theme {
+  --font-orbitron: "Orbitron", sans-serif;
+
   /* ─── MAIN APP PALETTE (overridden by gym_settings localStorage) ── */
   --color-primary: #FF6B6B;         /* New Signature Coral      */
   --color-primary-foreground: #ffffff;

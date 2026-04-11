@@ -19,6 +19,7 @@ const Login = lazy(() => import('./pages/Login'));
 
 const Register = lazy(() => import('./pages/Register'));
 const PublicRegistration = lazy(() => import('./pages/PublicRegistration'));
+const StaffRegister = lazy(() => import('./pages/StaffRegister'));
 const AdminCameras = lazy(() => import('./pages/AdminCameras'));
 const DashboardLayout = lazy(() => import('./layouts/DashboardLayout'));
 const PersonalDashboard = lazy(() => import('./pages/PersonalDashboard'));
@@ -48,7 +49,7 @@ const JumpRopeLeaderboard = lazy(() => import('./features/jump-rope/JumpRopeLead
 const JumpRopeHistory = lazy(() => import('./features/jump-rope/JumpRopeHistory'));
 const JumpRopeSettings = lazy(() => import('./features/jump-rope/JumpRopeSettings'));
 const JumpRopeAdmin = lazy(() => import('./features/jump-rope/JumpRopeAdmin'));
-const StrategyWorkplace = lazy(() => import('./features/jump-rope/StrategyWorkplace'));
+const StrategyHub = lazy(() => import('./pages/StrategyHub'));
 
 import { initializeTheme } from './utils/theme';
 import { CurrencyProvider } from './context/CurrencyContext';
@@ -88,14 +89,40 @@ const PageLoader = ({ name }: { name?: string }) => {
   }, [name]);
 
   return (
-    <div className="min-h-screen bg-[#050505] flex flex-col items-center justify-center p-8">
-      <div className="relative w-24 h-24 mb-8">
-        <div className="absolute inset-0 border-4 border-primary/20 rounded-full"></div>
-        <div className="absolute inset-0 border-4 border-primary rounded-full border-t-transparent animate-spin"></div>
+    <div className="min-h-screen bg-[#050505] flex flex-col items-center justify-center p-8 relative overflow-hidden">
+      {/* Background Glow */}
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[40vw] h-[40vw] bg-primary/10 rounded-full blur-[120px] pointer-events-none" />
+
+      <div className="relative w-24 h-24 mb-10">
+        <div className="absolute inset-0 border-4 border-primary/10 rounded-[2rem] animate-pulse"></div>
+        <div className="absolute inset-0 border-4 border-primary rounded-[2rem] border-t-transparent animate-spin duration-1000"></div>
+        <div className="absolute inset-0 bg-primary/20 rounded-[2rem] blur-xl animate-pulse"></div>
       </div>
-      <div className="text-white/40 font-black tracking-[0.5em] text-xs uppercase animate-pulse">
-        {displayName && displayName !== 'Academy System' ? displayName : ''}
+
+      <div className="flex flex-col items-center animate-in fade-in zoom-in-95 duration-1000">
+        <div className="flex flex-col items-center gap-1 font-[var(--font-orbitron)] uppercase leading-none mb-4">
+            <span className="text-[32px] sm:text-[52px] font-black tracking-[0.3em] text-white drop-shadow-[0_0_40px_rgba(255,255,255,0.4)]">SKIPPY</span>
+            <div className="flex items-center gap-4 mt-2">
+                <div className="w-12 h-px bg-gradient-to-r from-transparent via-primary to-transparent" />
+                <span className="text-[12px] sm:text-[16px] font-black tracking-[0.8em] text-primary">TOES Q8</span>
+                <div className="w-12 h-px bg-gradient-to-r from-transparent via-primary to-transparent" />
+            </div>
+        </div>
+        <div className="overflow-hidden w-48 h-[1px] bg-white/5 relative mt-6">
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-primary to-transparent animate-shimmer" />
+        </div>
+        <p className="text-[10px] sm:text-[12px] font-black text-white/10 uppercase tracking-[0.8em] mt-6 animate-pulse">Intelligence Loading</p>
       </div>
+
+      <style>{`
+        @keyframes shimmer {
+          0% { transform: translateX(-100%); }
+          100% { transform: translateX(100%); }
+        }
+        .animate-shimmer {
+          animation: shimmer 1.5s infinite linear;
+        }
+      `}</style>
     </div>
   );
 };
@@ -157,6 +184,7 @@ function AppContent() {
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route path="/registration" element={<PublicRegistration />} />
+            <Route path="/staff-register" element={<StaffRegister />} />
             <Route path="/book-consultation" element={<BookConsultation />} />
 
             {/* Jump Rope Standalone application route — own branded Suspense */}
@@ -218,7 +246,7 @@ function AppContent() {
                 <Route path="communications" element={<Communications />} />
                 <Route path="consultations" element={<ConsultationsAdmin />} />
                 <Route path="smart-training" element={<SmartTraining />} />
-                <Route path="strategy-hub" element={<StrategyWorkplace />} />
+                <Route path="strategy-hub" element={<StrategyHub />} />
                 <Route path="book-consultation" element={<BookConsultation />} />
                 
                 {/* Fame Academy - New Features */}

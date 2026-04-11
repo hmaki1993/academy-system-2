@@ -87,3 +87,19 @@ export function useConsultationSettings() {
         }
     });
 }
+export function useDeleteConsultationRequests() {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: async (ids: string | string[]) => {
+            const idList = Array.isArray(ids) ? ids : [ids];
+            const { error } = await supabase
+                .from('consultation_requests')
+                .delete()
+                .in('id', idList);
+            if (error) throw error;
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['consultation_requests'] });
+        }
+    });
+}

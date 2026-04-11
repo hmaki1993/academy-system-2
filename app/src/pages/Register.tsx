@@ -30,7 +30,7 @@ export default function Register() {
     const [email, setEmail] = useState(prefill.email || '');
     const [phone, setPhone] = useState(prefill.phone || '');
     const [password, setPassword] = useState('');
-    const [role, setRole] = useState<'admin' | 'coach' | 'student'>(prefill.role || 'coach');
+    const [role, setRole] = useState<'admin' | 'coach' | 'student'>(prefill.role || 'student');
     const [studentId, setStudentId] = useState<string | null>(prefill.student_id || null);
     const [ptId, setPtId] = useState<string | null>(prefill.pt_id || null);
     const [loading, setLoading] = useState(false);
@@ -75,13 +75,28 @@ export default function Register() {
                 });
                 if (signInError) throw signInError;
 
-                // 2. Link Student Record (for Quick Add joins)
-                if (role === 'student' && studentId) {
-                    const { error: updateError } = await supabase
-                        .from('students')
-                        .update({ profile_id: data.user.id })
-                        .eq('id', studentId);
-                    if (updateError) console.error('Error linking student profile:', updateError);
+                // 2. Link or Create Student Record
+                if (role === 'student') {
+                    if (studentId) {
+                        // Update existing link
+                        const { error: updateError } = await supabase
+                            .from('students')
+                            .update({ profile_id: data.user.id })
+                            .eq('id', studentId);
+                        if (updateError) console.error('Error linking student profile:', updateError);
+                    } else {
+                        // Create NEW student record if none exists for this profile
+                        const { error: insertError } = await supabase
+                            .from('students')
+                            .insert({
+                                profile_id: data.user.id,
+                                full_name: fullName,
+                                email: email,
+                                parent_contact: phone,
+                                status: 'active'
+                            });
+                        if (insertError) console.error('Error creating student record:', insertError);
+                    }
                 }
 
                 // 3. Create Coach profile if applicable
@@ -115,17 +130,21 @@ export default function Register() {
             <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-red-500/5 rounded-full blur-[120px] translate-y-1/2 -translate-x-1/4"></div>
 
             <div className="w-full max-w-sm relative z-10 flex flex-col items-center bg-transparent border-none shadow-none">
-                {/* Integrated Logo */}
-                <div className="mb-2 animate-in fade-in zoom-in duration-1000">
-                    <img src="/logo.png" alt="Logo" className="h-[60px] w-auto filter drop-shadow-[0_0_15px_rgba(239,68,68,0.2)]" />
+                {/* Signature Brand Identity */}
+                <div className="mb-8 mt-6 animate-in fade-in zoom-in duration-1000">
+                    <h1 className="flex flex-col items-center gap-1 font-[var(--font-orbitron)] leading-none text-center">
+                        <span className="text-[40px] font-black uppercase tracking-[0.4em] text-white drop-shadow-[0_10px_30px_rgba(255,255,255,0.2)]">SKIPPY</span>
+                        <div className="h-[2px] w-40 bg-gradient-to-r from-transparent via-red-500 to-transparent my-3" />
+                        <span className="text-[12px] font-black uppercase tracking-[0.9em] text-red-500/80">TOES Q8</span>
+                    </h1>
                 </div>
 
                 {/* Floating Content */}
-                <div className="w-full text-center mb-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
-                    <h1 className="text-3xl font-black text-white uppercase tracking-tighter">
+                <div className="w-full text-center mb-10 animate-in fade-in slide-in-from-bottom-4 duration-700">
+                    <h2 className="text-2xl font-black text-white/90 uppercase tracking-[0.2em]">
                         {t('register.title')}
-                    </h1>
-                    <p className="text-red-500/40 mt-1 text-[9px] font-black uppercase tracking-[0.4em]">
+                    </h2>
+                    <p className="text-red-500/50 mt-2 text-[10px] font-black uppercase tracking-[0.6em]">
                         {t('register.subtitle')}
                     </p>
                 </div>
@@ -175,6 +194,7 @@ export default function Register() {
                             <input 
                                 type="email" 
                                 required 
+                                autoComplete="off"
                                 readOnly={!!prefill.email} 
                                 className="w-full !bg-transparent !border-none !outline-none py-3 px-0 text-white font-bold text-sm tracking-wide text-left !shadow-none !rounded-none" 
                                 dir="ltr" 
@@ -191,37 +211,17 @@ export default function Register() {
                             <input 
                                 type="password" 
                                 required 
+                                autoComplete="new-password"
                                 className="w-full !bg-transparent !border-none !outline-none py-3 px-0 text-white font-bold text-sm tracking-widest text-left !shadow-none !rounded-none" 
                                 dir="ltr" 
-                                placeholder="••••••••" 
                                 value={password} 
                                 onChange={(e) => setPassword(e.target.value)} 
                             />
                         </div>
                     </div>
 
-                    {!prefill.role ? (
-                        <div className="space-y-1.5 px-0">
-                            <label className="text-[9px] font-black text-white/40 uppercase tracking-[0.4em]">{t('register.role')}</label>
-                            <div className="relative border-b border-white/10 focus-within:border-red-500/40 transition-all duration-500 !rounded-none">
-                                <select 
-                                    value={role} 
-                                    onChange={(e) => setRole(e.target.value as any)} 
-                                    className="w-full !px-0 !py-3 !bg-transparent text-white font-bold text-sm appearance-none outline-none cursor-pointer !rounded-none !border-none"
-                                >
-                                    <option value="coach" className="bg-black">{t('common.coach')}</option>
-                                    <option value="admin" className="bg-black">{t('common.adminRole')}</option>
-                                    <option value="student" className="bg-black">{t('common.student')}</option>
-                                </select>
-                                <ChevronDown className="absolute right-0 top-1/2 -translate-y-1/2 w-4 h-4 text-white/10 pointer-events-none" />
-                            </div>
-                        </div>
-                    ) : (
-                        <div className="hidden">
-                            <label className="text-[9px] font-black text-white/40 uppercase tracking-[0.4em]">Fixed Role</label>
-                            <div className="text-red-500/20 font-black text-[10px] uppercase tracking-widest">{role}</div>
-                        </div>
-                    )}
+                    {/* Role is hidden and defaulted to student as per user request */}
+                    <input type="hidden" value={role} />
 
                     <div className="w-full flex justify-center pt-10">
                         <button 

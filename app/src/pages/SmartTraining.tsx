@@ -1,5 +1,5 @@
 import React from 'react';
-import JumpRopeTraining from './JumpRopeTraining';
+import JumpRopeTraining from '../features/jump-rope/JumpRopeTraining';
 
 export default function SmartTraining() {
     return (

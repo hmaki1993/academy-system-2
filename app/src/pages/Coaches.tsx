@@ -1,6 +1,6 @@
-import { useEffect, useState, memo } from 'react';
+import { useEffect, useState, memo, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
-import { Plus, Filter, Mail, Phone, MapPin, Medal, DollarSign, Clock, Edit, Trash2, X, Search, User } from 'lucide-react';
+import toast from 'react-hot-toast';
 import PageHeader from '../components/PageHeader';
 import AddCoachForm from '../components/AddCoachForm';
 import ConfirmModal from '../components/ConfirmModal';
@@ -9,9 +9,9 @@ import Payroll from '../components/Payroll';
 import { useTranslation } from 'react-i18next';
 import ImageLightbox from '../components/ImageLightbox';
 import { useCoaches } from '../hooks/useData';
-import toast from 'react-hot-toast';
 import { useCurrency } from '../context/CurrencyContext';
 import { useOutletContext, useLocation } from 'react-router-dom';
+import { Edit, Trash2, Search, Plus, X, Clock, User } from 'lucide-react';
 
 interface Coach {
     id: string;
@@ -38,6 +38,7 @@ interface CoachCardProps {
     onDelete: () => void;
     onAttendance: () => void;
     onManualAttendance?: () => void;
+    onCopyInvite?: () => void;
     onEnlargeImage?: (url: string) => void;
     isPremium?: boolean;
     isCompact?: boolean;
@@ -262,6 +263,12 @@ export default function Coaches() {
 
     const [refreshTrigger, setRefreshTrigger] = useState(0);
 
+    const handleCopyInvite = (coach: Coach) => {
+        const link = `${window.location.origin}/register?role=${coach.role}&invite=${coach.id}`;
+        navigator.clipboard.writeText(link);
+        toast.success(t('common.linkCopied', 'Invite link copied!'));
+    };
+
     const fetchAttendance = async (coachId: string) => {
         setLoadingAttendance(true);
         try {
@@ -384,6 +391,7 @@ export default function Coaches() {
                                                 onEdit={() => { setEditingCoach(coach); setShowAddModal(true); }}
                                                 onDelete={() => confirmDelete(coach.id)}
                                                 onAttendance={() => { setSelectedCoachForAttendance(coach); setShowAttendanceModal(true); fetchAttendance(coach.id); }}
+                                                onCopyInvite={() => handleCopyInvite(coach)}
                                                 onEnlargeImage={(url) => setEnlargedImage(url)}
                                             />
                                         ))}
@@ -412,6 +420,7 @@ export default function Coaches() {
                                                 onEdit={() => { setEditingCoach(coach); setShowAddModal(true); }}
                                                 onDelete={() => confirmDelete(coach.id)}
                                                 onAttendance={() => { setSelectedCoachForAttendance(coach); setShowAttendanceModal(true); fetchAttendance(coach.id); }}
+                                                onCopyInvite={() => handleCopyInvite(coach)}
                                                 onEnlargeImage={(url) => setEnlargedImage(url)}
                                             />
                                         ))}
@@ -442,6 +451,7 @@ export default function Coaches() {
                                                 onDelete={() => confirmDelete(coach.id)}
                                                 onAttendance={() => { setSelectedCoachForAttendance(coach); setShowAttendanceModal(true); fetchAttendance(coach.id); }}
                                                 onManualAttendance={() => { setSelectedCoachForManual(coach); setShowManualAttendance(true); }}
+                                                onCopyInvite={() => handleCopyInvite(coach)}
                                                 onEnlargeImage={(url) => setEnlargedImage(url)}
                                             />
                                         ))}

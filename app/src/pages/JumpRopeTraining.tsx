@@ -692,13 +692,6 @@ export default function JumpRopeTraining() {
                                 <span className="text-[8px] font-black text-white/40 uppercase tracking-[0.3em]">Strategy Synced</span>
                              </div>
                         </div>
-                        
-                        <button 
-                            onClick={() => navigate('/app/strategy-hub')} 
-                            className="w-full py-5 rounded-3xl border border-orange-500/30 bg-orange-500/5 text-orange-500 font-black uppercase tracking-[0.3em] text-[11px] hover:bg-orange-500/10 hover:border-orange-500/50 active:scale-95 transition-all relative z-10 shadow-[0_20px_40px_rgba(249,115,22,0.05)]"
-                        >
-                            Return To Hub
-                        </button>
                     </div>
                 </div>
             )}

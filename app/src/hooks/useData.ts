@@ -253,7 +253,7 @@ export function useJumpRopeAccess() {
             const isAdmin = role === 'admin' || role === 'coach' || role === 'head_coach';
 
             // Admins/Coaches always have access
-            if (isAdmin) return { isLocked: false, isAdmin: true };
+            if (isAdmin) return { isLocked: false, isAdmin: true, user };
 
             // 2. For students, check if they have at least one purchase
             // First get their student ID
@@ -263,7 +263,7 @@ export function useJumpRopeAccess() {
                 .eq('profile_id', user.id)
                 .maybeSingle();
             
-            if (!student || !student.id) return { isLocked: true, reason: 'no_student_record' };
+            if (!student || !student.id) return { isLocked: true, reason: 'no_student_record', user };
 
             const { count } = await supabase
                 .from('level_purchases')
@@ -274,7 +274,8 @@ export function useJumpRopeAccess() {
             return {
                 isLocked: !hasPurchased,
                 reason: !hasPurchased ? 'no_purchases' : null,
-                studentId: student.id
+                studentId: student.id,
+                user
             };
         },
         staleTime: 1000 * 60 * 5, // 5 minutes
@@ -850,6 +851,7 @@ export function useJumpRopeHistory() {
 
 export interface JrAdminStat {
     userId: string;
+    studentId?: string; // Add true students.id
     name: string;
     avatarUrl: string;
     email?: string;
@@ -865,41 +867,34 @@ export function useJumpRopeAdminStats() {
     return useQuery({
         queryKey: ['jump_rope_admin_stats'],
         queryFn: async () => {
-            // Fetch all students with linked profiles
-            const { data: studentsData, error: studentsError } = await supabase
+            // 1. Fetch only official students from the students table (Source of Truth)
+            const { data: students, error: sError } = await supabase
                 .from('students')
-                .select('id, full_name, email, parent_contact, profile_id, profiles(full_name, avatar_url, last_active_at, email)');
+                .select('id, profile_id, parent_contact, full_name, email, profiles ( avatar_url, last_active_at )');
 
-            if (studentsError) throw studentsError;
+            if (sError) throw sError;
 
-            // Only include students who have completed registration (have a profile_id)
-            const linkedStudents = studentsData?.filter(s => s.profile_id) || [];
-
-            // Fetch coach profile IDs to exclude (staff members)
-            const { data: coachesData } = await supabase
-                .from('coaches').select('profile_id');
-
-            const staffProfileIds = new Set(coachesData?.map(c => c.profile_id).filter(Boolean));
-
-            // Fetch all jump rope sessions
+            // 2. Fetch all jump rope sessions
             const { data: sessionsData } = await supabase
                 .from('jump_rope_sessions')
                 .select('jumps, created_at, user_id')
                 .order('created_at', { ascending: false });
 
-            // Build athlete stats — seed all real students first
+            // Build athlete stats
             const userStats: Record<string, JrAdminStat> = {};
 
-            linkedStudents.forEach(student => {
-                const uid = student.profile_id as string;
-                if (!uid || staffProfileIds.has(uid)) return;
+            students?.forEach(student => {
+                const uid = student.profile_id;
+                if (!uid) return;
 
-                const prof = (student as any).profiles as any;
+                const prof = student.profiles as any;
+
                 userStats[uid] = {
                     userId: uid,
-                    name: prof?.full_name || student.full_name || 'Unknown Athlete',
+                    studentId: student.id,
+                    name: student.full_name || 'Unknown Athlete',
                     avatarUrl: prof?.avatar_url || '',
-                    email: student.email || prof?.email || '',
+                    email: student.email || '',
                     phone: student.parent_contact || '',
                     role: 'student',
                     totalJumps: 0,
@@ -909,7 +904,7 @@ export function useJumpRopeAdminStats() {
                 };
             });
 
-            // Accumulate session data for known students
+            // Accumulate session data for active students
             sessionsData?.forEach(session => {
                 const uid = session.user_id;
                 if (!uid || !userStats[uid]) return;
@@ -924,6 +919,38 @@ export function useJumpRopeAdminStats() {
         },
         staleTime: 1000 * 10,
         refetchInterval: 1000 * 30,
+    });
+}
+
+export function useDeleteAthlete() {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: async (userId: string) => {
+            // 1. Delete from students table
+            const { error: sError } = await supabase
+                .from('students')
+                .delete()
+                .eq('profile_id', userId);
+            
+            if (sError) console.error('Error deleting student record:', sError);
+
+            // 2. Delete profile record (Trigger will handle auth deletion if configured)
+            const { error: pError } = await supabase
+                .from('profiles')
+                .delete()
+                .eq('id', userId);
+            
+            if (pError) throw pError;
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['jump_rope_admin_stats'] });
+            queryClient.invalidateQueries({ queryKey: ['students'] });
+            toast.success('Athlete removed from system successfully');
+        },
+        onError: (error: any) => {
+            console.error('Error deleting athlete:', error);
+            toast.error('فشل مسح اللاعب: ' + error.message);
+        }
     });
 }
 
@@ -949,31 +976,38 @@ export function useAthleteActivityHistory(userId?: string) {
 export function useAddJumpRopeSession() {
     const queryClient = useQueryClient();
     return useMutation({
-        mutationFn: async (session: { jumps: number; duration: number; rpm: number; work_duration?: number; rest_duration?: number }) => {
+        mutationFn: async (session: { jumps: number; duration: number; rpm: number; work_duration?: number; rest_duration?: number; student_id?: string }) => {
             const sessionsStr = localStorage.getItem(LOCAL_STORAGE_KEY) || '[]';
             const sessions = JSON.parse(sessionsStr);
             
+            const { data: { user } } = await supabase.auth.getUser();
+            const userId = user?.id || 'anonymous_user';
+
             const newSession = {
                 id: Date.now().toString(),
                 created_at: new Date().toISOString(),
-                user_id: (await supabase.auth.getUser()).data.user?.id || 'anonymous_user',
+                user_id: userId,
                 ...session
             };
             
-            sessions.unshift(newSession); // Add to beginning
-            localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(sessions.slice(0, 500))); // Store up to 500
+            sessions.unshift(newSession);
+            localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(sessions.slice(0, 500)));
 
-            // Sync to Supabase if logged in
-            const { data: { user } } = await supabase.auth.getUser();
+            // Sync to Supabase
             if (user) {
-                await supabase.from('jump_rope_sessions').insert([{
+                const { error } = await supabase.from('jump_rope_sessions').insert([{
                     user_id: user.id,
+                    student_id: session.student_id || null,
                     jumps: session.jumps,
                     duration: session.duration,
                     rpm: session.rpm,
-                    work_duration: session.work_duration || session.duration, // Fallback to total if not provided
-                    rest_duration: session.rest_duration || 0
+                    work_duration: session.work_duration ?? session.duration,
+                    rest_duration: session.rest_duration ?? 0
                 }]);
+                if (error) {
+                    console.error('Failed to sync jump rope session:', error);
+                    throw error;
+                }
             }
             
             return newSession;
@@ -1057,15 +1091,27 @@ export function useAssignTraining() {
     });
 }
 
-export function useTrainingPlanHistory(studentId?: string | null) {
+export function useTrainingPlanHistory(possibleId?: string | null) {
     return useQuery({
-        queryKey: ['training_plan_history', studentId],
-        enabled: !!studentId,
+        queryKey: ['training_plan_history', possibleId],
+        enabled: !!possibleId,
         queryFn: async () => {
+            // First identify the true student.id (it could be a profile_id)
+            let trueStudentId = possibleId;
+            const { data: stData } = await supabase
+                .from('students')
+                .select('id')
+                .or(`id.eq.${possibleId},profile_id.eq.${possibleId}`)
+                .maybeSingle();
+            
+            if (stData?.id) {
+                trueStudentId = stData.id;
+            }
+
             const { data, error } = await supabase
                 .from('training_plans')
                 .select('*')
-                .eq('student_id', studentId)
+                .eq('student_id', trueStudentId)
                 .order('created_at', { ascending: false });
             
             if (error) {

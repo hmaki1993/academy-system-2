@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { toast } from 'react-hot-toast';
+import { useQueryClient } from '@tanstack/react-query';
 
 export interface TrainingMetric {
     age: number;
@@ -28,6 +29,7 @@ export interface GeneratedPlan {
 export function useSmartPlan() {
     const [isGenerating, setIsGenerating] = useState(false);
     const [isSending, setIsSending] = useState(false);
+    const queryClient = useQueryClient();
 
     // Helper to resolve an ID that might be a profile_id (from JumpRopeAdmin auth) into an actual students.id
     const resolveStudentId = async (possibleProfileIdOrStudentId: string): Promise<string> => {
@@ -177,14 +179,25 @@ export function useSmartPlan() {
                 throw dbError;
             }
 
-            // Also update student profile metrics
-            await supabase
-                .from('students')
-                .update({ 
-                    updated_at: new Date().toISOString()
-                })
-                .eq('id', studentId);
+            // 3. Real-time Broadcast (Immediate Dashboard/App Sync)
+            const channel = supabase.channel(`direct_broadcasts_${studentId}`);
+            await channel.subscribe(async (statusSub) => {
+                if (statusSub === 'SUBSCRIBED') {
+                    await channel.send({
+                        type: 'broadcast',
+                        event: 'session_update',
+                        payload: { 
+                            status: 'sent', 
+                            timestamp: new Date().toISOString(),
+                            refresh_plan: true // Signal to athlete app to refetch the full plan
+                        }
+                    });
+                    supabase.removeChannel(channel);
+                }
+            });
 
+            queryClient.invalidateQueries({ queryKey: ['training_plan_history', studentId] });
+            queryClient.invalidateQueries({ queryKey: ['training_plan_history', studentIdRaw] });
             toast.success('Training plan sent to student!');
         } catch (error: any) {
             toast.error(error.message);
@@ -194,48 +207,59 @@ export function useSmartPlan() {
     };
 
     // 4. Send Direct Targets (Independent of Full Plan)
-    const sendDirectTargets = async (studentIdRaw: string, targetTime: number | '', targetJumps: number | '') => {
+    const sendDirectTargets = async (studentIdRaw: string, targetTime: number | '', targetJumps: number | '', scheduledStart: string | null = null) => {
         setIsSending(true);
         try {
             const studentId = await resolveStudentId(studentIdRaw);
+            const sessionStartAt = new Date().toISOString();
             const payload = {
                 target_time: targetTime === '' ? null : targetTime,
                 target_jumps: targetJumps === '' ? null : targetJumps,
-                plan_content: [], // Minimal empty plan
-                status: 'direct_target',
-                bmr: 0, tdee: 0, target_calories: 0 // Default numericals required by previous schema
+                scheduled_start: scheduledStart,
+                status: scheduledStart ? 'scheduled' : 'live'
             };
 
-            console.log("SEND DIRECT TARGETS PAYLOAD:", { studentId, targetTime, targetJumps });
-
-            // 1. Try UPDATE directly
-            const { data: updateData, error: updateError } = await supabase
+            // Atomic update - leave plan_content and other fields untouched
+            const { error: updateError } = await supabase
                 .from('training_plans')
                 .update(payload)
-                .eq('student_id', studentId)
-                .select('id');
-
-            console.log("DIRECT TARGET UPDATE RESULT:", { updateData, updateError });
-
-            let dbError = updateError;
-
-            // 2. If no rows updated, execute INSERT
-            if (!updateData || updateData.length === 0) {
-                console.log("DIRECT TARGET UPDATE TOUCHED 0 ROWS. ATTEMPTING INSERT...");
-                const { error: insertError } = await supabase
-                    .from('training_plans')
-                    .insert({ student_id: studentId, ...payload });
-                
-                console.log("DIRECT TARGET INSERT ERROR RAW:", insertError);
-                dbError = insertError;
-            }
-
-            if (dbError) {
-                console.error("DIRECT TARGET FINAL DB ERROR:", JSON.stringify(dbError, null, 2));
-                throw dbError;
-            }
+                .eq('student_id', studentId);
             
-            toast.success('Session targets broadcasted directly!');
+            if (updateError) throw updateError;
+
+            // If no plan starts yet, ensure we at least have a record
+            const { data } = await supabase.from('training_plans').select('id').eq('student_id', studentId).maybeSingle();
+            if (!data) {
+                await supabase.from('training_plans').insert({ 
+                    student_id: studentId, 
+                    ...payload,
+                    plan_content: [], // Minimal default for new record
+                    bmr: 0, tdee: 0, target_calories: 0
+                });
+            }
+
+            // 2. Direct Broadcast (Instant Sync for Remote Unlock)
+            const channel = supabase.channel(`direct_broadcasts_${studentId}`);
+            await channel.subscribe(async (statusSub) => {
+                if (statusSub === 'SUBSCRIBED') {
+                    await channel.send({
+                        type: 'broadcast',
+                        event: 'session_update',
+                        payload: { 
+                            status: payload.status, 
+                            target_time: targetTime, 
+                            target_jumps: targetJumps, 
+                            scheduled_start: scheduledStart,
+                            session_start_at: sessionStartAt,
+                            timestamp: new Date().toISOString(),
+                            refresh_plan: true // Force app to get new targets
+                        }
+                    });
+                    supabase.removeChannel(channel);
+                }
+            });
+
+            toast.success('Session targets updated!');
         } catch (error: any) {
             toast.error(error.message);
         } finally {
@@ -243,5 +267,55 @@ export function useSmartPlan() {
         }
     };
 
-    return { generateAIPlan, sendPlan, sendDirectTargets, isGenerating, isSending };
+    // 5. Update Session Lifecycle (Pause, Resume, Stop)
+    const updateSessionStatus = async (studentIdRaw: string, status: 'live' | 'paused' | 'idle' | 'restarting') => {
+        setIsSending(true);
+        try {
+            const studentId = await resolveStudentId(studentIdRaw);
+            
+            // If stopping, clear all session targets
+            const payload: any = { status };
+            if (status === 'idle') {
+                payload.target_time = null;
+                payload.target_jumps = null;
+                payload.scheduled_start = null;
+            }
+
+            // 1. Database Update (Persistence)
+            const { error } = await supabase
+                .from('training_plans')
+                .update(payload)
+                .eq('student_id', studentId);
+
+            if (error) throw error;
+
+            // 2. Direct Broadcast (Instant Sync)
+            const channel = supabase.channel(`direct_broadcasts_${studentId}`);
+            await channel.subscribe(async (statusSub) => {
+                if (statusSub === 'SUBSCRIBED') {
+                    await channel.send({
+                        type: 'broadcast',
+                        event: 'session_update',
+                        payload: { 
+                            ...payload, 
+                            timestamp: new Date().toISOString(),
+                            refresh_plan: status === 'idle'
+                        }
+                    });
+                    supabase.removeChannel(channel);
+                }
+            });
+            
+            if (status === 'live') toast.success('Session Resumed');
+            if (status === 'paused') toast.success('Session Paused');
+            if (status === 'idle') toast.success('Session Stopped');
+            if (status === 'restarting') toast.success('Session Restarting...');
+        } catch (error: any) {
+            toast.error(error.message);
+        } finally {
+            setIsSending(false);
+        }
+    };
+
+    return { generateAIPlan, sendPlan, sendDirectTargets, updateSessionStatus, isGenerating, isSending };
 }

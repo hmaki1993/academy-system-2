@@ -30,7 +30,7 @@ export function PremiumConfirmModal({ isOpen, onClose, title, message, onConfirm
                         </button>
                         <button
                             onClick={onConfirm}
-                            className={`flex-1 px-4 py-3.5 sm:px-6 sm:py-4 rounded-xl sm:rounded-2xl font-black uppercase tracking-widest text-[9px] sm:text-[10px] shadow-2xl transition-all hover:scale-105 active:scale-95 ${type === 'destructive' ? 'bg-rose-500 text-white shadow-rose-500/30 hover:bg-rose-600' : 'bg-primary text-white shadow-primary/30 hover:bg-primary-hover'}`}
+                            className={`flex-1 px-4 py-3.5 sm:px-6 sm:py-4 rounded-xl sm:rounded-2xl font-black uppercase tracking-widest text-[9px] sm:text-[10px] shadow-2xl transition-all hover:scale-105 ${type === 'destructive' ? 'bg-rose-500 text-white shadow-rose-500/30 hover:bg-rose-600' : 'bg-primary text-white shadow-primary/30 hover:bg-primary-hover'}`}
                         >
                             Confirm
                         </button>

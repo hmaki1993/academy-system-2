@@ -430,14 +430,34 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
         fetchSettings();
 
         // 3. Keep profile synced if updated elsewhere
-        const handleProfileUpdate = () => {
-            fetchSettings();
+        const handleProfileUpdate = (e: Event) => {
+            console.log('🔄 ThemeContext: Profile update signal received, refreshing...');
+            
+            // ✨ UI INSTANT SYNC: If the event carries data, apply it immediately to state
+            // This ensures the name updates in the Dashboard without waiting for DB fetch.
+            if (e instanceof CustomEvent && e.detail) {
+                if (e.detail.full_name) {
+                    console.log('✨ ThemeContext: Applying instant name update:', e.detail.full_name);
+                    setUserProfile(prev => {
+                        const newName = e.detail.full_name;
+                        if (prev) return { ...prev, full_name: newName };
+                        return prev;
+                    });
+                }
+            }
+
+            // Add a tiny delay to ensure database consistency before refetching
+            setTimeout(() => {
+                fetchSettings();
+            }, 500);
         };
         window.addEventListener('userProfileUpdated', handleProfileUpdate);
+        window.addEventListener('gymProfileUpdated', handleProfileUpdate);
 
         return () => {
             subscription.unsubscribe();
             window.removeEventListener('userProfileUpdated', handleProfileUpdate);
+            window.removeEventListener('gymProfileUpdated', handleProfileUpdate);
         };
     }, []);
 
@@ -614,16 +634,18 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
                     setUserProfile({
                         id: user.id,
                         email: user.email || '',
-                        ...profileRes.data
+                        ...profileRes.data,
+                        // FALLBACK: If DB full_name is null/empty, use metadata
+                        full_name: profileRes.data.full_name || user.user_metadata?.full_name || user.user_metadata?.name || null
                     });
-                } else if (isAdminEmail) {
                     // 🛡️ ADMIN FALLBACK: If they have an admin email but no profile record, 
                     // allow them to stay logged in as an admin to fix the issue.
                     console.warn('🛡️ ThemeContext: Admin profile missing in DB, using fallback.');
+                    const metadataName = user.user_metadata?.full_name || user.user_metadata?.name || user.user_metadata?.display_name;
                     setUserProfile({
                         id: user.id,
                         email: user.email || '',
-                        full_name: user.user_metadata?.full_name || 'Administrator',
+                        full_name: metadataName || 'Administrator',
                         role: 'admin',
                         avatar_url: null
                     });

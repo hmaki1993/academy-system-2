@@ -63,96 +63,95 @@ export default function SmartPlanModal({ studentId, studentName, isOpen, onClose
         <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 sm:p-6 animate-in fade-in duration-300">
             <div className="absolute inset-0 bg-[#050505]" onClick={onClose} />
             
-            <div className="relative w-full max-w-[500px] bg-zinc-950/90 border border-orange-500/20 rounded-[2.5rem] overflow-hidden shadow-[0_40px_100px_rgba(0,0,0,0.8)] flex flex-col max-h-[90vh]">
+            <div className="relative w-full max-w-[420px] bg-zinc-950/90 border border-orange-500/20 rounded-[2rem] overflow-hidden shadow-[0_40px_100px_rgba(0,0,0,0.8)] flex flex-col max-h-[85vh]">
                 {/* Header */}
-                <div className="p-8 pb-4 flex items-center justify-between shrink-0">
+                <div className="p-6 pb-2 flex items-center justify-between shrink-0">
                     <div className="flex flex-col">
-                        <h3 className="text-xl font-black tracking-widest uppercase text-white leading-none">Smart Plan</h3>
-                        <p className="text-[10px] font-black uppercase tracking-[0.3em] text-orange-500 mt-2">AI Generator for {studentName}</p>
+                        <h3 className="text-lg font-black tracking-widest uppercase text-white leading-none">Smart Plan</h3>
+                        <p className="text-[9px] font-black uppercase tracking-[0.2em] text-orange-500 mt-1.5 line-clamp-1">AI Generator for {studentName}</p>
                     </div>
-                    <div className="flex items-center gap-4">
-                        <div className="flex bg-white/5 p-1 rounded-xl border border-white/5">
+                    <div className="flex items-center gap-3">
+                        <div className="flex bg-white/5 p-1 rounded-lg border border-white/5">
                             {(['en', 'ar'] as const).map(lang => (
                                 <button
                                     key={lang}
                                     onClick={async () => {
                                         const newMetrics = {...metrics, language: lang};
                                         setMetrics(newMetrics);
-                                        // Auto-regenerate if a plan is already visible
                                         if (plan) {
                                             const result = await generateAIPlan(studentId, newMetrics);
                                             setPlan(result);
                                             setEditablePlan(result.weeklyPlan);
                                         }
                                     }}
-                                    className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${metrics.language === lang ? 'bg-orange-500 text-black shadow-lg' : 'text-white/40 hover:text-white'}`}
+                                    className={`px-2 py-1 rounded-md text-[8px] font-black uppercase tracking-widest transition-all ${metrics.language === lang ? 'bg-orange-500 text-black shadow-lg' : 'text-white/40 hover:text-white'}`}
                                 >
                                     {lang}
                                 </button>
                             ))}
                         </div>
-                        <button onClick={onClose} className="w-10 h-10 rounded-2xl bg-white/5 flex items-center justify-center text-white/40 hover:text-white transition-all">
-                            <X size={20} />
+                        <button onClick={onClose} className="w-8 h-8 rounded-xl bg-white/5 flex items-center justify-center text-white/40 hover:text-white transition-all">
+                            <X size={16} />
                         </button>
                     </div>
                 </div>
 
                 {/* Content */}
-                <div className="flex-1 overflow-y-auto custom-scrollbar px-8 pb-8">
+                <div className="flex-1 overflow-y-auto custom-scrollbar px-6 pb-6">
                     {!plan ? (
-                        <div className="space-y-6">
+                        <div className="space-y-4">
                             {/* Inputs Grid */}
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-2">
-                                    <label className="text-[9px] font-black uppercase tracking-widest text-white/30 ml-2">
+                            <div className="grid grid-cols-2 gap-3">
+                                <div className="space-y-1.5">
+                                    <label className="text-[8px] font-black uppercase tracking-widest text-white/20 ml-1">
                                         {metrics.language === 'ar' ? 'الوزن (كجم)' : 'Weight (KG)'}
                                     </label>
                                     <input 
                                         type="number" 
                                         value={metrics.weight}
                                         onChange={e => setMetrics({...metrics, weight: Number(e.target.value)})}
-                                        className="w-full bg-white/[0.01] border border-white/5 rounded-2xl px-5 py-3 text-sm font-black text-white focus:border-orange-500/10 focus:bg-white/[0.03] outline-none transition-all"
+                                        className="w-full bg-white/[0.01] border border-white/5 rounded-xl px-4 py-2 text-xs font-black text-white focus:border-orange-500/10 focus:bg-white/[0.03] outline-none transition-all"
                                     />
                                 </div>
-                                <div className="space-y-2">
-                                    <label className="text-[9px] font-black uppercase tracking-widest text-white/30 ml-2">
+                                <div className="space-y-1.5">
+                                    <label className="text-[8px] font-black uppercase tracking-widest text-white/20 ml-1">
                                         {metrics.language === 'ar' ? 'الطول (سم)' : 'Height (CM)'}
                                     </label>
                                     <input 
                                         type="number" 
                                         value={metrics.height}
                                         onChange={e => setMetrics({...metrics, height: Number(e.target.value)})}
-                                        className="w-full bg-white/[0.01] border border-white/5 rounded-2xl px-5 py-3 text-sm font-black text-white focus:border-orange-500/10 focus:bg-white/[0.03] outline-none transition-all"
+                                        className="w-full bg-white/[0.01] border border-white/5 rounded-xl px-4 py-2 text-xs font-black text-white focus:border-orange-500/10 focus:bg-white/[0.03] outline-none transition-all"
                                     />
                                 </div>
-                                <div className="space-y-2">
-                                    <label className="text-[9px] font-black uppercase tracking-widest text-white/30 ml-2">
+                                <div className="space-y-1.5">
+                                    <label className="text-[8px] font-black uppercase tracking-widest text-white/20 ml-1">
                                         {metrics.language === 'ar' ? 'العمر' : 'Age'}
                                     </label>
                                     <input 
                                         type="number" 
                                         value={metrics.age}
                                         onChange={e => setMetrics({...metrics, age: Number(e.target.value)})}
-                                        className="w-full bg-white/[0.01] border border-white/5 rounded-2xl px-5 py-3 text-sm font-black text-white focus:border-orange-500/10 focus:bg-white/[0.03] outline-none transition-all"
+                                        className="w-full bg-white/[0.01] border border-white/5 rounded-xl px-4 py-2 text-xs font-black text-white focus:border-orange-500/10 focus:bg-white/[0.03] outline-none transition-all"
                                     />
                                 </div>
-                                <div className="space-y-2 relative">
-                                    <label className="text-[9px] font-black uppercase tracking-widest text-white/30 ml-2">
+                                <div className="space-y-1.5 relative">
+                                    <label className="text-[8px] font-black uppercase tracking-widest text-white/20 ml-1">
                                         {metrics.language === 'ar' ? 'أيام التدريب' : 'Days / Week'}
                                     </label>
                                     <div className="relative">
                                         <button 
                                             onClick={() => setShowDaysMenu(!showDaysMenu)}
-                                            className="w-full bg-white/[0.01] border border-white/5 rounded-2xl px-5 py-3 text-sm font-black text-white focus:border-orange-500/10 focus:bg-white/[0.03] outline-none transition-all flex items-center justify-between group"
+                                            className="w-full bg-white/[0.01] border border-white/5 rounded-xl px-4 py-2 text-xs font-black text-white focus:border-orange-500/10 focus:bg-white/[0.03] outline-none transition-all flex items-center justify-between group"
                                         >
                                             <span>{metrics.daysPerWeek} {metrics.language === 'ar' ? 'أيام' : 'Days'}</span>
-                                            <Calculator size={14} className={`text-white/20 group-hover:text-orange-500 transition-all ${showDaysMenu ? 'rotate-180' : ''}`} />
+                                            <Calculator size={12} className={`text-white/20 group-hover:text-orange-500 transition-all ${showDaysMenu ? 'rotate-180' : ''}`} />
                                         </button>
 
                                         {showDaysMenu && (
                                             <>
                                                 <div className="fixed inset-0 z-40" onClick={() => setShowDaysMenu(false)} />
-                                                <div className="absolute top-full left-0 right-0 mt-2 bg-zinc-900/90 backdrop-blur-xl border border-white/10 rounded-2xl p-2 z-50 shadow-2xl animate-in zoom-in-95 duration-200">
+                                                <div className="absolute top-full left-0 right-0 mt-1 bg-zinc-900/90 backdrop-blur-xl border border-white/10 rounded-xl p-1 z-50 shadow-2xl animate-in zoom-in-95 duration-200">
                                                     {[1,2,3,4,5,6,7].map(d => (
                                                         <button
                                                             key={d}
@@ -160,7 +159,7 @@ export default function SmartPlanModal({ studentId, studentName, isOpen, onClose
                                                                 setMetrics({...metrics, daysPerWeek: d});
                                                                 setShowDaysMenu(false);
                                                             }}
-                                                            className={`w-full px-4 py-2.5 rounded-xl text-left text-[11px] font-black uppercase tracking-widest transition-all ${metrics.daysPerWeek === d ? 'bg-orange-500 text-black' : 'text-white/40 hover:bg-white/5 hover:text-white'}`}
+                                                            className={`w-full px-3 py-2 rounded-lg text-left text-[10px] font-black uppercase tracking-widest transition-all ${metrics.daysPerWeek === d ? 'bg-orange-500 text-black' : 'text-white/40 hover:bg-white/5 hover:text-white'}`}
                                                         >
                                                             {d} Days
                                                         </button>
@@ -172,39 +171,39 @@ export default function SmartPlanModal({ studentId, studentName, isOpen, onClose
                                 </div>
                             </div>
 
-                            {/* Live Stats Preview - Premium Compact Version */}
-                            <div className="p-4 rounded-[1.8rem] bg-white/[0.01] border border-white/5 flex items-center justify-around relative overflow-hidden group">
+                            {/* Live Stats Preview - Fixed Compact Version */}
+                            <div className="py-3 px-4 rounded-[1.5rem] bg-white/[0.01] border border-white/5 flex items-center justify-between relative overflow-hidden group">
                                 <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/[0.02] to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
                                 
-                                <div className="text-center relative z-10">
-                                    <span className="block text-[6px] font-black uppercase tracking-[0.3em] text-white/20 mb-1">
+                                <div className="text-center relative z-10 flex-1">
+                                    <span className="block text-[6px] font-black uppercase tracking-[0.3em] text-white/20 mb-0.5">
                                         {metrics.language === 'ar' ? 'معدل الأيض' : 'BMR'}
                                     </span>
-                                    <span className="text-sm font-black text-white/80 tabular-nums">{bmrPreview}</span>
+                                    <span className="text-xs font-black text-white/80 tabular-nums leading-none">{bmrPreview}</span>
                                 </div>
-                                <div className="w-px h-6 bg-white/5" />
-                                <div className="text-center relative z-10">
-                                    <span className="block text-[6px] font-black uppercase tracking-[0.3em] text-white/20 mb-1">
+                                <div className="w-px h-5 bg-white/5" />
+                                <div className="text-center relative z-10 flex-1">
+                                    <span className="block text-[6px] font-black uppercase tracking-[0.3em] text-white/20 mb-0.5">
                                         {metrics.language === 'ar' ? 'إجمالي الطاقة' : 'TDEE'}
                                     </span>
-                                    <span className="text-sm font-black text-white/80 tabular-nums">{tdeePreview}</span>
+                                    <span className="text-xs font-black text-white/80 tabular-nums leading-none">{tdeePreview}</span>
                                 </div>
-                                <div className="w-px h-6 bg-white/5" />
-                                <div className="text-center relative z-10">
-                                    <span className="block text-[6px] font-black uppercase tracking-[0.3em] text-orange-500/40 mb-1">
+                                <div className="w-px h-5 bg-white/5" />
+                                <div className="text-center relative z-10 flex-1">
+                                    <span className="block text-[6px] font-black uppercase tracking-[0.3em] text-orange-500/40 mb-0.5">
                                         {metrics.language === 'ar' ? 'هدف الحرق' : 'Burn Goal'}
                                     </span>
-                                    <span className="text-sm font-black text-orange-500 tabular-nums">{Math.round(tdeePreview * 0.8)}</span>
+                                    <span className="text-xs font-black text-orange-500 tabular-nums leading-none">{Math.round(tdeePreview * 0.8)}</span>
                                 </div>
                             </div>
 
-                            <div className="flex justify-center">
+                            <div className="flex justify-center pt-2">
                                 <button 
                                     onClick={handleGenerate}
                                     disabled={isGenerating}
-                                    className="w-fit px-8 h-12 rounded-2xl bg-orange-500/10 border border-orange-500/20 text-orange-500 font-black uppercase tracking-[0.3em] text-[10px] shadow-[0_10px_30px_rgba(249,115,22,0.1)] transition-all hover:bg-orange-500 hover:text-black active:scale-95 flex items-center justify-center gap-3 disabled:opacity-50"
+                                    className="w-full h-11 rounded-xl bg-orange-500/10 border border-orange-500/20 text-orange-500 font-black uppercase tracking-[0.3em] text-[9px] shadow-[0_10px_30px_rgba(249,115,22,0.1)] transition-all hover:bg-orange-500 hover:text-black active:scale-95 flex items-center justify-center gap-3 disabled:opacity-50"
                                 >
-                                    {isGenerating ? <Activity className="animate-spin" size={14} /> : <Sparkles size={14} />}
+                                    {isGenerating ? <Activity className="animate-spin" size={12} /> : <Sparkles size={12} />}
                                     {metrics.language === 'ar' ? 'توليد خطة التدريب' : 'GENERATE PLAN'}
                                 </button>
                             </div>

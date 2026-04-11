@@ -134,23 +134,16 @@ export default function AddCoachForm({ onClose, onSuccess, initialData }: AddCoa
             }
 
             const coachData: any = {
-                full_name: formData.full_name.trim(),
-                email: formData.email.toLowerCase().trim(),
-                phone: formData.phone.trim(),
+                profile_id: profileId,
+                full_name: formData.full_name,
                 specialty: formData.specialty,
+                pt_rate: formData.pt_rate,
                 role: formData.role,
-                pt_rate: parseFloat(formData.pt_rate) || 0,
-                salary: parseFloat(formData.salary) || 0,
-                avatar_url: formData.avatar_url,
                 image_pos_x: formData.image_pos_x,
-                image_pos_y: formData.image_pos_y
+                image_pos_y: formData.image_pos_y,
             };
 
-            if (profileId) {
-                coachData.profile_id = profileId;
-            }
-
-            let error;
+            let dbError = null;
 
             if (initialData) {
                 // Update existing coach record in DB
@@ -158,22 +151,19 @@ export default function AddCoachForm({ onClose, onSuccess, initialData }: AddCoa
                     .from('coaches')
                     .update(coachData)
                     .eq('id', initialData.id);
-                error = updateError;
+                dbError = updateError;
             } else {
                 // Create or Update coach record in DB
-                // We target 'profile_id' as the anchor because it's the source of truth for the account.
                 const { error: upsertError } = await supabase
                     .from('coaches')
                     .upsert([coachData], {
                         onConflict: 'profile_id',
                         ignoreDuplicates: false
                     });
-                error = upsertError;
-
-
+                dbError = upsertError;
             }
 
-            if (error) throw error;
+            if (dbError) throw dbError;
             toast.success(initialData ? t('common.saveSuccess') : 'Coach added successfully (Login active)');
             onSuccess();
             onClose();

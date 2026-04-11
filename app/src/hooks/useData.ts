@@ -867,10 +867,11 @@ export function useJumpRopeAdminStats() {
     return useQuery({
         queryKey: ['jump_rope_admin_stats'],
         queryFn: async () => {
-            // 1. Fetch only official students from the students table (Source of Truth)
+            // 1. Fetch only official students with 'student' role (Source of Truth)
             const { data: students, error: sError } = await supabase
                 .from('students')
-                .select('id, profile_id, parent_contact, full_name, email, profiles ( avatar_url, last_active_at )');
+                .select('id, profile_id, parent_contact, full_name, email, profiles!inner ( avatar_url, last_active_at, role )')
+                .eq('profiles.role', 'student');
 
             if (sError) throw sError;
 

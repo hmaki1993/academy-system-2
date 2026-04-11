@@ -23,7 +23,7 @@ import UpcomingAgendaWidget from '../components/UpcomingAgendaWidget';
 export default function Dashboard() {
     const { t } = useTranslation();
     const navigate = useNavigate();
-    const { role, fullName, userEmail } = useOutletContext<{ role: string, fullName: string, userEmail: string | null }>() || { role: null, fullName: null, userEmail: null };
+    const { role, fullName, userEmail, userId } = useOutletContext<{ role: string, fullName: string, userEmail: string | null, userId: string }>() || { role: null, fullName: null, userEmail: null, userId: null };
     const cleanName = fullName?.trim() || userEmail?.split('@')[0]?.trim() || 'Admin';
     const { formatPrice, currency } = useCurrency();
     const { data: analytics, isLoading: analyticsLoading } = useAdminAnalytics();

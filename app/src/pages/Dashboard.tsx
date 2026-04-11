@@ -30,6 +30,12 @@ export default function Dashboard() {
     const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
     const [selectedMetric, setSelectedMetric] = useState<'PT' | 'Consultation' | 'Total' | null>(null);
 
+    const filteredDetails = useMemo(() => {
+        if (!selectedMetric || !analytics?.details) return [];
+        if (selectedMetric === 'Total') return analytics.details;
+        return analytics.details.filter(d => d.type === selectedMetric);
+    }, [selectedMetric, analytics]);
+
     // RESTORE ROLE-BASED REDIRECTION
     if (!role) {
         return (
@@ -46,12 +52,6 @@ export default function Dashboard() {
     if (normalizedRole === 'reception' || normalizedRole === 'receptionist') return <ReceptionDashboard role={role} />;
     if (normalizedRole === 'cleaner') return <CleanerDashboard />;
     if (normalizedRole === 'student' || normalizedRole === 'trainee') return <StudentDashboard />;
-
-    const filteredDetails = useMemo(() => {
-        if (!selectedMetric || !analytics?.details) return [];
-        if (selectedMetric === 'Total') return analytics.details;
-        return analytics.details.filter(d => d.type === selectedMetric);
-    }, [selectedMetric, analytics]);
 
     const metrics = [
         {

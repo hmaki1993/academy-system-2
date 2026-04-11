@@ -27,8 +27,8 @@ export default function Dashboard() {
     const { formatPrice, currency } = useCurrency();
     const { data: analytics, isLoading: analyticsLoading } = useAdminAnalytics();
     const { onlineStudents, onlineCount } = usePresence();
-    const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
     const [selectedMetric, setSelectedMetric] = useState<'PT' | 'Consultation' | 'Total' | null>(null);
+    const [isVerifiedStudent, setIsVerifiedStudent] = useState<boolean | null>(null);
 
     const filteredDetails = useMemo(() => {
         if (!selectedMetric || !analytics?.details) return [];
@@ -36,8 +36,23 @@ export default function Dashboard() {
         return analytics.details.filter(d => d.type === selectedMetric);
     }, [selectedMetric, analytics]);
 
-    // RESTORE ROLE-BASED REDIRECTION
-    if (!role) {
+    // HEALING REDIRECTION: Check if user exists in Students table regardless of profile role
+    useState(() => {
+        const checkStudentStatus = async () => {
+            if (!userId) return;
+            const { data } = await supabase
+                .from('students')
+                .select('id')
+                .eq('profile_id', userId)
+                .maybeSingle();
+            
+            setIsVerifiedStudent(!!data);
+        };
+        checkStudentStatus();
+    });
+
+    // RESTORE ROLE-BASED REDIRECTION (+ Student Fail-safe)
+    if (!role || isVerifiedStudent === null) {
         return (
             <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
                 <div className="w-12 h-12 border-2 border-primary/20 border-t-primary rounded-full animate-spin" />
@@ -47,6 +62,11 @@ export default function Dashboard() {
     }
 
     const normalizedRole = role.toLowerCase().trim();
+    
+    // PRIORITY 1: If verified as student in DB, always go to Student Dashboard
+    if (isVerifiedStudent) return <StudentDashboard />;
+
+    // PRIORITY 2: Role-based routing for staff
     if (normalizedRole === 'head_coach') return <HeadCoachDashboard />;
     if (normalizedRole === 'coach') return <CoachDashboard />;
     if (normalizedRole === 'reception' || normalizedRole === 'receptionist') return <ReceptionDashboard role={role} />;

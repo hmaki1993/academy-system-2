@@ -1,7 +1,8 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Users, DollarSign, Medal, TrendingUp, Sparkles, Activity, Clock, ArrowUpRight, ChevronRight, Zap, X, Globe } from 'lucide-react';
 import { useOutletContext, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { supabase } from '../lib/supabase';
 import { useAdminAnalytics, RevenueDetail } from '../hooks/useAdminAnalytics';
 import { usePresence } from '../hooks/usePresence';
 import { useCurrency } from '../context/CurrencyContext';

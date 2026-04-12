@@ -13,6 +13,56 @@ interface SmartPlan {
     updated_at: string;
 }
 
+function CountdownTimer({ targetDate }: { targetDate: string }) {
+    const [timeLeft, setTimeLeft] = useState<{h: string, m: string, s: string} | null>(null);
+
+    useEffect(() => {
+        const calculate = () => {
+            const diff = new Date(targetDate).getTime() - new Date().getTime();
+            if (diff <= 0) return setTimeLeft(null);
+            
+            const h = Math.floor(diff / (1000 * 60 * 60)).toString().padStart(2, '0');
+            const m = Math.floor((diff / (1000 * 60)) % 60).toString().padStart(2, '0');
+            const s = Math.floor((diff / 1000) % 60).toString().padStart(2, '0');
+            setTimeLeft({ h, m, s });
+        };
+        
+        calculate();
+        const timer = setInterval(calculate, 1000);
+        return () => clearInterval(timer);
+    }, [targetDate]);
+
+    if (!timeLeft) return (
+         <div className="flex flex-col items-end gap-2">
+            <span className="text-[9px] font-black text-emerald-400 uppercase tracking-[0.4em]">Strategy Active</span>
+            <div className="flex items-center gap-3 px-5 py-3 bg-emerald-500/10 rounded-2xl border border-emerald-500/20">
+                <Zap className="w-4 h-4 text-emerald-400 animate-pulse" />
+                <span className="text-[11px] font-black text-white tracking-widest uppercase">Proceed to Hub</span>
+            </div>
+         </div>
+    );
+
+    return (
+        <div className="flex flex-col items-end gap-3">
+            <span className="text-[9px] font-black text-white/20 uppercase tracking-[0.4em]">Strategy Deployment</span>
+            <div className="flex items-center gap-2.5">
+                {[
+                    { label: 'H', val: timeLeft.h },
+                    { label: 'M', val: timeLeft.m },
+                    { label: 'S', val: timeLeft.s }
+                ].map((unit, i) => (
+                    <div key={i} className="flex flex-col items-center">
+                        <div className="px-2.5 py-1.5 bg-white/5 rounded-xl border border-white/10 min-w-[38px] flex items-center justify-center">
+                            <span className="text-base font-black text-white tracking-tighter tabular-nums">{unit.val}</span>
+                        </div>
+                        <span className="text-[6px] font-black text-white/20 uppercase tracking-widest mt-1">{unit.label}</span>
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+}
+
 export default function SmartTrackerWidget() {
     const [plan, setPlan] = useState<SmartPlan | null>(null);
     const [loading, setLoading] = useState(true);
@@ -84,13 +134,11 @@ export default function SmartTrackerWidget() {
     const isLive = plan?.status === 'live' || plan?.status === 'sent';
     const isPaused = plan?.status === 'paused';
     const isScheduled = plan?.status === 'scheduled';
-    const isLocked = !isLive && !isPaused && !isScheduled;
 
     return (
-        <div onMouseEnter={playHoverSound} className="glass-card p-8 rounded-[2.5rem] border border-white/5 bg-white/[0.01] relative overflow-hidden group shadow-premium transition-all duration-700 hover:bg-white/[0.02]">
-            {/* Atmospheric Depth */}
-            <div className={`absolute -right-12 -bottom-12 w-48 h-48 rounded-full blur-[80px] transition-all duration-1000 ${isLive ? 'bg-emerald-500/10 opacity-60 group-hover:opacity-100' : 'bg-primary/5 opacity-20'}`} />
-            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-white/5 to-transparent" />
+        <div onMouseEnter={playHoverSound} className="relative py-8 px-4 overflow-hidden group transition-all duration-700">
+            {/* Atmospheric Depth - Minimalist Glow Only */}
+            <div className={`absolute -right-12 -bottom-12 w-48 h-48 rounded-full blur-[100px] transition-all duration-1000 ${isLive ? 'bg-emerald-500/5 opacity-40' : 'bg-primary/5 opacity-10'}`} />
             
             <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-8">
                 <div className="flex items-center gap-7">
@@ -146,13 +194,7 @@ export default function SmartTrackerWidget() {
                             <Play fill="currentColor" className="w-4 h-4" /> Start Training Hub <ArrowRight className="w-5 h-5" />
                         </Link>
                     ) : isScheduled && plan?.scheduled_start ? (
-                         <div className="flex flex-col items-end gap-2">
-                            <span className="text-[9px] font-black text-white/20 uppercase tracking-[0.4em]">Strategy Deployment</span>
-                            <div className="flex items-center gap-3 px-5 py-3 bg-white/5 rounded-2xl border border-white/10">
-                                <ClockIcon className="w-4 h-4 text-primary" />
-                                <span className="text-sm font-black text-white tracking-widest">{plan.scheduled_start}</span>
-                            </div>
-                         </div>
+                         <CountdownTimer targetDate={plan.scheduled_start} />
                     ) : (
                         <div className="flex flex-col items-end gap-1 opacity-20 group-hover:opacity-40 transition-opacity">
                             <p className="text-[10px] font-black text-white uppercase tracking-[0.6em] text-right">Awaiting Remote Signal</p>

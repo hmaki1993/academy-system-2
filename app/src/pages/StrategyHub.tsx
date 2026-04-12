@@ -15,6 +15,7 @@ import { useTheme } from '../context/ThemeContext';
 import toast from 'react-hot-toast';
 import { formatDistanceToNow, format } from 'date-fns';
 import { useSmartPlan, TrainingMetric, GeneratedPlan } from '../hooks/useSmartPlan';
+import { supabase } from '../lib/supabase';
 
 
 // --- Sub-Component: Floating Remote Control Hub ---
@@ -61,7 +62,7 @@ const FloatingRemoteHub = ({ athlete, onClose }: { athlete: any, onClose: () => 
     };
 
     return createPortal(
-        <div className="fixed inset-0 z-[999] pointer-events-none flex items-start sm:items-center justify-center pt-32 sm:pt-0 sm:block sm:inset-auto sm:bottom-10 sm:left-0 sm:translate-y-0">
+        <div className="fixed inset-0 z-[999] pointer-events-none flex items-start sm:items-center justify-center pt-32 sm:pt-0 sm:block sm:inset-auto sm:bottom-10 sm:left-12 sm:translate-y-0">
             <div
                 className="pointer-events-auto w-60 bg-[#0b0e18] border border-white/10 rounded-xl shadow-2xl p-4 flex flex-col gap-3 animate-in zoom-in-95 fade-in duration-200"
                 style={{ 
@@ -407,8 +408,8 @@ const InlinePlanBuilder = ({ studentId, studentName, onClose, onSendReady, exist
             <div className="flex flex-col lg:flex-row gap-12 lg:gap-16 relative z-10">
                 {/* SIDEBAR: Manual Metrics */}
                 <div className="w-full lg:w-[220px] shrink-0 space-y-3">
-                    <div className="p-4 rounded-[1.5rem] bg-transparent flex flex-col gap-4 relative">
-                        <div className="absolute top-0 right-0 w-32 h-32 bg-orange-500/5 blur-[40px] rounded-full" />
+                    <div className="p-5 rounded-[2rem] bg-white/[0.01] border border-white/5 flex flex-col gap-5 relative group/bio">
+                        <div className="absolute top-0 right-0 w-32 h-32 bg-orange-500/5 blur-[40px] rounded-full group-hover/bio:bg-orange-500/10 transition-all duration-700" />
                         <h3 className="text-[8px] font-black uppercase tracking-[0.5em] text-white/10 mb-1">
                             {isAr ? 'القياسات العصبية' : 'Bio-Metrics'}
                         </h3>
@@ -608,28 +609,34 @@ const AthleteDetailModal = ({ athlete, onClose, autoOpenGenerator = false }: { a
                             </div>
                         </div>
 
-                        <div className="flex items-center justify-center gap-4 sm:scale-110">
-                            <div className="flex items-center gap-2 p-1.5 bg-white/5 rounded-[1.5rem] w-full sm:w-fit">
+                        <div className="flex items-center justify-center gap-10">
+                            <div className="flex items-center gap-4 w-full sm:w-fit px-4">
                                 <button
                                     onClick={() => setActiveTab('strategy')}
-                                    className={`flex-1 sm:flex-none px-6 sm:px-8 py-3 sm:py-3.5 rounded-2xl text-[10px] sm:text-[11px] font-black uppercase tracking-[.2em] transition-all ${activeTab === 'strategy' ? 'bg-orange-500/10 text-orange-400 border border-orange-500/30 shadow-lg shadow-orange-500/10' : 'text-white/20 hover:text-white/50 border border-transparent'}`}
+                                    className={`relative px-6 sm:px-8 py-3 rounded-2xl text-[10px] sm:text-[11px] font-black uppercase tracking-[.3em] transition-all ${activeTab === 'strategy' ? 'text-orange-400' : 'text-white/20 hover:text-white/50'}`}
                                 >
                                     Strategy
+                                    {activeTab === 'strategy' && <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-4 h-[2px] bg-orange-500 rounded-full shadow-[0_0_8px_rgba(249,115,22,0.6)]" />}
                                 </button>
+                                
+                                <div className="w-px h-4 bg-white/10 rotate-[15deg] hidden sm:block" />
+                                
                                 <button
                                     onClick={() => setActiveTab('activity')}
-                                    className={`flex-1 sm:flex-none px-6 sm:px-8 py-3 sm:py-3.5 rounded-2xl text-[10px] sm:text-[11px] font-black uppercase tracking-[.2em] transition-all ${activeTab === 'activity' ? 'bg-blue-500/10 text-blue-400 border border-blue-500/30 shadow-lg shadow-blue-500/10' : 'text-white/20 hover:text-white/50 border border-transparent'}`}
+                                    className={`relative px-6 sm:px-8 py-3 rounded-2xl text-[10px] sm:text-[11px] font-black uppercase tracking-[.3em] transition-all ${activeTab === 'activity' ? 'text-blue-400' : 'text-white/20 hover:text-white/50'}`}
                                 >
                                     Activity
+                                    {activeTab === 'activity' && <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-4 h-[2px] bg-blue-500 rounded-full shadow-[0_0_8px_rgba(59,130,246,0.6)]" />}
                                 </button>
                             </div>
-                            {/* Quick Generate Plan Button */}
+                            
+                            {/* Quick Generate Plan Button - Scaled down and balanced */}
                             <button
                                 onClick={() => setShowGenerator(true)}
                                 title="Generate Smart Plan"
-                                className="w-12 h-12 rounded-2xl bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-400 hover:bg-red-500/20 hover:text-red-400 hover:border-red-500/40 transition-all active:scale-90 shrink-0 shadow-lg shadow-red-500/5 group"
+                                className="w-8 h-8 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-500 hover:bg-red-500/20 hover:text-red-400 hover:border-red-500/40 transition-all active:scale-90 shrink-0 group"
                             >
-                                <span className="text-2xl font-black leading-none group-hover:rotate-90 transition-transform">+</span>
+                                <span className="text-lg font-black leading-none group-hover:rotate-90 transition-transform">+</span>
                             </button>
                         </div>
 
@@ -818,15 +825,37 @@ export default function StrategyHub() {
     const { userProfile } = useTheme();
     const isAdmin = userProfile?.role === 'admin' || userProfile?.role === 'coach' || userProfile?.role === 'head_coach';
     const { data: athletes, isLoading: isAthletesLoading } = useJumpRopeAdminStats();
+    const [liveAthletes, setLiveAthletes] = useState<any[]>([]);
+
+    useEffect(() => {
+        if (athletes) {
+            setLiveAthletes(athletes);
+        }
+    }, [athletes]);
+
+    useEffect(() => {
+        const channel = supabase.channel('profiles-presence-sync')
+            .on('postgres_changes' as any, { event: 'UPDATE', table: 'profiles', schema: 'public' }, (payload: any) => {
+                setLiveAthletes(prev => prev.map(a => 
+                    a.userId === payload.new.id 
+                        ? { ...a, lastActiveAt: payload.new.last_active_at } 
+                        : a
+                ));
+            })
+            .subscribe();
+
+        return () => { 
+            supabase.removeChannel(channel); 
+        };
+    }, []);
 
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedAthlete, setSelectedAthlete] = useState<any>(null);
     const [autoOpenDetailGenerator, setAutoOpenDetailGenerator] = useState(false);
 
     const filteredAthletes = useMemo(() => {
-        if (!athletes) return [];
-        return athletes.filter(a => a.name.toLowerCase().includes(searchQuery.toLowerCase()));
-    }, [athletes, searchQuery]);
+        return liveAthletes.filter(a => a.name.toLowerCase().includes(searchQuery.toLowerCase()));
+    }, [liveAthletes, searchQuery]);
 
     const [activeRemoteId, setActiveRemoteId] = useState<string | null>(null);
 
@@ -878,16 +907,23 @@ export default function StrategyHub() {
 
                 <div className="flex flex-col flex-1 space-y-10">
                     {/* Stats Row */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        {[
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-8 sm:gap-16 px-2">
+                        {([
                             { label: 'Active Athletes', value: athletes?.length || 0, icon: Users, color: 'text-orange-500' },
                             { label: 'Collective Jumps', value: athletes?.reduce((sum, a) => sum + a.totalJumps, 0).toLocaleString() || 0, icon: Trophy, color: 'text-blue-400' },
                             { label: 'Neural Status', value: 'OPTIMAL', icon: Activity, color: 'text-green-500' }
-                        ].map((stat, i) => (
-                            <div key={i} className="p-4 px-5 rounded-[1.5rem] bg-white/[0.02] border border-white/5 backdrop-blur-3xl relative overflow-hidden group">
-                                <div className={`absolute top-0 right-0 p-3 opacity-[0.4] ${stat.color} group-hover:scale-110 transition-transform`}><stat.icon size={32} /></div>
-                                <span className="text-[7px] font-black text-white/20 uppercase tracking-widest mb-1 block">{stat.label}</span>
-                                <span className={`text-xl font-black tracking-tighter ${stat.color}`}>{stat.value}</span>
+                        ] as const).map((stat, i) => (
+                            <div key={i} className="flex items-center gap-8 sm:gap-16 relative">
+                                <div className="flex flex-col group">
+                                    <span className="text-[7px] font-black text-white/10 uppercase tracking-[0.3em] mb-2 group-hover:text-white/30 transition-colors uppercase">{stat.label}</span>
+                                    <div className="flex items-center gap-3">
+                                        <span className={`text-2xl font-black tracking-tighter uppercase ${stat.color} drop-shadow-2xl`}>{stat.value}</span>
+                                        <stat.icon size={16} className={`${stat.color} opacity-20 group-hover:opacity-40 transition-opacity`} />
+                                    </div>
+                                </div>
+                                {i < 2 && (
+                                    <div className="hidden md:block absolute -right-4 sm:-right-8 top-1/2 -translate-y-1/2 w-px h-10 bg-gradient-to-b from-transparent via-white/[0.15] to-transparent rotate-[15deg]" />
+                                )}
                             </div>
                         ))}
                     </div>
@@ -901,7 +937,7 @@ export default function StrategyHub() {
                                 placeholder=""
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
-                                className="w-full h-9 rounded-xl bg-white/[0.02] border border-white/5 px-4 text-[9px] font-black tracking-[0.2em] text-white outline-none focus:border-orange-500/30 transition-all"
+                                className="w-full h-9 rounded-xl bg-white/[0.02] border border-white/30 px-4 text-[9px] font-black tracking-[0.2em] text-white outline-none focus:border-orange-500/50 transition-all shadow-[0_4px_12px_rgba(0,0,0,0.1)]"
                             />
                         </div>
                     </div>
@@ -912,60 +948,75 @@ export default function StrategyHub() {
                             <div
                                 key={athlete.userId}
                                 onClick={() => setSelectedAthlete(athlete)}
-                                className="p-5 rounded-[1.5rem] bg-white/[0.01] border border-white/5 hover:bg-white/[0.04] hover:border-orange-500/30 transition-all cursor-pointer group animate-in slide-in-from-bottom-5 duration-500"
+                                className="p-5 rounded-[2rem] bg-slate-900/60 backdrop-blur-3xl border border-white/40 hover:bg-slate-900/80 hover:border-orange-500/80 transition-all cursor-pointer group animate-in slide-in-from-bottom-5 duration-500 shadow-[0_12px_40px_rgba(0,0,0,0.3)] hover:shadow-orange-500/10"
                                 style={{ animationDelay: `${i * 100}ms` }}
                             >
-                                <div className="flex items-start justify-between mb-4">
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-10 h-10 rounded-xl bg-white/[0.03] border border-white/10 flex items-center justify-center overflow-hidden shrink-0 group-hover:scale-105 transition-transform">
-                                            {athlete.avatarUrl ? <img src={athlete.avatarUrl} className="w-full h-full object-cover" /> : <UserCircle2 size={20} className="text-white/20" />}
+                                <div className="flex items-start justify-between mb-6">
+                                    <div className="flex items-center gap-4">
+                                        <div className="w-12 h-12 rounded-2xl bg-white/[0.05] border border-white/20 flex items-center justify-center overflow-hidden shrink-0 group-hover:scale-110 transition-transform shadow-inner shadow-white/5">
+                                            {athlete.avatarUrl ? <img src={athlete.avatarUrl} className="w-full h-full object-cover" /> : <UserCircle2 size={24} className="text-white/30" />}
                                         </div>
                                         {(() => {
-                                            const isLive = athlete.lastActiveAt && (Date.now() - new Date(athlete.lastActiveAt).getTime() < 300000);
+                                            if (!athlete.lastActiveAt) return (
+                                                <div className="flex flex-col">
+                                                    <h3 className="text-[12px] font-black tracking-widest text-white uppercase truncate max-w-[100px] font-[var(--font-orbitron)]">{athlete.name}</h3>
+                                                    <div className="flex items-center gap-1.5 mt-1">
+                                                        <div className="w-1.5 h-1.5 rounded-full bg-white/10" />
+                                                        <span className="text-[7px] font-black uppercase tracking-[0.2em] text-white/20">Offline</span>
+                                                    </div>
+                                                </div>
+                                            );
+                                            
+                                            const lastDate = new Date(athlete.lastActiveAt).getTime();
+                                            const now = Date.now();
+                                            const diff = now - lastDate;
+                                            const isLive = diff < 180000 && diff > -60000;
+                                            
                                             return (
                                                 <div className="flex flex-col">
-                                                    <h3 className="text-[11px] font-black tracking-widest text-white uppercase truncate max-w-[100px]">{athlete.name}</h3>
-                                                    <div className="flex items-center gap-1.5 mt-0.5">
+                                                    <h3 className="text-[12px] font-black tracking-widest text-white uppercase truncate max-w-[100px] font-[var(--font-orbitron)] line-clamp-1">{athlete.name}</h3>
+                                                    <div className="flex items-center gap-2 mt-1">
                                                         <div className="relative">
-                                                            <div className={`w-1.5 h-1.5 rounded-full ${isLive ? 'bg-cyan-400 animate-pulse' : 'bg-white/10'}`} />
-                                                            {isLive && <div className="absolute inset-0 w-1.5 h-1.5 rounded-full bg-cyan-400 blur-[2px] animate-pulse" />}
+                                                            <div className={`w-1.5 h-1.5 rounded-full ${isLive ? 'bg-emerald-400 animate-pulse' : 'bg-white/10'}`} />
+                                                            {isLive && <div className="absolute inset-0 w-1.5 h-1.5 rounded-full bg-emerald-400 blur-[3px] animate-pulse" />}
                                                         </div>
-                                                        <span className={`text-[7px] font-black uppercase tracking-[0.2em] ${isLive ? 'text-cyan-400/80 animate-pulse' : 'text-white/20'}`}>
-                                                            {isLive ? 'Training Now' : 'Offline'}
+                                                        <span className={`text-[7px] font-black uppercase tracking-[0.3em] ${isLive ? 'text-emerald-400/90 animate-pulse' : 'text-white/20'}`}>
+                                                            {isLive ? 'ACTIVE' : 'Offline'}
                                                         </span>
                                                     </div>
                                                 </div>
                                             );
                                         })()}
                                     </div>
-                                    <div className="px-2 py-1 bg-white/[0.03] border border-white/5 rounded-lg text-right">
-                                        <span className="text-[7px] font-black text-green-500 uppercase tracking-widest">Verified</span>
+                                    <div className="px-3 py-1.5 bg-white/[0.05] border border-white/30 rounded-xl text-right shadow-sm">
+                                        <span className="text-[7px] font-black text-emerald-500 uppercase tracking-widest">Verified</span>
                                     </div>
                                 </div>
 
-                                <div className="grid grid-cols-2 gap-2 mt-4">
-                                    <div className="p-3 bg-white/[0.02] border border-white/5 rounded-xl flex flex-col items-center justify-center">
-                                        <span className="text-[6px] font-black text-white/20 uppercase tracking-widest mb-1">Total Jumps</span>
-                                        <span className="text-xs font-black text-blue-400 tracking-tighter">{athlete.totalJumps.toLocaleString()}</span>
+                                <div className="grid grid-cols-2 gap-3 mt-4">
+                                    <div className="p-4 bg-black/40 border border-white/20 rounded-2xl flex flex-col items-center justify-center group-hover:bg-black/60 transition-colors shadow-inner shadow-blue-500/5">
+                                        <span className="text-[6px] font-black text-white/30 uppercase tracking-[0.2em] mb-1.5">Total Jumps</span>
+                                        <span className="text-lg font-black text-blue-400 tabular-nums drop-shadow-[0_0_8px_rgba(96,165,250,0.3)]">{athlete.totalJumps.toLocaleString()}</span>
                                     </div>
-                                    <div className="p-3 bg-white/[0.02] border border-white/5 rounded-xl flex flex-col items-center justify-center">
-                                        <span className="text-[6px] font-black text-white/20 uppercase tracking-widest mb-1">Sessions</span>
-                                        <span className="text-xs font-black text-white tracking-widest">{athlete.sessionsCount}</span>
+                                    <div className="p-4 bg-black/40 border border-white/20 rounded-2xl flex flex-col items-center justify-center group-hover:bg-black/60 transition-colors shadow-inner shadow-white/5">
+                                        <span className="text-[6px] font-black text-white/30 uppercase tracking-[0.2em] mb-1.5">Sessions</span>
+                                        <span className="text-lg font-black text-white tabular-nums tracking-widest drop-shadow-[0_0_8px_rgba(255,255,255,0.2)]">{athlete.sessionsCount}</span>
                                     </div>
                                 </div>
 
-                                <div className="mt-4 pt-3 border-t border-white/5 flex items-center justify-between">
+                                <div className="mt-6 pt-4 border-t border-white/5 flex items-center justify-between">
                                     <button
                                         onClick={(e) => {
                                             e.stopPropagation();
                                             setActiveRemoteId(activeRemoteId === athlete.userId ? null : athlete.userId);
                                         }}
-                                        className="w-8 h-8 rounded-lg bg-orange-500/10 flex items-center justify-center text-orange-500 hover:bg-orange-500 hover:text-black transition-all active:scale-90 group/remote"
+                                        className="w-9 h-9 rounded-xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center text-orange-500 hover:bg-orange-500 hover:text-black transition-all active:scale-95 group/remote shadow-lg shadow-orange-500/5"
                                         title="Remote Control"
                                     >
-                                        <Settings2 size={16} className="group-hover/remote:rotate-90 transition-transform duration-300" />
+                                        <Settings2 size={18} className="group-hover/remote:rotate-90 transition-transform duration-500" />
                                     </button>
-                                    <div className="flex items-center gap-2">
+                                    
+                                    <div className="flex items-center gap-3">
                                         {/* Quick Generate Plan Button */}
                                         <button
                                             onClick={(e) => {
@@ -974,13 +1025,10 @@ export default function StrategyHub() {
                                                 setSelectedAthlete(athlete);
                                             }}
                                             title="Generate Smart Plan"
-                                            className="w-7 h-7 rounded-lg bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-400/60 hover:bg-red-500/20 hover:text-red-400 hover:border-red-500/40 transition-all active:scale-90"
+                                            className="w-9 h-9 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-500/60 hover:bg-red-500 hover:text-white hover:border-red-500/50 transition-all active:scale-95 shadow-lg shadow-red-500/5"
                                         >
-                                            <span className="text-sm font-black leading-none">+</span>
+                                            <span className="text-xl font-light leading-none">+</span>
                                         </button>
-                                        <div className="w-6 h-6 rounded-lg bg-orange-500/10 flex items-center justify-center">
-                                            <Sparkles size={10} className="text-orange-500" />
-                                        </div>
                                     </div>
                                 </div>
                             </div>

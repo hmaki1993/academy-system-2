@@ -273,13 +273,22 @@ export function useSmartPlan() {
         try {
             const studentId = await resolveStudentId(studentIdRaw);
             
-            // If stopping, clear all session targets
-            const payload: any = { status };
+            // Atomic status updates
+            let finalStatus: string = status;
+            const payload: any = {};
+
+            if (status === 'restarting') {
+                finalStatus = 'live'; // Effectively starts it immediately from 0
+                payload.scheduled_start = new Date().toISOString();
+            }
+
             if (status === 'idle') {
                 payload.target_time = null;
                 payload.target_jumps = null;
                 payload.scheduled_start = null;
             }
+
+            payload.status = finalStatus;
 
             // 1. Database Update (Persistence)
             const { error } = await supabase

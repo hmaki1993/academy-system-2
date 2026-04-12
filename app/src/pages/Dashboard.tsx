@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, lazy, Suspense } from 'react';
 import { Users, DollarSign, Medal, TrendingUp, Sparkles, Activity, Clock, ArrowUpRight, ChevronRight, Zap, X, Globe } from 'lucide-react';
 import { useOutletContext, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -13,11 +13,12 @@ import CoachDashboard from './CoachDashboard';
 import HeadCoachDashboard from './HeadCoachDashboard';
 import ReceptionDashboard from './ReceptionDashboard';
 import CleanerDashboard from './CleanerDashboard';
-import StudentDashboard from './StudentDashboard';
+const StudentDashboard = lazy(() => import('./EliteDashboard'));
 
 import LiveStudentsWidget from '../components/LiveStudentsWidget';
 import QuickAddStudentModal from '../components/QuickAddStudentModal';
 import PremiumClock from '../components/PremiumClock';
+import MinimalCountdown from '../components/MinimalCountdown';
 
 import UpcomingAgendaWidget from '../components/UpcomingAgendaWidget';
 
@@ -34,6 +35,10 @@ export default function Dashboard() {
     const [isVerifiedStudent, setIsVerifiedStudent] = useState<boolean | null>(null);
     const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
 
+    // AI TRACKER REAL-TIME STATE
+    const [scheduledStart, setScheduledStart] = useState<string | null>(null);
+    const [planStatus, setPlanStatus] = useState<string | null>(null);
+
     const filteredDetails = useMemo(() => {
         if (!selectedMetric || !analytics?.details) return [];
         if (selectedMetric === 'Total') return analytics.details;
@@ -44,6 +49,7 @@ export default function Dashboard() {
     useEffect(() => {
         const checkStudentStatus = async () => {
             if (!userId) return;
+            console.log('Dashboard: Checking status for user:', userId);
             try {
                 const { data } = await supabase
                     .from('students')
@@ -51,7 +57,32 @@ export default function Dashboard() {
                     .eq('profile_id', userId)
                     .maybeSingle();
                 
+                console.log('Dashboard: Verified student data:', data);
                 setIsVerifiedStudent(!!data);
+
+                // --- GLOBAL AI TRACKER MONITOR ---
+                // Fetch the latest/upcoming session
+                const { data: plan } = await supabase
+                    .from('training_plans')
+                    .select('status, scheduled_start')
+                    .order('scheduled_start', { ascending: false })
+                    .limit(1)
+                    .maybeSingle();
+                
+                if (plan) {
+                    setScheduledStart(plan.scheduled_start);
+                    setPlanStatus(plan.status);
+                }
+
+                // Subscribe to ANY session update (Global Monitor)
+                const channel = supabase.channel('global-session-sync')
+                    .on('postgres_changes' as any, { event: '*', table: 'training_plans' }, (payload: any) => {
+                        console.log('Global Sync: Session Update detected', payload.new);
+                        setScheduledStart(payload.new?.scheduled_start || null);
+                        setPlanStatus(payload.new?.status || null);
+                    }).subscribe();
+
+                return () => { supabase.removeChannel(channel); };
             } catch (err) {
                 console.error('Error verifying student status:', err);
                 setIsVerifiedStudent(false); // Fallback to role-based
@@ -78,15 +109,25 @@ export default function Dashboard() {
 
     const normalizedRole = role.toLowerCase().trim();
     
-    // PRIORITY 1: If verified as student in DB, always go to Student Dashboard
-    if (isVerifiedStudent) return <StudentDashboard />;
-
-    // PRIORITY 2: Role-based routing for staff
+    // PRIORITY 1: Explicit Staff Roles (Head Coach, Coach, Reception, Cleaner)
     if (normalizedRole === 'head_coach') return <HeadCoachDashboard />;
     if (normalizedRole === 'coach') return <CoachDashboard />;
     if (normalizedRole === 'reception' || normalizedRole === 'receptionist') return <ReceptionDashboard role={role} />;
     if (normalizedRole === 'cleaner') return <CleanerDashboard />;
-    if (normalizedRole === 'student' || normalizedRole === 'trainee') return <StudentDashboard />;
+
+    // PRIORITY 2: Admin check - If it's admin, stay here and DON'T go to Student Dashboard
+    if (normalizedRole === 'admin') {
+        // Continue to render the Admin Dashboard below
+    } else {
+        // PRIORITY 3: If verified as student in DB OR role is student, go to Student Dashboard
+        if (isVerifiedStudent || normalizedRole === 'student' || normalizedRole === 'trainee') {
+            return (
+                <Suspense fallback={<div className="flex items-center justify-center min-h-[60vh]"><div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin"></div></div>}>
+                    <StudentDashboard />
+                </Suspense>
+            );
+        }
+    }
 
     const metrics = [
         {
@@ -179,152 +220,60 @@ export default function Dashboard() {
                     </div>
                 </div>
 
-                    <div className="flex items-center gap-6">
+                    <div className="flex items-center gap-12">
                         <PremiumClock />
                     </div>
                 </div>
 
-                {/* Metrics Matrix - Unified Revenue Hub & Roster */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                    {/* Unified Revenue Intelligence Hub */}
-                    <div
-                        onClick={() => setSelectedMetric('Total')}
-                        onMouseEnter={playHoverSound}
-                        className="glass-card relative group py-8 px-8 bg-white/[0.01] border border-white/5 rounded-[2.5rem] hover:bg-white/[0.02] transition-all duration-700 cursor-pointer active:scale-[0.98] shadow-premium h-full"
-                    >
-                        <div className="flex items-center justify-between mb-10">
-                            <div className="flex items-center gap-5">
-                                <div className="p-4 bg-primary/10 rounded-2xl text-primary border border-white/5 group-hover:scale-110 transition-transform duration-700">
-                                    <DollarSign className="w-8 h-8" />
+                {/* Floating 4-Card Metrics Grid (No Cards/Backgrounds) */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+                    {metrics.map((stat, i) => (
+                        <div
+                            key={stat.id}
+                            onClick={() => stat.id !== 'Athletes' ? setSelectedMetric(stat.id as any) : navigate(stat.path || '/')}
+                            onMouseEnter={playHoverSound}
+                            className="relative py-4 px-2 transition-all duration-500 cursor-pointer group flex flex-col items-center text-center sm:border-r sm:border-white/[0.03] last:border-r-0"
+                        >
+                            {/* Icon & Trend Row */}
+                            <div className="flex items-center gap-3 mb-4">
+                                <div className={`p-2 rounded-lg bg-white/5 border border-white/5 group-hover:scale-125 transition-transform duration-500 ${stat.color}`}>
+                                    <stat.icon className="w-4 h-4" />
                                 </div>
-                                <div className="space-y-1">
-                                    <p className="text-[12px] font-black text-primary uppercase tracking-[0.4em] leading-none">Financial Intelligence</p>
-                                    <p className="text-[10px] font-bold text-white/20 uppercase tracking-[0.2em]">Live Revenue Stream</p>
+                                <div className="text-[8px] font-black text-emerald-500 uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity">
+                                    {stat.trend}
                                 </div>
                             </div>
-                            <div className="p-3 bg-white/5 rounded-xl opacity-0 group-hover:opacity-100 transition-all group-hover:translate-x-1">
-                                <ArrowUpRight className="w-5 h-5 text-white/40" />
+                            
+                            <div className="space-y-1">
+                                <p className="text-[10px] font-black text-white/20 uppercase tracking-[0.3em] group-hover:text-primary transition-colors">{stat.label}</p>
+                                <h3 className="text-3xl lg:text-4xl font-black text-white tracking-tighter tabular-nums group-hover:scale-105 transition-transform">
+                                    {analyticsLoading ? '...' : stat.value}
+                                </h3>
+                                <p className="text-[9px] font-bold text-white/5 uppercase tracking-widest">{stat.subValue}</p>
                             </div>
-                        </div>
 
-                        <div className="flex items-baseline gap-4 mb-2">
-                           <h3 className="text-4xl md:text-5xl lg:text-6xl font-black text-white tracking-tighter tabular-nums leading-none">
-                                {analyticsLoading ? '...' : formatPrice(analytics?.totalRevenue || 0)}
-                            </h3>
-                            <span className="text-xs font-black text-emerald-500 uppercase tracking-widest bg-emerald-500/10 px-2 py-0.5 rounded-md">+14% Goal</span>
+                            {/* Minimal Decorative Underline on Hover */}
+                            <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-0 h-[1px] bg-primary group-hover:w-full transition-all duration-700 opacity-20" />
                         </div>
-
-                        <div className="grid grid-cols-2 gap-8 mt-8 pt-8 border-t border-white/[0.05]">
-                            <div className="space-y-2">
-                                <div className="flex items-center gap-2">
-                                    <div className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-                                    <span className="text-[10px] font-black text-white/30 uppercase tracking-widest">PT Vertical</span>
-                                </div>
-                                <p className="text-xl md:text-2xl font-black text-white/80 tabular-nums">
-                                    {analyticsLoading ? '...' : formatPrice(analytics?.ptRevenue || 0)}
-                                </p>
-                            </div>
-                            <div className="space-y-2 border-l border-white/5 pl-8">
-                                <div className="flex items-center gap-2">
-                                    <div className="w-1.5 h-1.5 rounded-full bg-primary" />
-                                    <span className="text-[10px] font-black text-white/30 uppercase tracking-widest">Consultations</span>
-                                </div>
-                                <p className="text-xl md:text-2xl font-black text-white/80 tabular-nums">
-                                    {analyticsLoading ? '...' : formatPrice(analytics?.consultationRevenue || 0)}
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Athlete Network Hub */}
-                    <div
-                        onClick={() => navigate('/app/students')}
-                        onMouseEnter={playHoverSound}
-                        className="glass-card relative group py-8 px-8 bg-white/[0.01] border border-white/5 rounded-[2.5rem] hover:bg-white/[0.02] transition-all duration-700 cursor-pointer active:scale-[0.98] shadow-premium h-full"
-                    >
-                        <div className="flex items-center justify-between mb-10">
-                            <div className="flex items-center gap-5">
-                                <div className="p-4 bg-white/5 rounded-2xl text-white/30 border border-white/5 group-hover:scale-110 transition-transform duration-700">
-                                    <Users className="w-8 h-8" />
-                                </div>
-                                <div className="space-y-1">
-                                    <p className="text-[12px] font-black text-white/40 uppercase tracking-[0.4em] leading-none">Athlete Network</p>
-                                    <p className="text-[10px] font-bold text-white/10 uppercase tracking-[0.2em]">Active Roster Intelligence</p>
-                                </div>
-                            </div>
-                             <div className="p-3 bg-white/5 rounded-xl opacity-0 group-hover:opacity-100 transition-all group-hover:translate-x-1">
-                                <ArrowUpRight className="w-5 h-5 text-white/40" />
-                            </div>
-                        </div>
-
-                        <div className="flex items-baseline gap-4 mb-2">
-                            <h3 className="text-4xl md:text-5xl lg:text-6xl font-black text-white tracking-tighter tabular-nums leading-none">
-                                {analyticsLoading ? '...' : analytics?.athleteCount}
-                            </h3>
-                            <span className="text-xs font-black text-primary uppercase tracking-widest bg-primary/10 px-2 py-0.5 rounded-md">Live Pulse</span>
-                        </div>
-
-                        <div className="flex items-center justify-between mt-8 pt-8 border-t border-white/[0.05]">
-                            <div className="flex items-center gap-4">
-                                <div className="flex -space-x-3">
-                                    {[1, 2, 3].map(i => (
-                                        <div key={i} className="w-8 h-8 rounded-full border-2 border-[#050505] bg-white/10 flex items-center justify-center overflow-hidden">
-                                            <Activity className="w-4 h-4 text-white/20" />
-                                        </div>
-                                    ))}
-                                    <div className="w-8 h-8 rounded-full border-2 border-[#050505] bg-primary flex items-center justify-center text-[10px] font-black text-white">+</div>
-                                </div>
-                                <span className="text-[10px] font-black text-white/20 uppercase tracking-[0.2em]">Top Performers</span>
-                            </div>
-                            <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-xl bg-primary text-white flex items-center justify-center shadow-[0_0_20px_rgba(var(--color-primary),0.3)]">
-                                    <ChevronRight className="w-6 h-6" />
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                    ))}
                 </div>
 
-                {/* AI Strategy Hub Hub - The Central Command (Middle Overlay) */}
-                <div
-                    onClick={() => navigate('/app/strategy-hub')}
-                    onMouseEnter={playHoverSound}
-                    className="relative group py-10 px-10 bg-emerald-500/[0.03] border border-emerald-500/10 rounded-[3rem] hover:bg-emerald-500/[0.06] hover:border-emerald-500/20 transition-all duration-700 cursor-pointer overflow-hidden active:scale-95 shadow-[0_30px_60px_-15px_rgba(0,0,0,0.5)]"
-                >
-                    <div className="absolute -right-16 -top-16 w-64 h-64 bg-emerald-500/20 rounded-full blur-[100px] opacity-40 group-hover:opacity-70 transition-opacity duration-1000" />
-                    <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-10 relative z-10">
-                        <div className="flex items-center gap-10">
-                            <div className="w-20 h-20 md:w-24 md:h-24 rounded-[2rem] bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 shadow-[0_0_40px_rgba(16,185,129,0.2)] group-hover:scale-110 transition-all duration-1000">
-                                <Sparkles className="w-10 h-10" />
-                            </div>
-                            <div>
-                                <h3 className="text-3xl md:text-4xl font-black text-white uppercase tracking-tighter mb-2">Elite Strategy Hub</h3>
-                                <div className="flex items-center gap-4">
-                                    <span className="px-3 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded-full text-[10px] font-black text-emerald-400 uppercase tracking-widest">Active System</span>
-                                    <p className="text-[12px] font-black text-white/30 uppercase tracking-[0.4em]">Integrated Intelligence Dashboard</p>
-                                </div>
-                            </div>
-                        </div>
-                        <button className="flex items-center gap-4 px-10 py-5 bg-emerald-500 text-black rounded-2xl font-black uppercase tracking-widest text-[11px] hover:scale-105 transition-all shadow-2xl">
-                            Enter CommandCenter <ChevronRight className="w-5 h-5" />
-                        </button>
-                    </div>
-                </div>
-
-                {/* Bottom Intelligence Grid: Live Floor & Recent Activity */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 pt-8">
+                {/* Main Content Grid: Fully Floating Live Floor & Agenda (No Cards) */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-12 pt-12">
                     {/* Live Floor Area - Takes up 2 columns */}
-                    <div className="lg:col-span-2 glass-card p-8 rounded-[3rem] border border-white/5 bg-white/[0.01] min-h-[400px] flex flex-col">
-                        <div className="flex items-center justify-between mb-8 pb-4 border-b border-white/5">
-                            <div className="flex items-center gap-4">
-                                <Globe className="w-6 h-6 text-primary animate-pulse" />
+                    <div className="lg:col-span-2 min-h-[500px] flex flex-col">
+                        <div className="flex items-center justify-between mb-8 pb-6 border-b border-white/5">
+                            <div className="flex items-center gap-6">
+                                <div className="p-3 bg-primary/10 rounded-2xl border border-primary/20">
+                                    <Globe className="w-6 h-6 text-primary animate-pulse" />
+                                </div>
                                 <div>
-                                    <h3 className="text-xl font-black text-white uppercase tracking-widest leading-none">Live Floor</h3>
-                                    <p className="text-[10px] font-bold text-white/20 uppercase tracking-[0.2em]">Real-time Athlete Presence</p>
+                                    <h3 className="text-2xl font-black text-white uppercase tracking-[0.2em] leading-none mb-2">Live Floor</h3>
+                                    <p className="text-[10px] font-bold text-white/20 uppercase tracking-[0.4em]">Real-time AthletePresence Intelligence</p>
                                 </div>
                             </div>
-                            <div className="px-3 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded-full">
-                                <span className="text-[10px] font-black text-emerald-400 uppercase tracking-widest">{onlineStudents.length} Athletes Online</span>
+                            <div className="px-4 py-2 bg-emerald-500/5 border border-emerald-500/10 rounded-full backdrop-blur-sm">
+                                <span className="text-[10px] font-black text-emerald-400 uppercase tracking-widest">{onlineCount} Athletes Active</span>
                             </div>
                         </div>
                         <div className="flex-1">
@@ -332,18 +281,22 @@ export default function Dashboard() {
                         </div>
                     </div>
 
-                    {/* Recent Agenda Area - Sidebar */}
-                    <div className="lg:col-span-1 glass-card p-8 rounded-[3rem] border border-white/5 bg-white/[0.01]">
-                         <div className="flex items-center gap-4 mb-8 pb-4 border-b border-white/5">
-                            <Clock className="w-6 h-6 text-amber-500" />
+                    {/* Elite Agenda - Sidebar */}
+                    <div className="lg:col-span-1 border-l border-white/[0.03] pl-12">
+                         <div className="flex items-center gap-6 mb-8 pb-6 border-b border-white/5">
+                            <div className="p-3 bg-primary/10 rounded-2xl border border-primary/20">
+                                <Clock className="w-6 h-6 text-primary" />
+                            </div>
                             <div>
-                                <h3 className="text-xl font-black text-white uppercase tracking-widest leading-none">Elite Agenda</h3>
-                                <p className="text-[10px] font-bold text-white/20 uppercase tracking-[0.2em]">Upcoming Missions</p>
+                                <h3 className="text-2xl font-black text-white uppercase tracking-[0.2em] leading-none mb-2">Elite Agenda</h3>
+                                <p className="text-[10px] font-bold text-white/20 uppercase tracking-[0.4em]">Upcoming Training Missions</p>
                             </div>
                         </div>
                         <UpcomingAgendaWidget />
                     </div>
                 </div>
+
+
             </div>
 
             {/* Financial Detail Intelligence Overlay - Ultra Glassmorphism */}

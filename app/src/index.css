@@ -248,27 +248,8 @@ body {
     rgba(167,139,250,0.06) 70%,
     rgba(99,102,241,0.0) 100%
   );
-  border-bottom: 1px solid rgba(139, 92, 246, 0.1);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-}
-
-/* The shimmer line at the very top of the header */
-.premium-header-strip::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 1px;
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    rgba(167,139,250,0.6) 30%,
-    rgba(99,102,241,0.8) 50%,
-    rgba(167,139,250,0.6) 70%,
-    transparent 100%
-  );
 }
 
 /* ───────────────────────────────────────────────────────────────

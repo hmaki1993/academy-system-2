@@ -261,6 +261,14 @@ export default function NewPTBookingFlow({ onSuccess, onBack }: NewPTBookingFlow
 
             if (bookingError) throw bookingError;
 
+            // --- NEW: Notify Admin about the PT booking ---
+            await supabase.from('notifications').insert({
+                title: 'New PT Mission Booked',
+                message: `Trainee ${studentName} has just booked a PT session for ${dateStr} at ${selectedTime}.`,
+                type: 'student',
+                target_role: 'admin'
+            });
+
             // Success Transition
             setTimeout(() => {
                 setIsProcessing(false);

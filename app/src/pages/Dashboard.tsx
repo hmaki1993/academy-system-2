@@ -25,14 +25,13 @@ import UpcomingAgendaWidget from '../components/UpcomingAgendaWidget';
 export default function Dashboard() {
     const { t } = useTranslation();
     const navigate = useNavigate();
-    const { role, fullName, userEmail, userId } = useOutletContext<{ role: string, fullName: string, userEmail: string | null, userId: string }>() || { role: null, fullName: null, userEmail: null, userId: null };
+    const { role, fullName, userEmail, userId, isVerifiedStudent } = useOutletContext<{ role: string, fullName: string, userEmail: string | null, userId: string, isVerifiedStudent: boolean | null }>() || { role: null, fullName: null, userEmail: null, userId: null, isVerifiedStudent: null };
     const cleanName = fullName?.trim() || userEmail?.split('@')[0]?.trim() || 'Admin';
     const { formatPrice, currency } = useCurrency();
     const { userProfile } = useTheme();
     const { data: analytics, isLoading: analyticsLoading } = useAdminAnalytics();
     const { onlineStudents, onlineCount } = usePresence();
     const [selectedMetric, setSelectedMetric] = useState<'Total Revenue' | 'Consultations' | 'PT Sessions' | 'Athletes' | null>(null);
-    const [isVerifiedStudent, setIsVerifiedStudent] = useState<boolean | null>(null);
     const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
 
     // AI TRACKER REAL-TIME STATE
@@ -48,60 +47,19 @@ export default function Dashboard() {
         return [];
     }, [selectedMetric, analytics]);
 
-    // HEALING REDIRECTION: Check if user exists in Students table regardless of profile role
-    useEffect(() => {
-        const checkStudentStatus = async () => {
-            if (!userId) return;
-            console.log('Dashboard: Checking status for user:', userId);
-            try {
-                const { data } = await supabase
-                    .from('students')
-                    .select('id')
-                    .eq('profile_id', userId)
-                    .maybeSingle();
-                
-                console.log('Dashboard: Verified student data:', data);
-                setIsVerifiedStudent(!!data);
 
-                // --- GLOBAL AI TRACKER MONITOR ---
-                // Fetch the latest/upcoming session
-                const { data: plan } = await supabase
-                    .from('training_plans')
-                    .select('status, scheduled_start')
-                    .order('scheduled_start', { ascending: false })
-                    .limit(1)
-                    .maybeSingle();
-                
-                if (plan) {
-                    setScheduledStart(plan.scheduled_start);
-                    setPlanStatus(plan.status);
-                }
-
-                // Subscribe to ANY session update (Global Monitor)
-                const channel = supabase.channel('global-session-sync')
-                    .on('postgres_changes' as any, { event: '*', table: 'training_plans' }, (payload: any) => {
-                        console.log('Global Sync: Session Update detected', payload.new);
-                        setScheduledStart(payload.new?.scheduled_start || null);
-                        setPlanStatus(payload.new?.status || null);
-                    }).subscribe();
-
-                return () => { supabase.removeChannel(channel); };
-            } catch (err) {
-                console.error('Error verifying student status:', err);
-                setIsVerifiedStudent(false); // Fallback to role-based
-            }
-        };
-
-        checkStudentStatus();
-    }, [userId]);
-
-    // 🛡️ MASTER NAME DERIVATION: 
-    // Priorities: 1. DB/Context Name, 2. Layout Context Name, 3. Email Prefix, 4. Admin
-    const displayFullName = userProfile?.full_name || fullName || userEmail?.split('@')[0]?.trim() || 'Admin';
-    const firstName = displayFullName.split(' ')[0];
+    // 🛡️ MASTER NAME DERIVATION: Highly stabilized to avoid 'disappearing' name flash
+    // We prioritize the context name which is already synced in the Layout.
+    const displayFullName = (fullName || userProfile?.full_name || userEmail?.split('@')[0] || 'Admin').trim();
+    const firstName = displayFullName.split(/\s+/)[0] || 'Admin';
 
     // RESTORE ROLE-BASED REDIRECTION (+ Student Fail-safe)
-    if (!role || isVerifiedStudent === null) {
+    const normalizedRole = role?.toLowerCase().trim();
+
+    // IF ADMIN, SHOW IMMEDIATELY (Bypass student verification loader for better UX)
+    if (normalizedRole === 'admin') {
+        // Render below
+    } else if (!role || isVerifiedStudent === null) {
         return (
             <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
                 <div className="w-12 h-12 border-2 border-primary/20 border-t-primary rounded-full animate-spin" />
@@ -109,8 +67,6 @@ export default function Dashboard() {
             </div>
         );
     }
-
-    const normalizedRole = role.toLowerCase().trim();
     
     // PRIORITY 1: Explicit Staff Roles (Head Coach, Coach, Reception, Cleaner)
     if (normalizedRole === 'head_coach') return <HeadCoachDashboard />;
@@ -189,11 +145,11 @@ export default function Dashboard() {
                     <div className="flex flex-col gap-4">
                         {/* Greeting Cluster - Vertical Elite Hierarchy */}
                         <div className="flex flex-col items-start gap-1">
-                            <span className="text-[10px] md:text-[11px] font-black text-white/20 uppercase tracking-[0.8em] leading-none mb-1 select-none animate-in fade-in slide-in-from-left-4 duration-1000">
+                            <span className="text-[10px] md:text-[11px] font-black text-white/20 uppercase tracking-[0.8em] leading-none mb-1 select-none">
                                 {t('dashboard.hello', 'Hello')}
                             </span>
-                            <h1 className="text-3xl md:text-5xl font-black text-white tracking-tighter uppercase leading-none italic animate-in fade-in slide-in-from-left-8 duration-1000 delay-200">
-                                <span className="premium-gradient-text drop-shadow-[0_15px_40px_rgba(var(--color-primary),0.3)]">
+                            <h1 className="text-3xl md:text-5xl font-black text-white tracking-tighter uppercase leading-none italic">
+                                <span className="premium-gradient-text drop-shadow-[0_15px_40px_rgba(255,255,255,0.3)]">
                                     {firstName}
                                 </span>
                             </h1>
@@ -202,7 +158,7 @@ export default function Dashboard() {
                     </div>
 
                     {/* Right-Side Chronology */}
-                    <div className="flex items-center lg:justify-end animate-in fade-in slide-in-from-right-8 duration-1000">
+                    <div className="flex items-center lg:justify-end">
                         <PremiumClock />
                     </div>
                 </div>
@@ -271,13 +227,13 @@ export default function Dashboard() {
 
             {/* Intelligence Overlay - Ultra Glassmorphism */}
             {selectedMetric && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-2 sm:p-4 md:p-8 animate-in fade-in duration-500">
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-2 sm:p-4 md:p-8">
                     <div 
                         className="absolute inset-0 bg-black/40 backdrop-blur-2xl cursor-pointer"
                         onClick={() => setSelectedMetric(null)}
                     />
                     
-                    <div className="relative w-full max-w-2xl max-h-[85vh] bg-[#0c0e14]/90 border border-white/5 rounded-[3rem] overflow-hidden flex flex-col animate-in zoom-in-95 slide-in-from-bottom-8 duration-700 shadow-[0_50px_150px_rgba(0,0,0,0.8)]">
+                    <div className="relative w-full max-w-2xl max-h-[85vh] bg-[#0c0e14]/90 border border-white/5 rounded-[3rem] overflow-hidden flex flex-col shadow-[0_50px_150px_rgba(0,0,0,0.8)]">
                         {/* High-End Header */}
                         <div className="p-8 sm:p-10 border-b border-white/[0.03] flex items-center justify-between relative z-10">
                             <div className="space-y-1">

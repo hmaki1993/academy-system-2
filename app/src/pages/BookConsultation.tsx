@@ -72,6 +72,15 @@ export default function BookConsultation() {
                 if (data && !error) {
                     setReceiptData(data);
                     setShowReceipt(true);
+                    
+                    // --- NEW: Notify Admin about the booking ---
+                    await supabase.from('notifications').insert({
+                        title: 'Elite Consultation Booked',
+                        message: `Elite Athlete ${data.full_name} has just secured a consultation for ${format(new Date(`${data.booked_date}T12:00:00`), 'MMM d')} at ${data.booked_time.substring(0, 5)}.`,
+                        type: 'student',
+                        target_role: 'admin'
+                    });
+
                     // Clear params from URL for clean state
                     setSearchParams({}, { replace: true });
                 }

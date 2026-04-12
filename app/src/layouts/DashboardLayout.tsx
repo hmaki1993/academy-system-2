@@ -37,6 +37,7 @@ import PremiumClock from '../components/PremiumClock';
 import MinimalCountdown from '../components/MinimalCountdown';
 import WalkieTalkie from '../components/WalkieTalkie';
 import { playHoverSound } from '../utils/audio';
+import { usePresence } from '../hooks/usePresence';
 
 export default function DashboardLayout() {
     const { t, i18n } = useTranslation();
@@ -66,6 +67,7 @@ export default function DashboardLayout() {
     const [searchResults, setSearchResults] = useState<any[]>([]);
     const [isSearching, setIsSearching] = useState(false);
     const [showResults, setShowResults] = useState(false);
+    const [isVerifiedStudent, setIsVerifiedStudent] = useState<boolean | null>(null);
     const searchRef = useRef<HTMLDivElement>(null);
 
     const isRtl = i18n.language === 'ar' || document.dir === 'rtl';
@@ -117,68 +119,97 @@ export default function DashboardLayout() {
                 { event: 'INSERT', schema: 'public', table: 'notifications' },
                 async (payload) => {
                     const newNote = payload.new as any;
-                    const { data: { user } = {} } = await supabase.auth.getUser();
-                    if (!user) return;
+                    
+                    // 🛡️ CRITICAL: Simplified & Robust Logic for Admin/Role-based toasts
+                    const target = (newNote.target_role || '').toLowerCase().trim();
+                    const isGlobal = !newNote.user_id && !newNote.target_role;
+                    const matchesMe = (userId && newNote.user_id === userId) || 
+                                    (target === 'admin' && role === 'admin') ||
+                                    (target === 'admin_head_reception' && ['admin', 'head_coach', 'reception'].includes(role || ''));
 
-                    const isSelfBroadcast = newNote.related_coach_id && newNote.related_coach_id === user.id;
-                    if (isSelfBroadcast && !newNote.user_id) return;
-
-                    if (!newNote.user_id || newNote.user_id === user.id) {
+                    if (isGlobal || matchesMe) {
                         if (processedIds.current.has(newNote.id)) return;
+                        processedIds.current.add(newNote.id);
 
-                        const now = Date.now();
-                        if (now - lastToastTime.current > 2000) {
-                            toastCount.current = 0;
-                            lastToastTime.current = now;
+                        // PLAY SOUND IMMEDIATELY 🔊
+                        if (settings.notify_sounds !== false) {
+                            import('../utils/notifications').then(m => m.playNotificationSound('success'));
                         }
 
-                        const isDuplicate = Array.from(processedToasts.current).some(msg =>
-                            msg === newNote.message || msg.includes(newNote.message) || newNote.message.includes(msg)
-                        );
-
-                        if (toastCount.current < 3) {
-                            const shouldShowToast =
-                                (newNote.type === 'payment' && settings.notify_payments !== false) ||
-                                (newNote.type === 'attendance_absence' && settings.notify_absences !== false) ||
-                                (newNote.type === 'student' && settings.notify_registrations !== false) ||
-                                (!['payment', 'attendance_absence', 'student'].includes(newNote.type));
-
-                            if (shouldShowToast && !isDuplicate) {
-                                toastCount.current++;
-                                processedToasts.current.add(newNote.message);
-                                setTimeout(() => processedToasts.current.delete(newNote.message), 10000);
-
-                                toast.success(`${newNote.message}`, {
-                                    icon: '🔔',
-                                    duration: 5000,
-                                    style: {
-                                        backdropFilter: 'blur(25px)',
-                                        background: 'rgba(15, 23, 42, 0.95)',
-                                        border: '1px solid rgba(255, 255, 255, 0.2)',
-                                        color: '#fff',
-                                        fontSize: '13px',
-                                        fontWeight: '700',
-                                        padding: '16px 24px',
-                                        borderRadius: '24px'
-                                    }
-                                });
-                            }
-                        }
-
+                        // Update State Instantly
                         setNotifications(prev => {
                             if (prev.some(n => n.id === newNote.id)) return prev;
                             const updated = [newNote, ...prev];
                             return updated.slice(0, 50);
                         });
+
+                        // Toast Logic
+                        const isDuplicate = Array.from(processedToasts.current).some(msg => msg === newNote.message);
+                        if (!isDuplicate) {
+                            processedToasts.current.add(newNote.message);
+                            toast.success(`${newNote.title.toUpperCase()}: ${newNote.message}`, {
+                                icon: '🔔',
+                                duration: 6000,
+                                style: { 
+                                    background: '#050510', 
+                                    color: '#fff', 
+                                    border: '1px solid rgba(212,175,55,0.3)',
+                                    fontSize: '11px',
+                                    fontWeight: '900',
+                                    padding: '16px 24px',
+                                    borderRadius: '16px',
+                                    boxShadow: '0 20px 40px rgba(0,0,0,0.6)'
+                                }
+                            });
+                        }
                     }
                 }
             )
             .subscribe();
 
-        return () => { supabase.removeChannel(channel); };
-    }, [settings]);
+        // ⚡ ZERO-LATENCY DIRECT MONITORING (Saves ~60s of delay)
+        const directMonitor = supabase.channel('direct-system-monitor')
+            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'pt_bookings' }, (payload) => {
+                const booking = payload.new as any;
+                toast.success(`PT BOOKED: ${booking.student_name || 'Expert Athlete'}`, {
+                    icon: '🦾', 
+                    duration: 8000,
+                    style: { background: '#050510', color: '#fff', border: '1px solid #d4af37' }
+                });
+                import('../utils/notifications').then(m => m.playNotificationSound('success'));
+            })
+            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'consultation_requests' }, (payload) => {
+                const req = payload.new as any;
+                toast.success(`CONSULTATION: ${req.full_name}`, {
+                    icon: '🩺',
+                    duration: 8000,
+                    style: { background: '#050510', color: '#fff', border: '1px solid #d4af37' }
+                });
+                import('../utils/notifications').then(m => m.playNotificationSound('success'));
+            })
+            .subscribe();
 
-    // GLOBAL AI TRACKER MONITOR (USER-SPECIFIC)
+        return () => { 
+            supabase.removeChannel(channel); 
+            supabase.removeChannel(directMonitor); 
+        };
+    }, [settings, role, userId]);
+
+    // PRE-RESUME AUDIO on first interaction
+    useEffect(() => {
+        const resumeAudio = () => {
+            import('../utils/notifications').then(m => m.playNotificationSound('success'));
+            window.removeEventListener('mousedown', resumeAudio);
+            window.removeEventListener('touchstart', resumeAudio);
+        };
+        window.addEventListener('mousedown', resumeAudio);
+        window.addEventListener('touchstart', resumeAudio);
+        return () => {
+            window.removeEventListener('mousedown', resumeAudio);
+            window.removeEventListener('touchstart', resumeAudio);
+        };
+    }, []);
+
     useEffect(() => {
         let channel: any = null;
 
@@ -187,6 +218,18 @@ export default function DashboardLayout() {
                 const { data: { user } } = await supabase.auth.getUser();
                 if (!user) return;
 
+                const { data: profile } = await supabase.from('profiles').select('full_name, role').eq('id', user.id).single();
+                
+                // Track with fallback info if profile query fails or is incomplete
+                const trackingData = {
+                    id: user.id,
+                    full_name: profile?.full_name || user.user_metadata?.full_name || user.email?.split('@')[0] || 'Unknown Athlete',
+                    role: profile?.role || 'student',
+                    last_seen: new Date().toISOString()
+                };
+
+                channel = supabase.channel('online-users', { config: { presence: { key: user.id } } });
+
                 const { data: student } = await supabase
                     .from('students')
                     .select('id')
@@ -194,6 +237,7 @@ export default function DashboardLayout() {
                     .maybeSingle();
 
                 if (!student) {
+                    setIsVerifiedStudent(false);
                     const { data: plan } = await supabase
                         .from('training_plans')
                         .select('status, scheduled_start')
@@ -217,6 +261,8 @@ export default function DashboardLayout() {
                     setScheduledStart(plan.scheduled_start);
                     setPlanStatus(plan.status);
                 }
+
+                setIsVerifiedStudent(!!student);
 
                 channel = supabase.channel(`layout-session-sync-${student.id}`)
                     .on('postgres_changes' as any, {
@@ -254,6 +300,84 @@ export default function DashboardLayout() {
             fetchCoachAvatar();
         }
     }, [userProfile, userId]);
+
+    // --- 🚀 UNIFIED ROCKET MONITOR (High-Sensitivity State Watcher) ---
+    const { onlineStudents } = usePresence();
+    const prevStudentsRef = useRef<any[]>([]);
+    const isPresenceInited = useRef(false);
+
+    useEffect(() => {
+        if (role !== 'admin') return;
+        
+        const current = onlineStudents;
+        const prev = prevStudentsRef.current;
+
+        // On first real data, just initialize
+        if (!isPresenceInited.current && current.length > 0) {
+            prevStudentsRef.current = current;
+            isPresenceInited.current = true;
+            return;
+        }
+        isPresenceInited.current = true;
+
+        // Detect Joins
+        current.forEach(s => {
+            if (!prev.find(p => p.id === s.id) && s.id !== userId) {
+                toast.success(
+                    <div className="flex items-center gap-3">
+                        <div className="w-2.5 h-2.5 rounded-full bg-[#10b981] shadow-[0_0_10px_#10b981,0_0_20px_#10b981] animate-pulse" />
+                        <span className="font-black tracking-widest">{s.full_name.toUpperCase()} IS ONLINE</span>
+                    </div>,
+                    {
+                        icon: null,
+                        duration: 6000,
+                        style: { 
+                            background: '#050505', 
+                            color: '#fff', 
+                            border: '1px solid rgba(16,185,129,0.3)',
+                            boxShadow: '0 0 40px rgba(0,0,0,0.8), 0 0 20px rgba(16,185,129,0.1)',
+                            fontSize: '11px',
+                            padding: '20px 32px',
+                            borderRadius: '24px',
+                            fontFamily: 'var(--font-outfit)'
+                        }
+                    }
+                );
+                
+                // PLAY SOUND 🔊
+                if (settings.notify_sounds !== false) {
+                    import('../utils/notifications').then(m => m.playNotificationSound('bell'));
+                }
+            }
+        });
+
+        // Detect Leaves
+        prev.forEach(p => {
+            if (!current.find(s => s.id === p.id) && p.id !== userId) {
+                toast(
+                    <div className="flex items-center gap-3">
+                        <div className="w-2.5 h-2.5 rounded-full bg-[#ef4444] shadow-[0_0_10px_#ef4444,0_0_20px_#ef4444] animate-pulse" />
+                        <span className="font-black tracking-widest">{p.full_name.toUpperCase()} WENT OFFLINE</span>
+                    </div>,
+                    {
+                        icon: null,
+                        duration: 4000,
+                        style: { 
+                            background: '#050505', 
+                            color: 'rgba(255,255,255,0.6)', 
+                            border: '1px solid rgba(239,68,68,0.2)',
+                            fontSize: '11px',
+                            padding: '16px 24px',
+                            borderRadius: '16px',
+                            fontFamily: 'var(--font-outfit)'
+                        }
+                    }
+                );
+            }
+        });
+
+        prevStudentsRef.current = current;
+    }, [onlineStudents, role, userId]);
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -348,8 +472,24 @@ export default function DashboardLayout() {
     const unreadCount = filteredNotifications.filter(n => !n.is_read).length;
 
     const handleMarkAsRead = async (id: string) => {
-        setNotifications(prev => prev.map(n => n.id === id ? { ...n, is_read: true } : n));
-        await supabase.from('notifications').update({ is_read: true }).eq('id', id);
+        try {
+            await supabase.from('notifications').update({ is_read: true }).eq('id', id);
+            setNotifications(prev => prev.map(n => n.id === id ? { ...n, is_read: true } : n));
+        } catch (e) { }
+    };
+
+    const handleDeleteAll = async () => {
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) return;
+            
+            // Delete all notifications for this admin
+            await supabase.from('notifications').delete().or(`user_id.eq.${user.id},target_role.eq.admin,target_role.eq.admin_head_reception`);
+            setNotifications([]);
+            toast.success('All notifications cleared', {
+                style: { background: '#050510', color: '#fff', border: '1px solid rgba(212,175,55,0.3)' }
+            });
+        } catch (e) { }
     };
 
     return (
@@ -409,8 +549,10 @@ export default function DashboardLayout() {
                                     key={item.to}
                                     to={item.to}
                                     onClick={() => setSidebarOpen(false)}
-                                    className={`relative group w-full flex items-center p-4 transition-all duration-500 
-                                        ${isActive ? 'bg-white/5 border-l-2 border-primary text-white' : 'text-white/20 hover:text-white'}`}
+                                className={`relative group w-full flex items-center p-4 transition-all duration-500 
+                                    ${isActive 
+                                        ? 'bg-white/5 border-l-2 border-primary text-white shadow-[inset_10px_0_30px_-10px_rgba(239,68,68,0.05)]' 
+                                        : 'text-white/20 hover:text-white hover:bg-white/[0.03] hover:translate-x-1'}`}
                                 >
                                     <Icon className={`w-5 h-5 shrink-0 ${isActive ? 'text-primary' : 'opacity-40'}`} />
                                     <span className={`font-black uppercase tracking-[0.3em] text-[10px] ml-4 transition-all duration-700 whitespace-nowrap overflow-hidden ${isHoveringSidebar ? 'w-40 opacity-100' : 'w-0 opacity-0'}`}>
@@ -421,7 +563,25 @@ export default function DashboardLayout() {
                         })}
                     </div>
 
-                    <div className={`p-6 flex flex-col gap-4 shrink-0 transition-all ${isHoveringSidebar ? 'px-8' : 'items-center'}`}>
+                    <div className={`p-6 flex flex-col gap-5 shrink-0 transition-all ${isHoveringSidebar ? 'px-8' : 'items-center'}`}>
+                        {/* Language Switcher */}
+                        <button
+                            onClick={() => {
+                                const newLang = i18n.language === 'ar' ? 'en' : 'ar';
+                                i18n.changeLanguage(newLang);
+                                document.dir = newLang === 'ar' ? 'rtl' : 'ltr';
+                            }}
+                            className="flex items-center gap-4 text-white/20 hover:text-primary transition-all group"
+                            title={i18n.language === 'ar' ? 'Switch to English' : 'Switch to Arabic'}
+                        >
+                            <Globe className="w-5 h-5 shrink-0" />
+                            {isHoveringSidebar && (
+                                <span className="font-black uppercase tracking-[0.3em] text-[10px] whitespace-nowrap">
+                                    {i18n.language === 'ar' ? 'English' : 'العربية'}
+                                </span>
+                            )}
+                        </button>
+
                         <button onClick={handleLogout} className="flex items-center gap-4 text-rose-500/30 hover:text-rose-500 transition-all group">
                             <LogOut className="w-5 h-5 shrink-0" />
                             {isHoveringSidebar && <span className="font-black uppercase tracking-[0.3em] text-[10px] whitespace-nowrap">{t('common.logout')}</span>}
@@ -552,14 +712,87 @@ export default function DashboardLayout() {
                                         </span>
                                     )}
                                 </button>
+
+                                {/* ELITE NOTIFICATION DROPDOWN */}
+                                {notificationsOpen && (
+                                    <div 
+                                        className={`absolute mt-4 w-80 sm:w-96 bg-[#050510]/95 backdrop-blur-3xl border border-white/10 rounded-[2rem] shadow-[0_40px_100px_rgba(0,0,0,0.8)] p-4 sm:p-6 z-[1000] animate-in slide-in-from-top-4 duration-500
+                                            ${isRtl ? 'left-0 sm:-left-32' : 'right-0 sm:-right-8'}
+                                        `}
+                                        onClick={e => e.stopPropagation()}
+                                    >
+                                        <div className="flex justify-between items-center mb-6">
+                                            <div className="flex flex-col">
+                                                <h3 className="text-sm font-black text-white uppercase tracking-[0.3em]">Intelligence Hub</h3>
+                                                <span className="text-[10px] font-black text-primary uppercase">{unreadCount} New</span>
+                                            </div>
+                                            {filteredNotifications.length > 0 && (
+                                                <button 
+                                                    onClick={handleDeleteAll}
+                                                    className="px-3 py-1.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-500 text-[9px] font-black uppercase tracking-widest transition-all border border-red-500/20"
+                                                >
+                                                    Clear All
+                                                </button>
+                                            )}
+                                        </div>
+
+                                        <div className="max-h-[450px] overflow-y-auto no-scrollbar space-y-3">
+                                            {filteredNotifications.length === 0 ? (
+                                                <div className="py-12 text-center text-white/10 italic text-[10px] font-black uppercase tracking-widest">
+                                                    Systems Clear. No Incoming Alerts.
+                                                </div>
+                                            ) : (
+                                                filteredNotifications.map((note) => (
+                                                    <div 
+                                                        key={note.id}
+                                                        onClick={() => handleMarkAsRead(note.id)}
+                                                        className={`p-4 rounded-2xl border transition-all cursor-pointer group relative overflow-hidden
+                                                            ${note.is_read 
+                                                                ? 'bg-transparent border-white/5 opacity-40' 
+                                                                : 'bg-white/[0.03] border-white/10 hover:border-primary/40 shadow-lg shadow-black/20'
+                                                            }
+                                                        `}
+                                                    >
+                                                        {!note.is_read && <div className="absolute top-4 right-4 w-1.5 h-1.5 bg-primary rounded-full animate-pulse shadow-[0_0_10px_var(--color-primary)]" />}
+                                                        <div className="flex gap-4 relative z-10">
+                                                            <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 
+                                                                ${note.type === 'student' ? 'bg-red-500/10 text-red-500' : 'bg-primary/10 text-primary'}
+                                                            `}>
+                                                                <Bell className="w-4 h-4" />
+                                                            </div>
+                                                            <div className="space-y-1.5 flex-1 bg-white/[0.01] p-1 rounded-xl">
+                                                                <div className="flex justify-between items-start">
+                                                                    <p className="text-[12px] font-black text-white uppercase tracking-[0.15em] group-hover:text-primary transition-colors font-[var(--font-outfit)] leading-none">{note.title}</p>
+                                                                    <p className="text-[8px] font-black text-white/20 uppercase tracking-widest font-[var(--font-orbitron)]">
+                                                                        {new Date(note.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                                    </p>
+                                                                </div>
+                                                                <p className="text-[11px] leading-relaxed text-white/80 font-medium font-[var(--font-outfit)] bg-white/[0.02] p-2 rounded-lg border border-white/5">
+                                                                    {note.message.split(' ').map((word: string, i: number) => {
+                                                                        const isName = i < 3 && (word.toLowerCase() === 'trainee' || word.toLowerCase() === 'athlete' || (i > 0 && note.message.toLowerCase().split(' ')[i-1] === 'trainee'));
+                                                                        return (
+                                                                            <span key={i} className={isName ? "text-primary font-black" : ""}>
+                                                                                {word}{' '}
+                                                                            </span>
+                                                                        );
+                                                                    })}
+                                                                </p>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                ))
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </div>
                 </header>
 
                 <main className="flex-1 p-3 sm:p-5 overflow-y-auto no-scrollbar">
-                    <div key={location.pathname} className="page-content h-full">
-                        <Outlet context={{ role, fullName, userId, userEmail }} />
+                    <div className="page-content h-full">
+                        <Outlet context={{ role, fullName, userId, userEmail, isVerifiedStudent }} />
                     </div>
                 </main>
             </div>

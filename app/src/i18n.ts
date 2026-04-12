@@ -24,7 +24,7 @@ i18n
                     },
                     register: {
                         title: 'Create Account',
-                        subtitle: 'Join the Elite Academy',
+                        subtitle: 'COACH MARYAM | ELITE PROTOCOL',
                         fullName: 'Full Name',
                         phone: 'Phone Number',
                         email: 'Email Address',
@@ -582,7 +582,7 @@ i18n
                     },
                     register: {
                         title: 'إنشاء حساب',
-                        subtitle: 'انضم إلى أكاديمية النخبة',
+                        subtitle: 'كوتش مريم | بروتوكول النخبة',
                         fullName: 'الاسم بالكامل',
                         phone: 'رقم الهاتف',
                         email: 'البريد الإلكتروني',

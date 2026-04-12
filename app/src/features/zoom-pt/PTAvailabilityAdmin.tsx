@@ -21,7 +21,7 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import PageHeader from '../../components/PageHeader';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 
 const STATUS_COLORS: Record<string, string> = {
     pending: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
@@ -255,7 +255,24 @@ function CustomTimePicker({ value, onChange, label }: { value: string; onChange:
 
 export default function PTAvailabilityAdmin() {
     const navigate = useNavigate();
-    const [activeTab, setActiveTab] = useState<'availability' | 'bookings' | 'analytics'>('availability');
+    const [searchParams, setSearchParams] = useSearchParams();
+    const [activeTab, setActiveTab] = useState<'availability' | 'bookings' | 'analytics'>(
+        (searchParams.get('tab') as any) || 'availability'
+    );
+
+    // Sync state to local state if search param changes
+    useEffect(() => {
+        const tab = searchParams.get('tab');
+        if (tab && (tab === 'availability' || tab === 'bookings' || tab === 'analytics')) {
+            setActiveTab(tab);
+        }
+    }, [searchParams]);
+
+    // Update URL when tab changes manually
+    const handleTabChange = (tab: 'availability' | 'bookings' | 'analytics') => {
+        setActiveTab(tab);
+        setSearchParams({ tab }, { replace: true });
+    };
 
     // Calendar & Selection State
     const [currentMonth, setCurrentMonth] = useState(new Date());
@@ -586,7 +603,7 @@ export default function PTAvailabilityAdmin() {
                     ] as const).map(tab => (
                         <button
                             key={tab.id}
-                            onClick={() => setActiveTab(tab.id)}
+                            onClick={() => handleTabChange(tab.id)}
                             className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === tab.id
                                 ? 'bg-primary text-white shadow-lg shadow-primary/20'
                                 : 'text-white/40 hover:text-white hover:bg-white/5'

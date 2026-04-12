@@ -31,7 +31,7 @@ export default function Dashboard() {
     const { userProfile } = useTheme();
     const { data: analytics, isLoading: analyticsLoading } = useAdminAnalytics();
     const { onlineStudents, onlineCount } = usePresence();
-    const [selectedMetric, setSelectedMetric] = useState<'PT' | 'Consultation' | 'Total' | null>(null);
+    const [selectedMetric, setSelectedMetric] = useState<'Total Revenue' | 'Consultations' | 'PT Sessions' | 'Athletes' | null>(null);
     const [isVerifiedStudent, setIsVerifiedStudent] = useState<boolean | null>(null);
     const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
 
@@ -40,9 +40,12 @@ export default function Dashboard() {
     const [planStatus, setPlanStatus] = useState<string | null>(null);
 
     const filteredDetails = useMemo(() => {
-        if (!selectedMetric || !analytics?.details) return [];
-        if (selectedMetric === 'Total') return analytics.details;
-        return analytics.details.filter(d => d.type === selectedMetric);
+        if (!selectedMetric || !analytics) return [];
+        if (selectedMetric === 'Total Revenue') return analytics.revenueDetails || [];
+        if (selectedMetric === 'Consultations') return analytics.consultationDetails || [];
+        if (selectedMetric === 'PT Sessions') return analytics.ptDetails || [];
+        if (selectedMetric === 'Athletes') return analytics.athleteDetails || [];
+        return [];
     }, [selectedMetric, analytics]);
 
     // HEALING REDIRECTION: Check if user exists in Students table regardless of profile role
@@ -131,45 +134,44 @@ export default function Dashboard() {
 
     const metrics = [
         {
-            id: 'Total',
+            id: 'Total Revenue',
             label: 'Cycle Revenue',
             value: formatPrice(analytics?.totalRevenue || 0),
-            subValue: 'Total Inbound',
+            subValue: 'Total Monthly Inbound',
             icon: DollarSign,
             color: 'text-white',
-            glow: 'shadow-[0_0_50px_rgba(255,255,255,0.1)]',
-            trend: '+14.2%'
+            glow: 'shadow-[0_0_50px_rgba(255,255,255,0.05)]',
+            trend: 'Revenue Stream'
         },
         {
-            id: 'PT',
-            label: 'PT Revenue',
-            value: formatPrice(analytics?.ptRevenue || 0),
-            subValue: 'Private Sessions',
+            id: 'Consultations',
+            label: 'Consultations',
+            value: analytics?.consultationCount || 0,
+            subValue: 'Strategy Sessions',
+            icon: Sparkles,
+            color: 'text-emerald-400',
+            glow: 'shadow-[0_0_50px_rgba(16,185,129,0.1)]',
+            trend: 'Active Bookings'
+        },
+        {
+            id: 'PT Sessions',
+            label: 'PT Sessions',
+            value: analytics?.ptCount || 0,
+            subValue: 'Personal Training',
             icon: Medal,
             color: 'text-amber-400',
-            glow: 'shadow-[0_0_50px_rgba(245,158,11,0.15)]',
-            trend: 'Elite Yield'
-        },
-        {
-            id: 'Consultation',
-            label: 'Consultations',
-            value: formatPrice(analytics?.consultationRevenue || 0),
-            subValue: 'Elite Strategy',
-            icon: Sparkles,
-            color: 'text-primary',
-            glow: 'shadow-[0_0_50px_rgba(var(--primary-rgb,16,185,129),0.15)]',
-            trend: 'Direct Booking'
+            glow: 'shadow-[0_0_50px_rgba(245,158,11,0.1)]',
+            trend: 'Confirmed Missions'
         },
         {
             id: 'Athletes',
-            label: 'Athletes',
+            label: 'Elite Athletes',
             value: analytics?.athleteCount || 0,
-            subValue: 'Total Strength',
+            subValue: 'Active Roster',
             icon: Users,
-            color: 'text-white/60',
-            glow: 'shadow-[0_0_50px_rgba(255,255,255,0.05)]',
-            trend: 'Active Roster',
-            path: '/app/students'
+            color: 'text-blue-400',
+            glow: 'shadow-[0_0_50px_rgba(59,130,246,0.1)]',
+            trend: 'Total Strength'
         }
     ];
 
@@ -181,75 +183,53 @@ export default function Dashboard() {
                 <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-amber-500/5 rounded-full blur-[120px]" />
             </div>
 
-            <div className="relative z-10 space-y-8">
-                {/* Header Canvas - Elite Transformation */}
-                <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 py-6 mb-12">
-                <div className="flex flex-col gap-6">
-                    {/* Header Breadcrumb & Greeting */}
-                    <div className="space-y-4">
-                        <div className="flex items-center gap-3">
-                            <div className="h-4 w-[2px] bg-primary rounded-full shadow-[0_0_10px_rgba(var(--color-primary),0.8)]" />
-                            <h2 className="text-[10px] font-black text-white/40 uppercase tracking-[0.4em]">
-                                {t('dashboard.welcomeBack', 'Intelligence Active')}
-                            </h2>
-                        </div>
-                        
-                        <div className="flex flex-col gap-2">
-                            <div className="flex items-center gap-3 ml-1">
-                                <span className="text-[11px] font-black text-primary uppercase tracking-[0.5em] drop-shadow-[0_0_8px_rgba(var(--color-primary),0.3)]">{t('dashboard.hello', 'Hello')}</span>
-                                <div className="h-[1px] w-8 bg-gradient-to-r from-primary/40 to-transparent" />
-                            </div>
-                            <h1 className="text-2xl md:text-3xl lg:text-4xl font-black text-white tracking-tighter uppercase leading-tight animate-in fade-in zoom-in-95 duration-1000">
-                                <span className="premium-gradient-text drop-shadow-[0_10px_20px_rgba(var(--color-primary),0.15)] opacity-90">
+            <div className="relative z-10 space-y-12">
+                {/* Header Canvas - Anchored & Balanced Transformation */}
+                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 lg:gap-10 py-6 mb-8 border-b border-white/[0.03]">
+                    <div className="flex flex-col gap-4">
+                        {/* Greeting Cluster - Vertical Elite Hierarchy */}
+                        <div className="flex flex-col items-start gap-1">
+                            <span className="text-[10px] md:text-[11px] font-black text-white/20 uppercase tracking-[0.8em] leading-none mb-1 select-none animate-in fade-in slide-in-from-left-4 duration-1000">
+                                {t('dashboard.hello', 'Hello')}
+                            </span>
+                            <h1 className="text-3xl md:text-5xl font-black text-white tracking-tighter uppercase leading-none italic animate-in fade-in slide-in-from-left-8 duration-1000 delay-200">
+                                <span className="premium-gradient-text drop-shadow-[0_15px_40px_rgba(var(--color-primary),0.3)]">
                                     {firstName}
                                 </span>
                             </h1>
                         </div>
+
                     </div>
 
-                    {/* Status Badges Row */}
-                    <div className="flex flex-wrap items-center gap-3 opacity-0 animate-in fade-in slide-in-from-left-12 duration-1000 delay-500 fill-mode-forwards">
-                        <div className="flex items-center gap-2 px-4 py-2 rounded-2xl bg-primary/5 border border-primary/10 backdrop-blur-md">
-                            <Zap className="w-3.5 h-3.5 text-primary animate-pulse" />
-                            <span className="text-[10px] font-black text-primary uppercase tracking-[0.3em]">Elite Perspective</span>
-                        </div>
-                        <div className="flex items-center gap-2 px-4 py-2 rounded-2xl bg-white/5 border border-white/5 backdrop-blur-md">
-                            <Activity className="w-3.5 h-3.5 text-emerald-400" />
-                            <span className="text-[10px] font-black text-white/40 uppercase tracking-[0.3em]">Intelligence Active</span>
-                        </div>
-                    </div>
-                </div>
-
-                    <div className="flex items-center gap-12">
+                    {/* Right-Side Chronology */}
+                    <div className="flex items-center lg:justify-end animate-in fade-in slide-in-from-right-8 duration-1000">
                         <PremiumClock />
                     </div>
                 </div>
 
                 {/* Floating 4-Card Metrics Grid (No Cards/Backgrounds) */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-8">
                     {metrics.map((stat, i) => (
                         <div
                             key={stat.id}
                             onClick={() => stat.id !== 'Athletes' ? setSelectedMetric(stat.id as any) : navigate(stat.path || '/')}
                             onMouseEnter={playHoverSound}
-                            className="relative py-4 px-2 transition-all duration-500 cursor-pointer group flex flex-col items-center text-center sm:border-r sm:border-white/[0.03] last:border-r-0"
+                            className="relative py-2 sm:py-4 px-1 sm:px-2 transition-all duration-500 cursor-pointer group flex flex-col items-center text-center sm:border-r sm:border-white/[0.03] last:border-r-0"
                         >
                             {/* Icon & Trend Row */}
-                            <div className="flex items-center gap-3 mb-4">
-                                <div className={`p-2 rounded-lg bg-white/5 border border-white/5 group-hover:scale-125 transition-transform duration-500 ${stat.color}`}>
-                                    <stat.icon className="w-4 h-4" />
-                                </div>
-                                <div className="text-[8px] font-black text-emerald-500 uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity">
+                            <div className="flex items-center gap-2 sm:gap-3 mb-2 sm:mb-4">
+                                <stat.icon className={`w-4 h-4 sm:w-5 sm:h-5 ${stat.color} group-hover:scale-125 transition-transform duration-500`} />
+                                <div className="text-[7px] sm:text-[8px] font-black text-emerald-500 uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity">
                                     {stat.trend}
                                 </div>
                             </div>
                             
-                            <div className="space-y-1">
-                                <p className="text-[10px] font-black text-white/20 uppercase tracking-[0.3em] group-hover:text-primary transition-colors">{stat.label}</p>
-                                <h3 className="text-3xl lg:text-4xl font-black text-white tracking-tighter tabular-nums group-hover:scale-105 transition-transform">
+                            <div className="space-y-0.5 sm:space-y-1">
+                                <p className="text-[8px] sm:text-[10px] font-black text-white/20 uppercase tracking-[0.2em] sm:tracking-[0.3em] group-hover:text-primary transition-colors">{stat.label}</p>
+                                <h3 className="text-xl sm:text-3xl lg:text-4xl font-black text-white tracking-tighter tabular-nums group-hover:scale-105 transition-transform">
                                     {analyticsLoading ? '...' : stat.value}
                                 </h3>
-                                <p className="text-[9px] font-bold text-white/5 uppercase tracking-widest">{stat.subValue}</p>
+                                <p className="text-[7px] sm:text-[9px] font-bold text-white/5 uppercase tracking-widest">{stat.subValue}</p>
                             </div>
 
                             {/* Minimal Decorative Underline on Hover */}
@@ -258,22 +238,21 @@ export default function Dashboard() {
                     ))}
                 </div>
 
-                {/* Main Content Grid: Fully Floating Live Floor & Agenda (No Cards) */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-12 pt-12">
-                    {/* Live Floor Area - Takes up 2 columns */}
-                    <div className="lg:col-span-2 min-h-[500px] flex flex-col">
-                        <div className="flex items-center justify-between mb-8 pb-6 border-b border-white/5">
-                            <div className="flex items-center gap-6">
-                                <div className="p-3 bg-primary/10 rounded-2xl border border-primary/20">
-                                    <Globe className="w-6 h-6 text-primary animate-pulse" />
-                                </div>
+                {/* Main Content Grid: Balanced Live Floor & Agenda */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 pt-10">
+                    {/* Live Floor Area */}
+                    <div className="min-h-[200px] flex flex-col">
+                        <div className="flex items-center justify-between mb-6 pb-4 border-b border-white/[0.03]">
+                            <div className="flex items-center gap-4">
+                                <Globe className="w-5 h-5 text-primary animate-pulse" />
                                 <div>
-                                    <h3 className="text-2xl font-black text-white uppercase tracking-[0.2em] leading-none mb-2">Live Floor</h3>
-                                    <p className="text-[10px] font-bold text-white/20 uppercase tracking-[0.4em]">Real-time AthletePresence Intelligence</p>
+                                    <h3 className="text-lg font-black text-white uppercase tracking-[0.2em] leading-none mb-1.5">Live Floor</h3>
+                                    <p className="text-[9px] font-bold text-white/20 uppercase tracking-[0.4em]">Athlete Intelligence</p>
                                 </div>
                             </div>
-                            <div className="px-4 py-2 bg-emerald-500/5 border border-emerald-500/10 rounded-full backdrop-blur-sm">
-                                <span className="text-[10px] font-black text-emerald-400 uppercase tracking-widest">{onlineCount} Athletes Active</span>
+                            <div className="flex items-center gap-2">
+                                <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
+                                <span className="text-[9px] font-black text-emerald-400 uppercase tracking-widest">{onlineStudents.length} Online</span>
                             </div>
                         </div>
                         <div className="flex-1">
@@ -281,17 +260,8 @@ export default function Dashboard() {
                         </div>
                     </div>
 
-                    {/* Elite Agenda - Sidebar */}
-                    <div className="lg:col-span-1 border-l border-white/[0.03] pl-12">
-                         <div className="flex items-center gap-6 mb-8 pb-6 border-b border-white/5">
-                            <div className="p-3 bg-primary/10 rounded-2xl border border-primary/20">
-                                <Clock className="w-6 h-6 text-primary" />
-                            </div>
-                            <div>
-                                <h3 className="text-2xl font-black text-white uppercase tracking-[0.2em] leading-none mb-2">Elite Agenda</h3>
-                                <p className="text-[10px] font-bold text-white/20 uppercase tracking-[0.4em]">Upcoming Training Missions</p>
-                            </div>
-                        </div>
+                    {/* Elite Agenda */}
+                    <div className="flex flex-col">
                         <UpcomingAgendaWidget />
                     </div>
                 </div>
@@ -299,54 +269,67 @@ export default function Dashboard() {
 
             </div>
 
-            {/* Financial Detail Intelligence Overlay - Ultra Glassmorphism */}
+            {/* Intelligence Overlay - Ultra Glassmorphism */}
             {selectedMetric && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center p-2 sm:p-4 md:p-8 animate-in fade-in duration-500">
                     <div 
-                        className="absolute inset-0 bg-black/10 backdrop-blur-md cursor-pointer"
+                        className="absolute inset-0 bg-black/40 backdrop-blur-2xl cursor-pointer"
                         onClick={() => setSelectedMetric(null)}
                     />
                     
-                    <div className="relative w-full max-w-2xl max-h-[90vh] bg-[#0c0e14] border border-white/10 rounded-[2.5rem] overflow-hidden flex flex-col animate-in zoom-in-95 slide-in-from-bottom-8 duration-700 shadow-[0_50px_100px_rgba(0,0,0,0.6)]">
-                        {/* Interior Glass Glows */}
-                        <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-[100px] -mr-32 -mt-32 pointer-events-none" />
-                        
+                    <div className="relative w-full max-w-2xl max-h-[85vh] bg-[#0c0e14]/90 border border-white/5 rounded-[3rem] overflow-hidden flex flex-col animate-in zoom-in-95 slide-in-from-bottom-8 duration-700 shadow-[0_50px_150px_rgba(0,0,0,0.8)]">
                         {/* High-End Header */}
-                        <div className="p-6 sm:p-10 border-b border-white/5 flex items-center justify-between relative z-10">
+                        <div className="p-8 sm:p-10 border-b border-white/[0.03] flex items-center justify-between relative z-10">
                             <div className="space-y-1">
-                                <h3 className="text-xl sm:text-2xl font-black text-white uppercase tracking-tighter leading-tight">
-                                    {selectedMetric} Intelligence
+                                <h3 className="text-xl sm:text-2xl font-black text-white uppercase tracking-tighter leading-tight drop-shadow-[0_0_15px_rgba(255,255,255,0.2)]">
+                                    {selectedMetric} <span className="text-primary italic">Intelligence</span>
                                 </h3>
-                                <p className="text-[8px] sm:text-[10px] font-black text-white/30 uppercase tracking-[0.4em]">Detailed Transaction Audit</p>
+                                <p className="text-[8px] sm:text-[10px] font-black text-white/30 uppercase tracking-[0.4em]">Tactical Data Stream Audit</p>
                             </div>
                             <button 
                                 onClick={() => setSelectedMetric(null)}
-                                className="p-3 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-2xl border border-red-500/20 transition-all active:scale-90"
+                                className="w-10 h-10 sm:w-12 sm:h-12 bg-white/5 hover:bg-red-500/20 text-white/40 hover:text-red-500 rounded-2xl border border-white/5 hover:border-red-500/20 transition-all active:scale-90 flex items-center justify-center"
                             >
-                                <X className="w-5 h-5 sm:w-6 sm:h-6" />
+                                <X className="w-5 h-5" />
                             </button>
                         </div>
 
-                        {/* Transaction Feed */}
-                        <div className="flex-1 overflow-y-auto p-6 sm:p-10 custom-scrollbar relative z-10">
+                        {/* Tactical Detail Feed */}
+                        <div className="flex-1 overflow-y-auto p-8 sm:p-10 custom-scrollbar relative z-10">
                             {filteredDetails.length === 0 ? (
-                                <div className="py-20 text-center opacity-20 italic font-black uppercase tracking-widest text-[9px]">No data streams detected</div>
+                                <div className="py-24 text-center">
+                                    <p className="opacity-20 italic font-black uppercase tracking-[0.5em] text-[10px]">No active data streams detected</p>
+                                </div>
                             ) : (
                                 <div className="space-y-1">
-                                    {filteredDetails.map((item, i) => (
-                                        <div key={item.id} className="flex items-center justify-between py-6 sm:py-8 border-b border-white/[0.03] hover:translate-x-1 transition-all group">
-                                            <div className="space-y-1 sm:space-y-2">
-                                                <p className="text-[8px] sm:text-[9px] font-black text-primary uppercase tracking-widest">{item.date}</p>
-                                                <p className="text-sm sm:text-xl font-black text-white uppercase tracking-tight group-hover:text-primary transition-colors">{item.student_name}</p>
-                                                <p className="text-[7px] sm:text-[9px] font-bold text-white/10 uppercase tracking-widest">{item.notes || 'System Audit Trail'}</p>
-                                            </div>
-                                            <div className="text-right space-y-2 sm:space-y-3">
-                                                <p className="text-lg sm:text-3xl font-black text-white tracking-tighter tabular-nums">
-                                                    {currency.code} {item.amount}
-                                                </p>
-                                                <div className="px-3 sm:px-4 py-1.5 bg-red-500/10 border border-red-500/20 rounded-full inline-block">
-                                                    <span className="text-[7px] sm:text-[9px] font-black text-red-500 uppercase tracking-[0.2em]">{item.type}</span>
+                                    {filteredDetails.map((item: any) => (
+                                        <div key={item.id} className="flex items-center justify-between py-6 border-b border-white/[0.03] hover:translate-x-1 transition-all group">
+                                            <div className="space-y-1.5">
+                                                <div className="flex items-center gap-3">
+                                                    <p className="text-[10px] font-black text-primary uppercase tracking-[0.2em]">{item.date}</p>
+                                                    {item.extra && (
+                                                        <span className="text-[9px] font-bold text-white/10 uppercase tracking-widest px-2 py-0.5 rounded bg-white/5">{item.extra}</span>
+                                                    )}
                                                 </div>
+                                                <p className="text-base sm:text-xl font-black text-white uppercase tracking-tight group-hover:text-primary transition-colors">
+                                                    {item.student_name || item.name}
+                                                </p>
+                                                <p className="text-[8px] sm:text-[10px] font-bold text-white/20 uppercase tracking-widest">{item.notes || `STATUS: ${item.status || 'ACTIVE'}`}</p>
+                                            </div>
+                                            <div className="text-right">
+                                                {item.amount !== undefined ? (
+                                                    <p className="text-xl sm:text-3xl font-black text-white tracking-tighter tabular-nums drop-shadow-[0_0_12px_rgba(255,255,255,0.1)]">
+                                                        {currency.code} {item.amount}
+                                                    </p>
+                                                ) : (
+                                                    <div className={`px-4 py-2 rounded-xl border font-black text-[9px] uppercase tracking-widest ${
+                                                        item.status === 'PAID' || item.status === 'CONFIRMED' || item.status === 'COMPLETED' 
+                                                            ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' 
+                                                            : 'bg-white/5 text-white/40 border-white/5'
+                                                    }`}>
+                                                        {item.status}
+                                                    </div>
+                                                )}
                                             </div>
                                         </div>
                                     ))}

@@ -146,7 +146,7 @@ export default function WalkieTalkie({ role, userId }: { role: string; userId: s
     };
 
     const startRecording = async () => {
-        if (role !== 'admin') return;
+        if (role !== 'admin' && role !== 'head_coach' && role !== 'coach') return;
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
             mediaRecorder.current = new MediaRecorder(stream, { mimeType: 'audio/webm' });
@@ -184,7 +184,7 @@ export default function WalkieTalkie({ role, userId }: { role: string; userId: s
     };
 
     const handlePressStart = (e: React.MouseEvent | React.TouchEvent | MouseEvent | TouchEvent) => {
-        if (role !== 'admin') return;
+        if (role !== 'admin' && role !== 'head_coach' && role !== 'coach') return;
 
         // Prevent synthetic mouse events on touch devices
         if (e.type === 'touchstart') {
@@ -232,7 +232,7 @@ export default function WalkieTalkie({ role, userId }: { role: string; userId: s
     const handleToggle = (e: React.MouseEvent | React.TouchEvent | MouseEvent | TouchEvent) => {
         // This is only for the "Stop" action in toggle mode 
         // OR if the user just taps the button.
-        if (role !== 'admin') return;
+        if (role !== 'admin' && role !== 'head_coach' && role !== 'coach') return;
 
         // If we are already recording and it's a tap, stop it
         if (isRecording && (Date.now() - mouseDownTime.current < 250)) {
@@ -501,95 +501,8 @@ export default function WalkieTalkie({ role, userId }: { role: string; userId: s
 
     return (
         <div ref={containerRef} onMouseLeave={() => setShowRecipients(false)} className="flex items-center gap-1.5 sm:gap-2 relative">
-            {/* Recipients Selection - ADMIN ONLY */}
-            {role === 'admin' && (
-                <>
-                    <button
-                        onClick={handleOpenRecipients}
-                        className={`relative w-8 h-8 md:w-10 md:h-10 flex items-center justify-center rounded-full transition-all sidebar-3d-item ${showRecipients || selectedUserIds.length > 0
-                            ? 'bg-amber-500/10 border border-amber-500/50 text-amber-500 sidebar-3d-item-active'
-                            : 'text-white/40 hover:text-white hover:bg-white/10'
-                            }`}
-                        onMouseEnter={playHoverSound}
-                        title="Select who receives this message"
-                    >
-                        <Users className="w-3.5 h-3.5 md:w-4 md:h-4" />
-                        {selectedUserIds.length > 0 && (
-                            <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-amber-500 text-[9px] font-bold text-black border-2 border-[#122E34] shadow-lg">
-                                {selectedUserIds.length}
-                            </span>
-                        )}
-                    </button>
-
-                    {showRecipients && (
-                        <div className="fixed sm:absolute top-24 sm:top-12 left-1/2 sm:left-auto -translate-x-1/2 sm:translate-x-0 sm:right-0 w-[calc(100vw-2rem)] sm:w-64 bg-[#1A1D21] border border-white/10 rounded-xl shadow-2xl overflow-hidden z-[9999] animate-in fade-in slide-in-from-top-2">
-                            <div className="p-3 border-b border-white/5 flex items-center justify-between bg-white/5">
-                                <span className="text-xs font-bold text-white/80">Select Recipients</span>
-                                <button
-                                    onClick={() => setShowRecipients(false)}
-                                    className="text-white/40 hover:text-white"
-                                >
-                                    <X className="w-4 h-4" />
-                                </button>
-                            </div>
-
-                            <div className="max-h-60 overflow-y-auto p-2 space-y-1 custom-scrollbar">
-                                {isLoadingUsers ? (
-                                    <div className="flex justify-center p-4">
-                                        <Loader2 className="w-5 h-5 animate-spin text-white/40" />
-                                    </div>
-                                ) : (
-                                    <>
-                                        <button
-                                            onClick={toggleAllUsers}
-                                            className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors text-xs font-medium ${selectedUserIds.length === availableUsers.length && availableUsers.length > 0
-                                                ? 'bg-amber-500/20 text-amber-500' // Changed to amber for better contrast
-                                                : 'hover:bg-white/5 text-white/60'
-                                                }`}
-                                            onMouseEnter={playHoverSound}
-                                        >
-                                            <div className={`w-4 h-4 rounded border flex items-center justify-center ${selectedUserIds.length === availableUsers.length && availableUsers.length > 0
-                                                ? 'bg-amber-500 border-amber-500'
-                                                : 'border-white/20'
-                                                }`}>
-                                                {selectedUserIds.length === availableUsers.length && availableUsers.length > 0 && <CheckSquare className="w-3 h-3 text-black" />}
-                                            </div>
-                                            Broadcast to All ({availableUsers.length})
-                                        </button>
-
-                                        <div className="h-px bg-white/10 my-1 mx-2" />
-
-                                        {availableUsers.map(user => (
-                                            <button
-                                                key={user.id}
-                                                onClick={() => toggleUserSelection(user.id)}
-                                                className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors text-xs font-medium ${selectedUserIds.includes(user.id)
-                                                    ? 'bg-emerald-500/20 text-emerald-400'
-                                                    : 'hover:bg-white/5 text-white/60'
-                                                    }`}
-                                                onMouseEnter={playHoverSound}
-                                            >
-                                                <div className={`w-4 h-4 rounded border flex items-center justify-center ${selectedUserIds.includes(user.id)
-                                                    ? 'bg-emerald-500 border-emerald-500'
-                                                    : 'border-white/20'
-                                                    }`}>
-                                                    {selectedUserIds.includes(user.id) && <CheckSquare className="w-3 h-3 text-black" />}
-                                                </div>
-                                                <div className="flex flex-col items-start px-1">
-                                                    <span className="text-xs">{user.full_name}</span>
-                                                    <span className="text-[9px] uppercase opacity-50">{user.role.replace('_', ' ')}</span>
-                                                </div>
-                                            </button>
-                                        ))}
-                                    </>
-                                )}
-                            </div>
-                        </div>
-                    )}
-                </>
-            )}
-            {/* Broadcast Button - ADMIN ONLY */}
-            {role === 'admin' && (
+            {/* Broadcast Button - BROADCASTERS ONLY */}
+            {(role === 'admin' || role === 'head_coach' || role === 'coach') && (
                 <button
                     ref={recordButtonRef}
                     onMouseDown={handlePressStart}
@@ -616,8 +529,8 @@ export default function WalkieTalkie({ role, userId }: { role: string; userId: s
                 </button>
             )}
 
-            {/* Speaker Button - ALL AUTHORIZED ROLES */}
-            {role !== 'admin' && (
+            {/* Speaker Button - LISTENERS ONLY */}
+            {role !== 'admin' && role !== 'head_coach' && role !== 'coach' && (
                 <button
                     onClick={() => {
                         setIsMuted(!isMuted);

@@ -54,7 +54,7 @@ export default function DashboardLayout() {
 
     // Derived states from unified userProfile
     const userId = userProfile?.id || null;
-    const role = userProfile?.role || null;
+    const role = userProfile?.role?.toLowerCase() || null;
     const fullName = userProfile?.full_name?.trim() || null;
     const userEmail = userProfile?.email?.trim() || null;
     const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
@@ -181,7 +181,7 @@ export default function DashboardLayout() {
     // GLOBAL AI TRACKER MONITOR (USER-SPECIFIC)
     useEffect(() => {
         let channel: any = null;
-        
+
         const setupSessionMonitor = async () => {
             try {
                 const { data: { user } } = await supabase.auth.getUser();
@@ -212,17 +212,17 @@ export default function DashboardLayout() {
                     .select('status, scheduled_start')
                     .eq('student_id', student.id)
                     .maybeSingle();
-                
+
                 if (plan) {
                     setScheduledStart(plan.scheduled_start);
                     setPlanStatus(plan.status);
                 }
 
                 channel = supabase.channel(`layout-session-sync-${student.id}`)
-                    .on('postgres_changes' as any, { 
-                        event: '*', 
-                        table: 'training_plans', 
-                        filter: `student_id=eq.${student.id}` 
+                    .on('postgres_changes' as any, {
+                        event: '*',
+                        table: 'training_plans',
+                        filter: `student_id=eq.${student.id}`
                     }, (payload: any) => {
                         setScheduledStart(payload.new?.scheduled_start || null);
                         setPlanStatus(payload.new?.status || null);
@@ -308,15 +308,19 @@ export default function DashboardLayout() {
 
     const allNavItems = [
         { to: '/app', icon: LayoutDashboard, label: t('common.dashboard'), roles: ['admin', 'head_coach', 'coach', 'reception', 'cleaner', 'student'] },
-        { to: (normalizedRole === 'admin' || normalizedRole === 'head_coach' || normalizedRole === 'coach') ? '/app/pt-availability' : '/app/pt-booking', 
-          icon: CreditCard, 
-          label: (normalizedRole === 'admin' || normalizedRole === 'head_coach' || normalizedRole === 'coach') ? t('common.ptManagement', 'PT Management') : t('common.ptHub', 'PT HUB'), 
-          roles: ['admin', 'head_coach', 'coach', 'reception', 'student'] },
+        {
+            to: (normalizedRole === 'admin' || normalizedRole === 'head_coach' || normalizedRole === 'coach') ? '/app/pt-availability' : '/app/pt-booking',
+            icon: CreditCard,
+            label: (normalizedRole === 'admin' || normalizedRole === 'head_coach' || normalizedRole === 'coach') ? t('common.ptManagement', 'PT Management') : t('common.ptHub', 'PT HUB'),
+            roles: ['admin', 'head_coach', 'coach', 'reception', 'student']
+        },
         { to: '/app/communications', icon: MessageSquare, label: t('common.communications', 'Chats'), roles: ['admin', 'head_coach', 'coach', 'reception', 'cleaner', 'student'] },
-        { to: (normalizedRole === 'student') ? '/app/book-consultation' : '/app/consultations', 
-          icon: Video, 
-          label: (normalizedRole === 'student') ? t('common.bookConsultation', 'Book Consultation') : t('common.consultations', 'Consultations'), 
-          roles: ['admin', 'student'] },
+        {
+            to: (normalizedRole === 'student') ? '/app/book-consultation' : '/app/consultations',
+            icon: Video,
+            label: (normalizedRole === 'student') ? t('common.bookConsultation', 'Book Consultation') : t('common.consultations', 'Consultations'),
+            roles: ['admin', 'student']
+        },
         { to: '/app/strategy-hub', icon: Sparkles, label: 'Strategy Hub', roles: ['admin', 'head_coach', 'coach'] },
         { to: '/app/smart-training', icon: Activity, label: 'AI Camera Tracker', roles: ['admin', 'head_coach', 'coach', 'student'] },
         { to: '/app/video-library', icon: Film, label: t('common.videoLibrary'), roles: ['admin', 'head_coach', 'coach', 'student'] },
@@ -425,19 +429,89 @@ export default function DashboardLayout() {
                     </div>
                 </div>
 
-                {/* MOBILE SIDEBAR */}
-                <div className="lg:hidden flex flex-col h-[100dvh] bg-black/60 backdrop-blur-3xl p-6">
-                    <div className="flex justify-between items-center mb-10">
-                         <h1 className="text-xl font-black text-white tracking-[0.4em] italic leading-none">SKIPPY</h1>
-                         <button onClick={() => setSidebarOpen(false)}><X className="w-6 h-6 text-white" /></button>
+                {/* MOBILE SIDEBAR - REINVENTED ELITE UI */}
+                <div className="lg:hidden flex flex-col h-[100dvh] bg-black/40 backdrop-blur-[40px] p-8 border-r border-white/5 animate-in slide-in-from-left duration-1000 ease-[cubic-bezier(0.23,1,0.32,1)]">
+                    {/* Header: Minimal & Sharp */}
+                    <div className="flex justify-between items-center mb-16 px-2">
+                        <div className="space-y-1.5">
+                            <h1 className="flex items-baseline gap-2 font-black italic leading-none tracking-tight">
+                                <span className="text-2xl text-white tracking-[0.2em] drop-shadow-[0_0_20px_rgba(255,255,255,0.2)]">SKIPPY</span>
+                                <span className="text-[11px] sm:text-xs text-primary font-black tracking-[0.3em] uppercase opacity-100 font-[var(--font-orbitron)]">Toes Q8</span>
+                            </h1>
+                            <div className="h-[1px] w-full bg-gradient-to-r from-primary/30 via-primary/10 to-transparent" />
+                        </div>
+                        <button
+                            onClick={() => setSidebarOpen(false)}
+                            className="w-8 h-8 bg-white/5 border border-white/10 rounded-full flex items-center justify-center text-white/30 hover:text-white transition-all active:scale-90"
+                        >
+                            <X className="w-4 h-4" />
+                        </button>
                     </div>
-                    <div className="flex-1 space-y-4 overflow-y-auto no-scrollbar">
-                        {navItems.map(item => (
-                            <Link key={item.to} to={item.to} onClick={() => setSidebarOpen(false)} className="flex items-center gap-5 p-4 rounded-2xl bg-white/5 text-white/60 active:bg-white/10 transition-all">
-                                <item.icon className="w-6 h-6" />
-                                <span className="font-black uppercase tracking-[0.4em] text-xs">{item.label}</span>
-                            </Link>
-                        ))}
+
+                    {/* Navigation: Fluid & Weightless Units */}
+                    <div className="flex-1 space-y-2.5 overflow-y-auto no-scrollbar custom-scrollbar pr-2">
+                        {navItems.map((item, idx) => {
+                            const Icon = item.icon;
+                            const isActive = location.pathname === item.to;
+                            return (
+                                <Link
+                                    key={item.to}
+                                    to={item.to}
+                                    onClick={() => setSidebarOpen(false)}
+                                    className={`group flex items-center justify-between p-4 rounded-2xl transition-all duration-500 relative overflow-hidden backdrop-blur-md
+                                        ${isActive
+                                            ? 'bg-primary/10 border border-primary/20 text-white shadow-[0_0_40px_rgba(var(--primary-rgb),0.1)]'
+                                            : 'bg-white/[0.02] border border-white/[0.03] text-white/30 hover:bg-white/[0.05] hover:text-white hover:translate-x-1'
+                                        }
+                                    `}
+                                    style={{ animationDelay: `${idx * 100}ms` }}
+                                >
+                                    <div className="flex items-center gap-4 relative z-10">
+                                        <div className={`transition-all duration-500 ${isActive ? 'scale-110 drop-shadow-[0_0_8px_rgba(var(--primary-rgb),0.5)]' : 'opacity-40 group-hover:opacity-100'}`}>
+                                            <Icon className={`w-4 h-4 sm:w-5 sm:h-5 ${isActive ? 'text-primary' : ''}`} />
+                                        </div>
+                                        <span className="font-black uppercase tracking-[0.3em] text-[9px] sm:text-[10px]">{item.label}</span>
+                                    </div>
+
+                                    {isActive && (
+                                        <div className="absolute right-6 w-1.5 h-1.5 bg-primary rounded-full animate-pulse shadow-[0_0_10px_var(--color-primary)]" />
+                                    )}
+
+                                    {/* Subtle Ambient Glow on Active */}
+                                    {isActive && (
+                                        <div className="absolute inset-0 bg-gradient-to-r from-primary/5 to-transparent pointer-events-none" />
+                                    )}
+                                </Link>
+                            );
+                        })}
+                    </div>
+
+                    {/* Footer: Tactical Actions - Split Row */}
+                    <div className="mt-4 pt-4 border-t border-white/[0.03] grid grid-cols-2 gap-2">
+                        {/* Language Switcher */}
+                        <button
+                            onClick={() => {
+                                const newLang = i18n.language === 'ar' ? 'en' : 'ar';
+                                i18n.changeLanguage(newLang);
+                                document.dir = newLang === 'ar' ? 'rtl' : 'ltr';
+                                setSidebarOpen(false);
+                            }}
+                            className="flex items-center justify-center gap-2 p-3 rounded-xl bg-white/[0.02] border border-white/5 text-white/40 hover:text-white transition-all active:scale-95 group"
+                        >
+                            <Globe className="w-3 h-3 text-primary" />
+                            <span className="font-black uppercase tracking-[0.2em] text-[8px]">
+                                {i18n.language === 'ar' ? 'EN' : 'AR'}
+                            </span>
+                        </button>
+
+                        {/* Compact Logout */}
+                        <button
+                            onClick={handleLogout}
+                            className="flex items-center justify-center gap-2 p-3 rounded-xl border border-red-500/10 bg-red-500/[0.02] text-red-500/30 font-black uppercase tracking-[0.2em] text-[8px] hover:text-red-500 hover:bg-red-500/10 transition-all active:scale-95"
+                        >
+                            <LogOut className="w-3 h-3" />
+                            {t('common.logout')}
+                        </button>
                     </div>
                 </div>
             </aside>
@@ -451,6 +525,21 @@ export default function DashboardLayout() {
                         </div>
 
                         <div className="flex items-center gap-4 sm:gap-6 justify-end lg:w-72">
+                            {/* Registration Button (Admin/Coach/Reception) */}
+                            {(role === 'admin' || role === 'head_coach' || role === 'coach' || role === 'reception') && (
+                                <Link 
+                                    to="/register"
+                                    className="w-9 h-9 flex items-center justify-center rounded-full text-red-500/70 hover:bg-red-500/10 transition-all"
+                                    title={t('common.registration', 'Registration')}
+                                >
+                                    <UserPlus className="w-4 h-4" />
+                                </Link>
+                            )}
+
+                            {/* Broadcast WalkieTalkie */}
+                            <WalkieTalkie role={role || ''} userId={userId || ''} />
+
+                            {/* Notifications Center */}
                             <div className="relative">
                                 <button
                                     onClick={(e) => { e.stopPropagation(); setNotificationsOpen(!notificationsOpen); }}
@@ -480,17 +569,17 @@ export default function DashboardLayout() {
                 <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/95 backdrop-blur-3xl animate-in fade-in duration-500" onClick={() => setIsAvatarModalOpen(false)}>
                     <div className="relative max-w-2xl w-full flex flex-col items-center">
                         <div className="p-1 rounded-[3rem] bg-gradient-to-br from-primary via-accent to-primary shadow-2xl">
-                             {avatarUrl ? (
+                            {avatarUrl ? (
                                 <img src={avatarUrl} alt="Profile" className="w-64 h-64 object-cover rounded-[3rem] border-4 border-[#08081a]" onClick={e => e.stopPropagation()} />
-                             ) : (
+                            ) : (
                                 <div className="w-64 h-64 bg-[#08081a] rounded-[3rem] flex items-center justify-center">
                                     <span className="text-white font-black text-8xl uppercase">{fullName?.[0] || 'A'}</span>
                                 </div>
-                             )}
+                            )}
                         </div>
                         <div className="mt-8 text-center bg-white/5 backdrop-blur-xl border border-white/10 px-8 py-4 rounded-3xl animate-in slide-in-from-bottom-4 duration-700">
-                             <h3 className="text-white font-black text-2xl tracking-tight">{fullName}</h3>
-                             <p className="text-primary text-[10px] font-black uppercase tracking-[0.5em] mt-1">{t(`roles.${role}`)}</p>
+                            <h3 className="text-white font-black text-2xl tracking-tight">{fullName}</h3>
+                            <p className="text-primary text-[10px] font-black uppercase tracking-[0.5em] mt-1">{t(`roles.${role}`)}</p>
                         </div>
                     </div>
                 </div>

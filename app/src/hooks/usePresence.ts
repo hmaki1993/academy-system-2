@@ -154,7 +154,10 @@ export function usePresence() {
     return {
         onlineUsers: Object.values(onlineUsers),
         onlineCount: Object.keys(onlineUsers).length,
-        onlineStudents: Object.values(onlineUsers).filter(u => u.role === 'student'),
+        onlineStudents: Object.values(onlineUsers).filter(u => {
+            const role = (u.role || '').toLowerCase();
+            return role === 'student' || role === 'trainee' || !['admin', 'coach', 'head_coach'].includes(role);
+        }),
         connectionStatus: status
     };
 }

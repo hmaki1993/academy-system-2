@@ -631,13 +631,22 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
                 if (profileRes.data && !isUnauthorizedGhost) {
                     console.log('🛡️ ThemeContext: Found valid user profile:', profileRes.data);
+                    
+                    // 🛡️ MASTER NAME DERIVATION: 
+                    // 1. Database Full Name (High priority - it's where 'Personal Settings' saves to)
+                    // 2. Auth Metadata (Fallback)
+                    // 3. Email prefix (Safety fallback)
+                    const dbName = profileRes.data.full_name?.trim();
+                    const metadataName = user.user_metadata?.full_name || user.user_metadata?.name;
+                    const finalName = dbName || metadataName || user.email?.split('@')[0] || 'User';
+
                     setUserProfile({
                         id: user.id,
                         email: user.email || '',
                         ...profileRes.data,
-                        // FALLBACK: If DB full_name is null/empty, use metadata
-                        full_name: profileRes.data.full_name || user.user_metadata?.full_name || user.user_metadata?.name || null
+                        full_name: finalName
                     });
+                } else if (isAdminEmail) {
                     // 🛡️ ADMIN FALLBACK: If they have an admin email but no profile record, 
                     // allow them to stay logged in as an admin to fix the issue.
                     console.warn('🛡️ ThemeContext: Admin profile missing in DB, using fallback.');
@@ -712,6 +721,23 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
             setHasLoaded(true);
         }
     };
+
+    // 🛡️ REAL-TIME IDENTITY SYNC
+    // Listen for manual updates from SettingsContainer to force a re-fetch of the profile
+    useEffect(() => {
+        const handleSync = () => {
+            console.log('🔄 ThemeContext: Global sync triggered via event (Identity/Gym Profile Updated)');
+            fetchSettings();
+        };
+
+        window.addEventListener('userProfileUpdated', handleSync);
+        window.addEventListener('gymProfileUpdated', handleSync);
+
+        return () => {
+            window.removeEventListener('userProfileUpdated', handleSync);
+            window.removeEventListener('gymProfileUpdated', handleSync);
+        };
+    }, []);
 
     const updateSettings = async (newSettings: Partial<GymSettings>): Promise<{ success: boolean; partial: boolean; }> => {
         if (isUpdatingRef.current) {

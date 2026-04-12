@@ -1511,7 +1511,7 @@ export default function Settings() {
                                         <FullScreenPreview
                                             show={showFullPreview}
                                             onClose={() => setShowFullPreview(false)}
-                                            activeSettings={previewSettings}
+                                            previewSettings={previewSettings}
                                             designMode={designMode}
                                         />
 

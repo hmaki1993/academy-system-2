@@ -190,7 +190,11 @@ i18n
                         noGroupsFound: 'No groups found',
                         createOneAbove: 'Create one above!',
                         selectedDate: 'Selected Date',
-                        activeSession: 'Active Session'
+                        activeSession: 'Active Session',
+                        feesPaid: 'Money Paid',
+                        ptSessions: 'PT Sessions',
+                        consultations: 'Consultations',
+                        eliteRank: 'Elite Rank'
                     },
                     settings: {
                         title: 'Settings',
@@ -738,7 +742,11 @@ i18n
                         noGroupsFound: 'لم يتم العثور على مجموعات',
                         createOneAbove: 'أنشئ واحدة أعلاه!',
                         selectedDate: 'التاريخ المختار',
-                        activeSession: 'حصة نشطة'
+                        activeSession: 'حصة نشطة',
+                        feesPaid: 'الفلوس اللي دفعتها',
+                        ptSessions: 'مرات الـ PT',
+                        consultations: 'الاستشارات',
+                        eliteRank: 'رتبة النخبة'
                     },
                     settings: {
                         title: 'الإعدادات',

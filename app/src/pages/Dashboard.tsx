@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { supabase } from '../lib/supabase';
 import { useAdminAnalytics, RevenueDetail } from '../hooks/useAdminAnalytics';
 import { usePresence } from '../hooks/usePresence';
+import { useTheme } from '../context/ThemeContext';
 import { useCurrency } from '../context/CurrencyContext';
 import { playHoverSound } from '../utils/audio';
 
@@ -26,10 +27,12 @@ export default function Dashboard() {
     const { role, fullName, userEmail, userId } = useOutletContext<{ role: string, fullName: string, userEmail: string | null, userId: string }>() || { role: null, fullName: null, userEmail: null, userId: null };
     const cleanName = fullName?.trim() || userEmail?.split('@')[0]?.trim() || 'Admin';
     const { formatPrice, currency } = useCurrency();
+    const { userProfile } = useTheme();
     const { data: analytics, isLoading: analyticsLoading } = useAdminAnalytics();
     const { onlineStudents, onlineCount } = usePresence();
     const [selectedMetric, setSelectedMetric] = useState<'PT' | 'Consultation' | 'Total' | null>(null);
     const [isVerifiedStudent, setIsVerifiedStudent] = useState<boolean | null>(null);
+    const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
 
     const filteredDetails = useMemo(() => {
         if (!selectedMetric || !analytics?.details) return [];
@@ -54,8 +57,14 @@ export default function Dashboard() {
                 setIsVerifiedStudent(false); // Fallback to role-based
             }
         };
+
         checkStudentStatus();
     }, [userId]);
+
+    // 🛡️ MASTER NAME DERIVATION: 
+    // Priorities: 1. DB/Context Name, 2. Layout Context Name, 3. Email Prefix, 4. Admin
+    const displayFullName = userProfile?.full_name || fullName || userEmail?.split('@')[0]?.trim() || 'Admin';
+    const firstName = displayFullName.split(' ')[0];
 
     // RESTORE ROLE-BASED REDIRECTION (+ Student Fail-safe)
     if (!role || isVerifiedStudent === null) {
@@ -132,134 +141,206 @@ export default function Dashboard() {
             </div>
 
             <div className="relative z-10 space-y-8">
-                {/* Header Canvas - More Compact */}
-                <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 py-2">
-                    <div className="space-y-0 group">
-                        <div className="flex items-center gap-3 mb-3">
-                            <div className="relative h-4 w-1 overflow-hidden rounded-full bg-white/5">
-                                <div className="absolute inset-0 bg-primary animate-pulse" />
-                            </div>
-                            <h2 className="text-[8px] font-black text-white/20 uppercase tracking-[0.5em] transition-colors group-hover:text-primary/40 duration-700">
-                                {t('dashboard.welcomeBack', 'System Intelligence Active')}
+                {/* Header Canvas - Elite Transformation */}
+                <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 py-6 mb-12">
+                <div className="flex flex-col gap-6">
+                    {/* Header Breadcrumb & Greeting */}
+                    <div className="space-y-4">
+                        <div className="flex items-center gap-3">
+                            <div className="h-4 w-[2px] bg-primary rounded-full shadow-[0_0_10px_rgba(var(--color-primary),0.8)]" />
+                            <h2 className="text-[10px] font-black text-white/40 uppercase tracking-[0.4em]">
+                                {t('dashboard.welcomeBack', 'Intelligence Active')}
                             </h2>
                         </div>
                         
-                        <div className="relative">
-                            <span className="block text-[8px] font-black text-white/30 uppercase tracking-[0.5em] mb-1 ml-0.5 animate-in fade-in slide-in-from-left-4 duration-1000">
-                                {t('dashboard.hello', 'Hello')}
-                            </span>
-                            <div className="flex flex-col sm:flex-row sm:items-end gap-3 sm:gap-4">
-                                <h1 className="text-2xl md:text-3xl lg:text-4xl font-black text-white tracking-tighter uppercase leading-tight animate-in fade-in zoom-in-95 duration-1000">
-                                    <span className="premium-gradient-text drop-shadow-[0_10px_30px_rgba(var(--color-primary),0.2)]">
-                                        {cleanName.split(' ')[0]}
-                                    </span>
-                                </h1>
-                                <div className="flex flex-col gap-1.5 mb-2 opacity-0 animate-in fade-in slide-in-from-left-8 duration-1000 delay-500 fill-mode-forwards">
-                                    <div className="h-[1px] w-16 bg-gradient-to-r from-primary to-transparent rounded-full shadow-[0_0_10px_rgba(var(--color-primary),0.4)]" />
-                                    <span className="text-[7px] font-black text-white/10 uppercase tracking-[0.8em] ml-0.5">Elite Perspective</span>
-                                </div>
+                        <div className="flex flex-col gap-2">
+                            <div className="flex items-center gap-3 ml-1">
+                                <span className="text-[11px] font-black text-primary uppercase tracking-[0.5em] drop-shadow-[0_0_8px_rgba(var(--color-primary),0.3)]">{t('dashboard.hello', 'Hello')}</span>
+                                <div className="h-[1px] w-8 bg-gradient-to-r from-primary/40 to-transparent" />
                             </div>
+                            <h1 className="text-2xl md:text-3xl lg:text-4xl font-black text-white tracking-tighter uppercase leading-tight animate-in fade-in zoom-in-95 duration-1000">
+                                <span className="premium-gradient-text drop-shadow-[0_10px_20px_rgba(var(--color-primary),0.15)] opacity-90">
+                                    {firstName}
+                                </span>
+                            </h1>
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-5">
-                        {/* Clock and Button removed per request for extreme minimalism */}
+                    {/* Status Badges Row */}
+                    <div className="flex flex-wrap items-center gap-3 opacity-0 animate-in fade-in slide-in-from-left-12 duration-1000 delay-500 fill-mode-forwards">
+                        <div className="flex items-center gap-2 px-4 py-2 rounded-2xl bg-primary/5 border border-primary/10 backdrop-blur-md">
+                            <Zap className="w-3.5 h-3.5 text-primary animate-pulse" />
+                            <span className="text-[10px] font-black text-primary uppercase tracking-[0.3em]">Elite Perspective</span>
+                        </div>
+                        <div className="flex items-center gap-2 px-4 py-2 rounded-2xl bg-white/5 border border-white/5 backdrop-blur-md">
+                            <Activity className="w-3.5 h-3.5 text-emerald-400" />
+                            <span className="text-[10px] font-black text-white/40 uppercase tracking-[0.3em]">Intelligence Active</span>
+                        </div>
+                    </div>
+                </div>
+
+                    <div className="flex items-center gap-6">
+                        <PremiumClock />
                     </div>
                 </div>
 
                 {/* Metrics Matrix - Unified Revenue Hub & Roster */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-
-                    {/* Unified Revenue Intelligence Hub - Minimalist Floating Mode */}
+                    {/* Unified Revenue Intelligence Hub */}
                     <div
                         onClick={() => setSelectedMetric('Total')}
                         onMouseEnter={playHoverSound}
-                        className="relative group py-3 px-4 bg-white/[0.01] border border-white/5 rounded-2xl hover:bg-white/[0.03] transition-all duration-500 cursor-pointer active:scale-[0.98]"
+                        className="glass-card relative group py-8 px-8 bg-white/[0.01] border border-white/5 rounded-[2.5rem] hover:bg-white/[0.02] transition-all duration-700 cursor-pointer active:scale-[0.98] shadow-premium h-full"
                     >
-                        <div className="flex items-center gap-4 mb-8">
-                            <div className="text-primary group-hover:scale-110 transition-transform">
-                                <DollarSign className="w-6 h-6" />
+                        <div className="flex items-center justify-between mb-10">
+                            <div className="flex items-center gap-5">
+                                <div className="p-4 bg-primary/10 rounded-2xl text-primary border border-white/5 group-hover:scale-110 transition-transform duration-700">
+                                    <DollarSign className="w-8 h-8" />
+                                </div>
+                                <div className="space-y-1">
+                                    <p className="text-[12px] font-black text-primary uppercase tracking-[0.4em] leading-none">Financial Intelligence</p>
+                                    <p className="text-[10px] font-bold text-white/20 uppercase tracking-[0.2em]">Live Revenue Stream</p>
+                                </div>
                             </div>
-                            <div className="space-y-1">
-                                <p className="text-[10px] font-black text-primary uppercase tracking-[0.4em] leading-none">Revenue Hub</p>
-                                <p className="text-[8px] font-bold text-white/20 uppercase tracking-[0.2em]">Global Growth Statistics</p>
+                            <div className="p-3 bg-white/5 rounded-xl opacity-0 group-hover:opacity-100 transition-all group-hover:translate-x-1">
+                                <ArrowUpRight className="w-5 h-5 text-white/40" />
                             </div>
                         </div>
 
-                        <h3 className="text-2xl md:text-3xl font-black text-white tracking-tighter tabular-nums leading-none">
-                            {analyticsLoading ? '...' : formatPrice(analytics?.totalRevenue || 0)}
-                        </h3>
+                        <div className="flex items-baseline gap-4 mb-2">
+                           <h3 className="text-4xl md:text-5xl lg:text-6xl font-black text-white tracking-tighter tabular-nums leading-none">
+                                {analyticsLoading ? '...' : formatPrice(analytics?.totalRevenue || 0)}
+                            </h3>
+                            <span className="text-xs font-black text-emerald-500 uppercase tracking-widest bg-emerald-500/10 px-2 py-0.5 rounded-md">+14% Goal</span>
+                        </div>
 
-                        <div className="flex items-center gap-6 mt-4 pt-4 border-t border-white/[0.03]">
-                            <div className="flex items-baseline gap-2">
-                                <span className="text-[8px] font-black text-white/20 uppercase tracking-widest">PT</span>
-                                <span className="text-sm md:text-lg font-black text-white/60">{analyticsLoading ? '...' : formatPrice(analytics?.ptRevenue || 0)}</span>
+                        <div className="grid grid-cols-2 gap-8 mt-8 pt-8 border-t border-white/[0.05]">
+                            <div className="space-y-2">
+                                <div className="flex items-center gap-2">
+                                    <div className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                                    <span className="text-[10px] font-black text-white/30 uppercase tracking-widest">PT Vertical</span>
+                                </div>
+                                <p className="text-xl md:text-2xl font-black text-white/80 tabular-nums">
+                                    {analyticsLoading ? '...' : formatPrice(analytics?.ptRevenue || 0)}
+                                </p>
                             </div>
-                            <div className="flex items-baseline gap-2 border-l border-white/[0.03] pl-6">
-                                <span className="text-[8px] font-black text-white/20 uppercase tracking-widest">CONSULT</span>
-                                <span className="text-sm md:text-lg font-black text-white/60">{analyticsLoading ? '...' : formatPrice(analytics?.consultationRevenue || 0)}</span>
+                            <div className="space-y-2 border-l border-white/5 pl-8">
+                                <div className="flex items-center gap-2">
+                                    <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+                                    <span className="text-[10px] font-black text-white/30 uppercase tracking-widest">Consultations</span>
+                                </div>
+                                <p className="text-xl md:text-2xl font-black text-white/80 tabular-nums">
+                                    {analyticsLoading ? '...' : formatPrice(analytics?.consultationRevenue || 0)}
+                                </p>
                             </div>
                         </div>
                     </div>
 
-                    {/* Athlete Network Hub - Minimalist Floating Mode */}
+                    {/* Athlete Network Hub */}
                     <div
-                        onClick={() => navigate('/strategy-hub')}
+                        onClick={() => navigate('/app/students')}
                         onMouseEnter={playHoverSound}
-                        className="relative group py-3 px-4 bg-white/[0.01] border border-white/5 rounded-2xl hover:bg-white/[0.03] transition-all duration-500 cursor-pointer active:scale-[0.98]"
+                        className="glass-card relative group py-8 px-8 bg-white/[0.01] border border-white/5 rounded-[2.5rem] hover:bg-white/[0.02] transition-all duration-700 cursor-pointer active:scale-[0.98] shadow-premium h-full"
                     >
-                        <div className="flex items-center gap-4 mb-8">
-                            <div className="text-white/30 group-hover:scale-110 transition-transform">
-                                <Users className="w-6 h-6" />
+                        <div className="flex items-center justify-between mb-10">
+                            <div className="flex items-center gap-5">
+                                <div className="p-4 bg-white/5 rounded-2xl text-white/30 border border-white/5 group-hover:scale-110 transition-transform duration-700">
+                                    <Users className="w-8 h-8" />
+                                </div>
+                                <div className="space-y-1">
+                                    <p className="text-[12px] font-black text-white/40 uppercase tracking-[0.4em] leading-none">Athlete Network</p>
+                                    <p className="text-[10px] font-bold text-white/10 uppercase tracking-[0.2em]">Active Roster Intelligence</p>
+                                </div>
                             </div>
-                            <div className="space-y-1">
-                                <p className="text-[10px] font-black text-white/40 uppercase tracking-[0.4em] leading-none">Athlete Network</p>
-                                <p className="text-[8px] font-bold text-white/10 uppercase tracking-[0.2em]">Active Roster Pulse</p>
+                             <div className="p-3 bg-white/5 rounded-xl opacity-0 group-hover:opacity-100 transition-all group-hover:translate-x-1">
+                                <ArrowUpRight className="w-5 h-5 text-white/40" />
                             </div>
                         </div>
 
-                        <h3 className="text-2xl md:text-4xl font-black text-white tracking-tighter tabular-nums leading-none">
-                            {analyticsLoading ? '...' : analytics?.athleteCount}
-                        </h3>
+                        <div className="flex items-baseline gap-4 mb-2">
+                            <h3 className="text-4xl md:text-5xl lg:text-6xl font-black text-white tracking-tighter tabular-nums leading-none">
+                                {analyticsLoading ? '...' : analytics?.athleteCount}
+                            </h3>
+                            <span className="text-xs font-black text-primary uppercase tracking-widest bg-primary/10 px-2 py-0.5 rounded-md">Live Pulse</span>
+                        </div>
 
-                        <div className="flex items-center justify-between mt-4 pt-4 border-t border-white/[0.03]">
-                            <div className="flex items-center gap-2">
-                                <span className="text-[9px] font-black text-primary uppercase tracking-[0.2em]">Live Sync Active</span>
-                                <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+                        <div className="flex items-center justify-between mt-8 pt-8 border-t border-white/[0.05]">
+                            <div className="flex items-center gap-4">
+                                <div className="flex -space-x-3">
+                                    {[1, 2, 3].map(i => (
+                                        <div key={i} className="w-8 h-8 rounded-full border-2 border-[#050505] bg-white/10 flex items-center justify-center overflow-hidden">
+                                            <Activity className="w-4 h-4 text-white/20" />
+                                        </div>
+                                    ))}
+                                    <div className="w-8 h-8 rounded-full border-2 border-[#050505] bg-primary flex items-center justify-center text-[10px] font-black text-white">+</div>
+                                </div>
+                                <span className="text-[10px] font-black text-white/20 uppercase tracking-[0.2em]">Top Performers</span>
                             </div>
-                            <div className="flex items-center gap-1.5 opacity-40">
-                                <span className="text-[9px] font-black text-white uppercase tracking-widest">Roster</span>
-                                <ChevronRight className="w-3 h-3" />
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-xl bg-primary text-white flex items-center justify-center shadow-[0_0_20px_rgba(var(--color-primary),0.3)]">
+                                    <ChevronRight className="w-6 h-6" />
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                {/* Dynamic Command Center: Live Floor & Upcoming Agenda (Weightless) */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-12 items-stretch py-12 border-b border-white/[0.03]">
-                    {/* Live Floor Area */}
-                    <div className="lg:col-span-2 relative group">
-                        <div className="flex items-center gap-4 mb-10 pb-6 border-b border-white/[0.03]">
-                            <div className="text-primary group-hover:scale-110 transition-transform">
-                                <Globe className="w-6 h-6 animate-pulse" />
+                {/* AI Strategy Hub Hub - The Central Command (Middle Overlay) */}
+                <div
+                    onClick={() => navigate('/app/strategy-hub')}
+                    onMouseEnter={playHoverSound}
+                    className="relative group py-10 px-10 bg-emerald-500/[0.03] border border-emerald-500/10 rounded-[3rem] hover:bg-emerald-500/[0.06] hover:border-emerald-500/20 transition-all duration-700 cursor-pointer overflow-hidden active:scale-95 shadow-[0_30px_60px_-15px_rgba(0,0,0,0.5)]"
+                >
+                    <div className="absolute -right-16 -top-16 w-64 h-64 bg-emerald-500/20 rounded-full blur-[100px] opacity-40 group-hover:opacity-70 transition-opacity duration-1000" />
+                    <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-10 relative z-10">
+                        <div className="flex items-center gap-10">
+                            <div className="w-20 h-20 md:w-24 md:h-24 rounded-[2rem] bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 shadow-[0_0_40px_rgba(16,185,129,0.2)] group-hover:scale-110 transition-all duration-1000">
+                                <Sparkles className="w-10 h-10" />
                             </div>
-                            <div className="space-y-1">
-                                <h3 className="text-xl font-black text-white uppercase tracking-widest leading-none">Live Floor</h3>
-                                <p className="text-[10px] font-bold text-white/20 uppercase tracking-[0.2em]">Active Presence Tracking</p>
-                            </div>
-                            {onlineStudents.length > 0 && (
-                                <div className="px-2 py-0.5 bg-emerald-500/10 border border-emerald-500/20 rounded-full ml-auto">
-                                    <span className="text-[10px] font-black text-emerald-400 uppercase tracking-widest">{onlineStudents.length} Online</span>
+                            <div>
+                                <h3 className="text-3xl md:text-4xl font-black text-white uppercase tracking-tighter mb-2">Elite Strategy Hub</h3>
+                                <div className="flex items-center gap-4">
+                                    <span className="px-3 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded-full text-[10px] font-black text-emerald-400 uppercase tracking-widest">Active System</span>
+                                    <p className="text-[12px] font-black text-white/30 uppercase tracking-[0.4em]">Integrated Intelligence Dashboard</p>
                                 </div>
-                            )}
+                            </div>
+                        </div>
+                        <button className="flex items-center gap-4 px-10 py-5 bg-emerald-500 text-black rounded-2xl font-black uppercase tracking-widest text-[11px] hover:scale-105 transition-all shadow-2xl">
+                            Enter CommandCenter <ChevronRight className="w-5 h-5" />
+                        </button>
+                    </div>
+                </div>
+
+                {/* Bottom Intelligence Grid: Live Floor & Recent Activity */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 pt-8">
+                    {/* Live Floor Area - Takes up 2 columns */}
+                    <div className="lg:col-span-2 glass-card p-8 rounded-[3rem] border border-white/5 bg-white/[0.01] min-h-[400px] flex flex-col">
+                        <div className="flex items-center justify-between mb-8 pb-4 border-b border-white/5">
+                            <div className="flex items-center gap-4">
+                                <Globe className="w-6 h-6 text-primary animate-pulse" />
+                                <div>
+                                    <h3 className="text-xl font-black text-white uppercase tracking-widest leading-none">Live Floor</h3>
+                                    <p className="text-[10px] font-bold text-white/20 uppercase tracking-[0.2em]">Real-time Athlete Presence</p>
+                                </div>
+                            </div>
+                            <div className="px-3 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded-full">
+                                <span className="text-[10px] font-black text-emerald-400 uppercase tracking-widest">{onlineStudents.length} Athletes Online</span>
+                            </div>
                         </div>
                         <div className="flex-1">
                             <LiveStudentsWidget onlineStudents={onlineStudents} />
                         </div>
                     </div>
 
-                    {/* Upcoming Agenda Area */}
-                    <div className="relative group lg:border-l lg:border-white/[0.03] lg:pl-12">
+                    {/* Recent Agenda Area - Sidebar */}
+                    <div className="lg:col-span-1 glass-card p-8 rounded-[3rem] border border-white/5 bg-white/[0.01]">
+                         <div className="flex items-center gap-4 mb-8 pb-4 border-b border-white/5">
+                            <Clock className="w-6 h-6 text-amber-500" />
+                            <div>
+                                <h3 className="text-xl font-black text-white uppercase tracking-widest leading-none">Elite Agenda</h3>
+                                <p className="text-[10px] font-bold text-white/20 uppercase tracking-[0.2em]">Upcoming Missions</p>
+                            </div>
+                        </div>
                         <UpcomingAgendaWidget />
                     </div>
                 </div>

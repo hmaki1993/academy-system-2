@@ -179,61 +179,20 @@ export function useSmartPlan() {
                 throw dbError;
             }
 
-            // 3. Persistent Database Notification (for the Bell Icon)
-            const { data: studentProfile } = await supabase
-                .from('students')
-                .select('profile_id, full_name')
-                .eq('id', studentId)
-                .single();
-
-            if (studentProfile?.profile_id) {
-                const msgData = {
-                    key: 'notifications.jumpRopePlanSet',
-                    titleKey: 'notifications.jumpRopePlanTitle'
-                };
-                const msgString = `JSON_NOTIF:${JSON.stringify(msgData)}`;
-
-                await supabase.from('notifications').insert({
-                    user_id: studentProfile.profile_id,
-                    type: 'training',
-                    title: 'New Schedule 🗓️', // Fallback
-                    message: msgString,
-                    is_read: false
-                });
-
-                // 4. Direct Broadcast (Instant Sync for Notification Bell)
-                const channel = supabase.channel(`athlete-broadcast-${studentProfile.profile_id}`);
-                channel.subscribe(async (statusSub) => {
-                    if (statusSub === 'SUBSCRIBED') {
-                        await channel.send({
-                            type: 'broadcast',
-                            event: 'SYNC_ALERTS',
-                            payload: { 
-                                type: 'training_update',
-                                message: msgString,
-                                timestamp: new Date().toISOString()
-                            }
-                        });
-                        // Remove channel after a short delay to ensure delivery
-                        setTimeout(() => supabase.removeChannel(channel), 2000);
-                    }
-                });
-            }
-
-            // 5. legacy Broadcast for JumpRopeTraining page internal sync
-            const legacyChannel = supabase.channel(`direct_broadcasts_${studentId}`);
-            legacyChannel.subscribe(async (statusSub) => {
+            // 3. Real-time Broadcast (Immediate Dashboard/App Sync)
+            const channel = supabase.channel(`direct_broadcasts_${studentId}`);
+            await channel.subscribe(async (statusSub) => {
                 if (statusSub === 'SUBSCRIBED') {
-                    await legacyChannel.send({
+                    await channel.send({
                         type: 'broadcast',
                         event: 'session_update',
                         payload: { 
                             status: 'sent', 
                             timestamp: new Date().toISOString(),
-                            refresh_plan: true 
+                            refresh_plan: true // Signal to athlete app to refetch the full plan
                         }
                     });
-                    setTimeout(() => supabase.removeChannel(legacyChannel), 2000);
+                    supabase.removeChannel(channel);
                 }
             });
 
@@ -251,8 +210,51 @@ export function useSmartPlan() {
     const sendDirectTargets = async (studentIdRaw: string, targetTime: number | '', targetJumps: number | '', scheduledStart: string | null = null) => {
         setIsSending(true);
         try {
+            // Helper to format time (HH:mm or ISO -> AM/PM)
+            const formatTime = (timeStr: string | null) => {
+                if (!timeStr) return "Now";
+                try {
+                    if (timeStr.includes('T')) {
+                        return new Date(timeStr).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+                    }
+                    if (timeStr.includes(':')) {
+                        const [h, m] = timeStr.split(':').map(Number);
+                        const period = h >= 12 ? 'PM' : 'AM';
+                        const h12 = h % 12 || 12;
+                        return `${String(h12).padStart(2, '0')}:${String(m).padStart(2, '0')} ${period}`;
+                    }
+                } catch (e) {}
+                return timeStr;
+            };
+
+            const timeDisplay = formatTime(scheduledStart);
+            const jumpsDisplay = targetJumps || '0';
+            const minsDisplay = targetTime || '0';
+            const finalMessage = `Coach Maryam sent you a mission starting at ${timeDisplay}. You will do ${jumpsDisplay} jumps and ${minsDisplay} mins.`;
+
+            // 🛡️ PRE-CONSTRUCT MOCK NOTIFICATION (For zero-latency broadcast)
+            const mockNotif = {
+                id: `temp-${Date.now()}`,
+                user_id: studentIdRaw,
+                type: 'coach',
+                title: 'New Mission Target!',
+                message: finalMessage,
+                is_read: false,
+                created_at: new Date().toISOString()
+            };
+
+            // 1. Persistent Notification (Background Task)
+            supabase.from('notifications').insert({
+                user_id: studentIdRaw, // GUID
+                type: 'coach',
+                title: 'New Mission Target!',
+                message: finalMessage,
+                is_read: false
+            }).then(({ error }) => {
+                if (error) console.warn('Notification DB Insert Error:', error);
+            });
+
             const studentId = await resolveStudentId(studentIdRaw);
-            const sessionStartAt = new Date().toISOString();
             const payload = {
                 target_time: targetTime === '' ? null : targetTime,
                 target_jumps: targetJumps === '' ? null : targetJumps,
@@ -274,73 +276,30 @@ export function useSmartPlan() {
                 await supabase.from('training_plans').insert({ 
                     student_id: studentId, 
                     ...payload,
-                    plan_content: [], // Minimal default for new record
+                    plan_content: [], 
                     bmr: 0, tdee: 0, target_calories: 0
                 });
             }
 
-            // 2. Persistent Database Notification (for the Bell Icon)
-            const { data: studentProfile } = await supabase
-                .from('students')
-                .select('profile_id, full_name')
-                .eq('id', studentId)
-                .single();
-
-            if (studentProfile?.profile_id) {
-                const msgData = {
-                    key: 'notifications.jumpRopeGoalSet',
-                    params: {
-                        jumps: targetJumps || '0',
-                        time: targetTime || '0'
-                    },
-                    titleKey: 'notifications.jumpRopeTitle'
-                };
-                const msgString = `JSON_NOTIF:${JSON.stringify(msgData)}`;
-
-                await supabase.from('notifications').insert({
-                    user_id: studentProfile.profile_id,
-                    type: 'training',
-                    title: 'New Training 🎯', // Fallback
-                    message: msgString,
-                    is_read: false
-                });
-
-                // 3. Direct Broadcast (Instant Sync for Remote Unlock & Notification Bell)
-                const channel = supabase.channel(`athlete-broadcast-${studentProfile.profile_id}`);
-                channel.subscribe(async (statusSub) => {
-                    if (statusSub === 'SUBSCRIBED') {
-                        await channel.send({
-                            type: 'broadcast',
-                            event: 'SYNC_ALERTS', 
-                            payload: { 
-                                type: 'training_update',
-                                message: msgString,
-                                timestamp: new Date().toISOString()
-                            }
-                        });
-                        setTimeout(() => supabase.removeChannel(channel), 2000);
-                    }
-                });
-            }
-
-            // 4. legacy Broadcast for JumpRopeTraining page internal sync
-            const legacyChannel = supabase.channel(`direct_broadcasts_${studentId}`);
-            legacyChannel.subscribe(async (statusSub) => {
+            // 2. Direct Broadcast (V2 PROTOCOL: ISOLATED ROCKET CHANNEL)
+            const channel = supabase.channel(`athlete_rocket_v2_${studentIdRaw}`);
+            await channel.subscribe(async (statusSub) => {
                 if (statusSub === 'SUBSCRIBED') {
-                    await legacyChannel.send({
+                    console.log(`🚀 COACH: Initiating ROCKET_NOTIFICATION broadcast for [${studentIdRaw}]`);
+                    const resp = await channel.send({
                         type: 'broadcast',
-                        event: 'session_update',
+                        event: 'ROCKET_NOTIFICATION',
                         payload: { 
-                            status: payload.status, 
+                            type: 'target_update',
                             target_time: targetTime, 
                             target_jumps: targetJumps, 
-                            scheduled_start: scheduledStart,
-                            session_start_at: sessionStartAt,
-                            timestamp: new Date().toISOString(),
-                            refresh_plan: true 
+                            refresh_plan: true,
+                            notification: mockNotif, 
+                            timestamp: new Date().toISOString()
                         }
                     });
-                    setTimeout(() => supabase.removeChannel(legacyChannel), 2000);
+                    console.log(`🚀 COACH: Rocket result:`, resp);
+                    setTimeout(() => supabase.removeChannel(channel), 3000);
                 }
             });
 
@@ -362,87 +321,71 @@ export function useSmartPlan() {
             let finalStatus: string = status;
             const payload: any = {};
 
+            // Context-aware Restarting Logic
             if (status === 'restarting') {
-                // Fetch current status to decide behavior
+                // 1. Fetch current status from DB first
                 const { data: currentPlan } = await supabase
                     .from('training_plans')
                     .select('status')
                     .eq('student_id', studentId)
                     .maybeSingle();
-                
+
                 const currentStatus = currentPlan?.status || 'idle';
-                
-                // ONLY restart to 'live' if it was already performing (live/paused)
-                // If it was idle, stoped, or just scheduled, DO NOT open it.
-                const isPerforming = ['live', 'paused'].includes(currentStatus);
 
-                if (isPerforming) {
-                    finalStatus = 'live'; 
-                    payload.scheduled_start = new Date().toISOString();
+                // 2. Decision: Keep 'live' if already active, otherwise go to 'ready'
+                if (currentStatus === 'live' || currentStatus === 'paused') {
+                    finalStatus = 'live'; // Keep it live, just reset the time
                 } else {
-                    finalStatus = 'idle'; // Just zero it out
-                    payload.scheduled_start = null;
+                    finalStatus = 'ready'; // Reset to ready
                 }
-            }
-
-            if (status === 'idle') {
-                payload.target_time = null;
-                payload.target_jumps = null;
-                payload.scheduled_start = null;
+                
+                payload.scheduled_start = new Date().toISOString();
+            } else if (status === 'live') {
+                // 🎯 FRESH START: When session goes live from idle/ready
+                payload.scheduled_start = new Date().toISOString();
             }
 
             payload.status = finalStatus;
 
-            // 1. Database Update (Persistence)
+            if (status === 'idle') {
+                payload.target_time = null;
+                payload.target_jumps = null;
+                // 🛡️ Persistence: Don't clear scheduled_start so the timer stays visible at 00:00
+            }
+
+
+            // 🎯 ROCKET SPEED OPTIMIZATION:
+            // 2. Direct Broadcast FIRST (Instant Sync) - Fire before DB update for zero latency
+            const channel = supabase.channel(`direct_broadcasts_${studentIdRaw}`);
+            await channel.subscribe(async (statusSub) => {
+                if (statusSub === 'SUBSCRIBED') {
+                    console.log(`📡 COACH: Initiating STATUS_UPDATE (${finalStatus}) broadcast for [${studentIdRaw}]`);
+                    const resp = await channel.send({
+                        type: 'broadcast',
+                        event: 'SYNC_ALERTS',
+                        payload: { 
+                            type: 'session_status_update',
+                            status: finalStatus,
+                            scheduled_start: payload.scheduled_start || null,
+                            timestamp: new Date().toISOString()
+                        }
+                    });
+                    console.log(`📡 COACH: Broadcast result:`, resp);
+                    // Wait 3s then cleanup
+                    setTimeout(() => {
+                        console.log(`🔌 COACH: Cleaning up temporary channel for [${studentIdRaw}]`);
+                        supabase.removeChannel(channel);
+                    }, 3000);
+                }
+            });
+
+            // 1. Database Update (Persistence) - Second priority
             const { error } = await supabase
                 .from('training_plans')
                 .update(payload)
                 .eq('student_id', studentId);
 
             if (error) throw error;
-
-            // 2. Direct Broadcasts (Instant Sync)
-            const { data: studentProfile } = await supabase
-                .from('students')
-                .select('profile_id')
-                .eq('id', studentId)
-                .single();
-
-            // 2a. Legacy Broadcast (for JumpRopeTraining page)
-            const legacyChannel = supabase.channel(`direct_broadcasts_${studentId}`);
-            await legacyChannel.subscribe(async (statusSub) => {
-                if (statusSub === 'SUBSCRIBED') {
-                    await legacyChannel.send({
-                        type: 'broadcast',
-                        event: 'session_update',
-                        payload: { 
-                            ...payload, 
-                            timestamp: new Date().toISOString(),
-                            refresh_plan: status === 'idle'
-                        }
-                    });
-                    supabase.removeChannel(legacyChannel);
-                }
-            });
-
-            // 2b. Unified Sync Signal (for EliteDashboard & Layout)
-            if (studentProfile?.profile_id) {
-                const syncChannel = supabase.channel(`athlete-broadcast-${studentProfile.profile_id}`);
-                await syncChannel.subscribe(async (statusSub) => {
-                    if (statusSub === 'SUBSCRIBED') {
-                        await syncChannel.send({
-                            type: 'broadcast',
-                            event: 'SYNC_ALERTS',
-                            payload: { 
-                                type: 'session_status_update',
-                                status: finalStatus,
-                                timestamp: new Date().toISOString()
-                            }
-                        });
-                        setTimeout(() => supabase.removeChannel(syncChannel), 1000);
-                    }
-                });
-            }
             
             if (status === 'live') toast.success('Session Resumed');
             if (status === 'paused') toast.success('Session Paused');

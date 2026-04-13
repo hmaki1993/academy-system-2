@@ -51,11 +51,18 @@ export default function EliteDashboard() {
             const { data: { user } } = await supabase.auth.getUser();
             if (!user || !studentName || !isMounted) return; 
 
-            // Unique broadcast channel for direct signaling
-            channel = supabase.channel(`athlete-broadcast-${user.id}`)
-                .on('broadcast', { event: 'SYNC_ALERTS' }, async () => {
-                    // 🔔 SIGNAL RECEIVED: Force local data re-fetch
+            // Unique broadcast channel for direct signaling (Unique name to avoid Layout collision)
+            channel = supabase.channel(`athlete-live-sync-${user.id}`)
+                .on('broadcast', { event: 'SYNC_ALERTS' }, async ({ payload }: any) => {
+                    // 🔔 SIGNAL RECEIVED: Use payload for instant update then re-fetch as backup
                     if (!isMounted) return;
+                    
+                    // Instant update from broadcast data
+                    if (payload?.type === 'session_status_update') {
+                        if (payload.status) setPlanStatus(payload.status);
+                        if (payload.scheduled_start !== undefined) setScheduledStart(payload.scheduled_start);
+                    }
+
                     const { data: student } = await supabase.from('students').select('id').eq('profile_id', user.id).maybeSingle();
                     if (student) {
                         const { data: planData } = await supabase.from('training_plans')
@@ -120,16 +127,20 @@ export default function EliteDashboard() {
                 setPtSubscription(activePt);
 
                 const [
-                    { data: ptSessions },
+                    { data: ptSessionsRes },
                     { data: consRequests },
                     { data: payments },
                     { data: planData }
                 ] = await Promise.all([
-                    supabase.from('pt_sessions').select('*').eq('subscription_id', activePt?.id).order('date', { ascending: false }),
+                    activePt?.id 
+                        ? supabase.from('pt_sessions').select('*').eq('subscription_id', activePt.id).order('date', { ascending: false })
+                        : Promise.resolve({ data: [] }),
                     supabase.from('consultation_requests').select('*').eq('email', user.email).order('created_at', { ascending: false }),
                     supabase.from('payments').select('*').eq('student_id', student.id).order('payment_date', { ascending: false }),
                     supabase.from('training_plans').select('plan_content, status, scheduled_start').eq('student_id', student.id).maybeSingle()
                 ]);
+
+                const ptSessions = ptSessionsRes || [];
 
                 setPtHistory(ptSessions || []);
                 setConsHistory(consRequests || []);
@@ -185,7 +196,7 @@ export default function EliteDashboard() {
                 }
             };
             refreshDynamicData();
-        }, 30000); // Polling fallback (30s) since broadcast handles instant updates
+        }, 10000); // Poll every 10s for maximum responsiveness
 
         return () => { 
             clearInterval(pollInterval);
@@ -206,19 +217,22 @@ export default function EliteDashboard() {
             <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-8 py-6">
                 <div className="flex flex-col gap-4">
                     <div className="flex items-center gap-8">
-                        <div className="flex items-center gap-3">
-                            <div className="h-4 w-[2px] bg-primary rounded-full shadow-[0_0_10px_rgba(var(--color-primary),1)]" />
-                            <h2 className="text-[10px] font-black text-white/40 uppercase tracking-[0.4em]">Intelligence Center</h2>
-                        </div>
+                    <div className="flex flex-col items-start gap-1">
+                        <span className="text-[10px] md:text-[11px] font-black text-white/20 uppercase tracking-[0.8em] leading-none mb-1 select-none">
+                            Hello
+                        </span>
+                        <h1 className="text-3xl md:text-5xl font-black text-white tracking-tighter uppercase leading-none italic">
+                            <span className="premium-gradient-text drop-shadow-[0_15px_40px_rgba(255,255,255,0.3)]">
+                                {studentName.split(' ')[0]}
+                            </span>
+                        </h1>
                     </div>
-                    <h1 className="text-3xl md:text-5xl font-black text-white tracking-tighter uppercase leading-tight italic">
-                        <span className="premium-gradient-text">{studentName.split(' ')[0]}</span>
-                    </h1>
+                </div>
                 </div>
 
-                {/* REAL-TIME SESSION WIDGET */}
-                {planStatus && (
-                    <div className="animate-in fade-in slide-in-from-right-4 duration-1000 mt-4 w-fit ml-auto">
+                {/* REAL-TIME SESSION WIDGET - Persistence: Always show if we have a start time */}
+                {scheduledStart && (
+                    <div className="animate-in fade-in slide-in-from-right-4 duration-1000 mt-4">
                         <MinimalCountdown targetDate={scheduledStart} status={planStatus} />
                     </div>
                 )}

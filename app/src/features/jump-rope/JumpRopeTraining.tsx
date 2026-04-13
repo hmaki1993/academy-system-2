@@ -213,31 +213,35 @@ export default function JumpRopeTraining() {
     }, [handleRestart, speak, isAdmin]);
 
     const fetchLatestPlan = useCallback(async () => {
-        if (!user?.id) return;
+        // 🛡️ Strict Guard: Ensure user id exists and looks like a valid UUID before querying profiles/students
+        if (!user?.id || user.id.length < 30) return; 
+        
         try {
             // Step 1: Get the student's integer ID using their profile UUID
-            const { data: stData } = await supabase
+            const { data: stData, error: stError } = await supabase
                 .from('students')
                 .select('id')
                 .eq('profile_id', user.id)
                 .maybeSingle();
 
-            if (!stData?.id) return; // Student not registered yet
+            if (stError || !stData?.id) return; // Student not registered yet
 
             // Step 2: Fetch their training plan by integer student_id
-            const { data: planData } = await supabase
+            const { data: planData, error: planError } = await supabase
                 .from('training_plans')
                 .select('*')
                 .eq('student_id', stData.id)
                 .order('created_at', { ascending: false })
                 .limit(1);
 
+            if (planError) throw planError;
+
             if (planData && planData.length > 0) {
                 setResolvedStudentId(stData.id);
                 applyPlanTargets(planData[0]);
             }
         } catch (e) {
-            console.error('fetchLatestPlan error:', e);
+            console.error('fetchLatestPlan SafeGuard:', e);
         }
     }, [user?.id, applyPlanTargets]);
 
@@ -254,31 +258,33 @@ export default function JumpRopeTraining() {
             const targetDate = new Date();
             targetDate.setHours(targetH, targetM, 0, 0);
 
-            // Calculate diff. If it's negative by a lot (e.g. > 12h), maybe it was meant for "today" but coach set it late.
-            // Existing logic currentTime >= activePlan.scheduled_start is effectively same-day focused.
+            // Calculate diff.
             let diffSeconds = Math.ceil((targetDate.getTime() - now.getTime()) / 1000);
+            const isToday = now.toDateString() === targetDate.toDateString();
 
-            // If target is more than 1 minute in the past, and we are in 'scheduled' status, 
-            // it should probably just trigger now (consistency with existing logic).
-            if (diffSeconds <= 0) {
-                console.log("SCHEDULED TIME REACHED! AUTO-STARTING...");
+            // 🎯 SECURE AUTO-START:
+            // Only fire if it's TODAY and the time has arrived.
+            if (isToday && diffSeconds <= 0 && activePlan.status === 'scheduled') {
+                console.log("🎯 SCHEDULED TIME REACHED! AUTO-STARTING...");
                 clearInterval(checkTime);
                 setScheduledRemaining(0);
 
-                // Transition to 'live' atomically
                 try {
                     await supabase
                         .from('training_plans')
                         .update({ status: 'live' })
                         .eq('id', activePlan.id);
-
-                    // Refresh local state to trigger the standard 'live' logic
+                    
                     fetchLatestPlan();
                 } catch (err) {
                     console.error("Failed to auto-transition scheduled session:", err);
                 }
-            } else {
+            } else if (diffSeconds > 0) {
                 setScheduledRemaining(diffSeconds);
+            } else if (isToday) {
+                setScheduledRemaining(0);
+            } else {
+                setScheduledRemaining(null);
             }
         }, 1000); // Check every 1 second for smooth countdown
 
@@ -292,12 +298,16 @@ export default function JumpRopeTraining() {
         let pollInterval: any = null;
 
         const init = async () => {
+            if (!user?.id || user.id.length < 30) return;
+
             // Resolve student_id for handleFinish auto-lock
-            const { data: stData } = await supabase
+            const { data: stData, error: stError } = await supabase
                 .from('students')
                 .select('id')
                 .eq('profile_id', user.id)
                 .maybeSingle();
+            
+            if (stError) console.error('Init st lookup error:', stError);
             if (stData?.id) setResolvedStudentId(stData.id);
 
             // Initial fetch
@@ -316,24 +326,78 @@ export default function JumpRopeTraining() {
         };
     }, [fetchLatestPlan, user?.id]);
 
-    // 1b. Real-time Broadcast Listener for instant plan delivery
+    // 🛰️ CONSOLIDATED BROADCAST HUB: Presence + Instructions (ROCK-SOLID)
     useEffect(() => {
         if (!user?.id) return;
 
-        const channel = supabase.channel(`direct_broadcasts_${user.id}`)
-            .on('broadcast', { event: 'session_update' }, (payload) => {
-                console.log('REAL-TIME PLAN SYNC:', payload);
-                // If it's a full plan update ('sent' status or explicit refresh flag)
-                if (payload.payload?.status === 'sent' || payload.payload?.refresh_plan) {
+        const channelId = `direct_broadcasts_${user.id}`;
+        console.log(`📡 STUDENT: Initializing persistent channel [${channelId}]`);
+
+        const channel = supabase.channel(channelId)
+            .on('broadcast', { event: 'STUDENT_ACK' }, () => {
+                // Self-ack (safe to ignore)
+            })
+            .on('broadcast', { event: 'SYNC_ALERTS' }, ({ payload }) => {
+                console.log('🚀 ROCKET SYNC RECEIVED:', payload);
+                
+                // 1. Lifecycle Status Updates
+                if (payload?.type === 'session_status_update') {
+                    if (payload.status) {
+                        // 🚀 ROCKET FOR LIVE START:
+                        if (payload.status === 'live') {
+                            toast.success('🚀 Mission Live! Let\'s Jump!', {
+                                duration: 5000,
+                                icon: '🔥',
+                                style: { background: '#0b0e18', color: '#10b981', border: '1px solid #10b981' }
+                            });
+                        }
+                        
+                        // Internal state refresh
+                        if (activePlan) {
+                            setActivePlan(prev => prev ? { ...prev, status: payload.status } : null);
+                        }
+                        fetchLatestPlan();
+                    }
+                }
+
+                // 2. Direct Target Updates
+                if (payload?.type === 'target_update') {
+                    const tJumps = payload.target_jumps || '??';
+                    const tTime = payload.target_time || '??';
+                    toast.success(`🚀 New Mission: ${tJumps} Jumps / ${tTime} Mins`, {
+                        duration: 5000,
+                        position: 'top-center',
+                        icon: '🎯',
+                        style: { background: '#0b0e18', color: '#3b82f6', border: '1px solid #3b82f6' }
+                    });
+                    fetchLatestPlan();
+                } else if (payload?.refresh_plan) {
                     fetchLatestPlan();
                 }
             })
-            .subscribe();
+            .subscribe(async (status) => {
+                if (status === 'SUBSCRIBED') {
+                    console.log(`✅ STUDENT: Persistence active on [${channelId}]`);
+                    
+                    // Fire the handshake ONE time upon entry
+                    await channel.send({
+                        type: 'broadcast',
+                        event: 'STUDENT_ACK',
+                        payload: { userId: user.id, timestamp: new Date().toISOString() }
+                    });
+                    console.log('🤝 HANDSHAKE: BROADCASTED PRESENCE');
+                }
+                if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
+                    console.warn(`⚠️ STUDENT: Channel ${status}. Connection might be fragile.`);
+                }
+            });
 
         return () => {
+            console.log(`🔌 STUDENT: Cleaning up channel [${channelId}]`);
             supabase.removeChannel(channel);
         };
-    }, [resolvedStudentId, fetchLatestPlan]);
+    }, [user?.id]); // 🛡️ ONLY dependent on userId to prevent flickering
+
 
     // 2. Handle Training Assignments
     useEffect(() => {

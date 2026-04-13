@@ -286,7 +286,9 @@ export function useLevelAccess(studentId?: string | number | null) {
     return useQuery({
         queryKey: ['level_access', studentId],
         queryFn: async () => {
-            if (!studentId || studentId === 'null') return [];
+            // 🛡️ NUCLEAR GUARD: Ignore missing or stringified null/undefined IDs
+            if (!studentId || studentId === 'null' || studentId === 'undefined') return [];
+            
             const { data, error } = await supabase
                 .from('level_purchases')
                 .select('level_number')
@@ -298,7 +300,7 @@ export function useLevelAccess(studentId?: string | number | null) {
             }
             return data.map(lp => lp.level_number) as number[];
         },
-        enabled: !!studentId && studentId !== 'null',
+        enabled: !!studentId && studentId !== 'null' && studentId !== 'undefined',
         staleTime: 1000 * 60 * 10,
     });
 }
@@ -959,7 +961,9 @@ export function useAthleteActivityHistory(userId?: string) {
     return useQuery({
         queryKey: ['athlete_activity_history', userId],
         queryFn: async () => {
-            if (!userId) return [];
+            // 🛡️ NUCLEAR GUARD: Ignore missing or stringified null/undefined IDs
+            if (!userId || userId === 'null' || userId === 'undefined') return [];
+            
             const { data, error } = await supabase
                 .from('jump_rope_sessions')
                 .select('*')
@@ -969,7 +973,7 @@ export function useAthleteActivityHistory(userId?: string) {
             if (error) throw error;
             return data;
         },
-        enabled: !!userId,
+        enabled: !!userId && userId !== 'null' && userId !== 'undefined',
         staleTime: 1000 * 60 * 2, // 2 minutes
     });
 }
@@ -1095,10 +1099,12 @@ export function useAssignTraining() {
 export function useTrainingPlanHistory(possibleId?: string | null) {
     return useQuery({
         queryKey: ['training_plan_history', possibleId],
-        enabled: !!possibleId,
         queryFn: async () => {
+            // 🛡️ NUCLEAR GUARD: Ignore missing or stringified null/undefined IDs
+            if (!possibleId || possibleId === 'null' || possibleId === 'undefined') return [];
+
             // First identify the true student.id (it could be a profile_id)
-            let trueStudentId = possibleId;
+            let trueStudentId: any = possibleId;
             const { data: stData } = await supabase
                 .from('students')
                 .select('id')
@@ -1121,6 +1127,7 @@ export function useTrainingPlanHistory(possibleId?: string | null) {
             }
             return data;
         },
+        enabled: !!possibleId && possibleId !== 'null' && possibleId !== 'undefined',
         staleTime: 1000 * 60 * 5,
     });
 }

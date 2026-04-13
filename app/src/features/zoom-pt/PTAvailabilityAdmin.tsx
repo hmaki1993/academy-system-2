@@ -575,25 +575,33 @@ export default function PTAvailabilityAdmin() {
                 <PageHeader title="PT Management" subtitle="Availability & Bookings Control" />
             </div>
 
-            {/* Tabs - Sleek Minimalist Style */}
-            <div className="flex justify-center mb-12">
-                <div className="flex gap-2 p-1 bg-white/5 rounded-2xl border border-white/10 w-fit">
+            {/* Tabs - Ultra Minimalist Style */}
+            <div className="flex justify-center mb-8 sm:mb-12 px-2">
+                <div className="flex items-center justify-center gap-2 sm:gap-4 w-fit">
                     {([
                         { id: 'availability', label: 'Availability', icon: Settings2 },
                         { id: 'bookings', label: 'Bookings', icon: CalendarDays },
                         { id: 'analytics', label: 'Analytics', icon: BarChart3 },
-                    ] as const).map(tab => (
-                        <button
-                            key={tab.id}
-                            onClick={() => handleTabChange(tab.id)}
-                            className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === tab.id
-                                ? 'bg-primary text-white shadow-lg shadow-primary/20'
-                                : 'text-white/40 hover:text-white hover:bg-white/5'
-                                }`}
-                        >
-                            <tab.icon className="w-3.5 h-3.5" />
-                            {tab.label}
-                        </button>
+                    ] as const).map((tab, idx) => (
+                        <div key={tab.id} className="flex items-center gap-2 sm:gap-4">
+                            {idx > 0 && <div className="w-1 h-1 rounded-full bg-white/10" />}
+                            <button
+                                onClick={() => handleTabChange(tab.id)}
+                                className={`relative flex items-center gap-2 px-3 py-3 sm:px-6 sm:py-4 transition-all duration-300 ${activeTab === tab.id
+                                    ? 'text-primary drop-shadow-[0_0_8px_rgba(212,175,55,0.5)]'
+                                    : 'text-white/20 hover:text-white/60'
+                                    }`}
+                            >
+                                <tab.icon className={`w-3.5 h-3.5 transition-transform duration-500 ${activeTab === tab.id ? 'scale-110' : 'opacity-40'}`} />
+                                <span className={`text-[9px] sm:text-[10px] font-black uppercase tracking-[0.3em] ${activeTab === tab.id ? '' : 'hidden sm:inline'}`}>
+                                    {tab.label}
+                                </span>
+                                
+                                {activeTab === tab.id && (
+                                    <div className="absolute bottom-0 left-2 right-2 h-[2px] bg-primary shadow-[0_0_15px_rgba(212,175,55,0.8)] rounded-full animate-in fade-in zoom-in-x duration-500" />
+                                )}
+                            </button>
+                        </div>
                     ))}
                 </div>
             </div>

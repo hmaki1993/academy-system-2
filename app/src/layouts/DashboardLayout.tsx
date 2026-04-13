@@ -58,6 +58,7 @@ export default function DashboardLayout() {
     // Derived states from unified userProfile
     const userId = userProfile?.id || null;
     const role = userProfile?.role?.toLowerCase() || null;
+    const normalizedRole = role?.toLowerCase().trim().replace(/\s+/g, '_');
     const fullName = userProfile?.full_name?.trim() || null;
     const userEmail = userProfile?.email?.trim() || null;
     const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
@@ -93,29 +94,31 @@ export default function DashboardLayout() {
     const lastToastTime = useRef<number>(0);
     const toastCount = useRef<number>(0);
 
+    const fetchNotifications = async () => {
+        if (!userId) return;
+
+        // Fetch only relevant notifications (for me OR global for my role)
+        const { data } = await supabase
+            .from('notifications')
+            .select('*')
+            .or(`user_id.eq.${userId},target_role.eq.${normalizedRole},target_role.eq.admin_head_reception`)
+            .order('created_at', { ascending: false })
+            .limit(20);
+
+        if (data) {
+            setNotifications(data);
+            data.forEach((n: any) => processedIds.current.add(n.id));
+        }
+    };
+
     useEffect(() => {
-        const fetchNotifications = async () => {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (!user) return;
-
-            const { data } = await supabase
-                .from('notifications')
-                .select('*')
-                .order('created_at', { ascending: false })
-                .limit(20);
-
-            const filteredData = data?.filter((n: any) => !n.user_id || n.user_id === user.id);
-
-            if (filteredData) {
-                setNotifications(filteredData);
-                filteredData.forEach((n: any) => processedIds.current.add(n.id));
-            }
-        };
-
         fetchNotifications();
-    }, [userId]);
+    }, [userId, normalizedRole]);
 
-    // 🔔 GLOBAL NOTIFICATION & SYNC ENGINE
+    const [syncStatus, setSyncStatus] = useState<'connected' | 'reconnecting' | 'disconnected'>('disconnected');
+    const syncStatusRef = useRef<'connected' | 'reconnecting' | 'disconnected'>('disconnected');
+
+    // 🔔 GLOBAL NOTIFICATION & SYNC ENGINE (V2 ROCKET)
     useEffect(() => {
         if (!userId) return;
 
@@ -123,58 +126,82 @@ export default function DashboardLayout() {
         let athleteMonitor: any = null;
 
         const setupGlobalSync = async () => {
-            // 1. BROADCAST PROTOCOL (Zero-Refresh Signal Listener)
-            notificationChannel = supabase.channel(`athlete-broadcast-${userId}`)
-                .on('broadcast', { event: 'SYNC_ALERTS' }, async (payload) => {
-                    // 🔔 SIGNAL RECEIVED: Coach pushed an update
-                    console.log('SYNC_ALERTS received:', payload);
+            // Ensure auth session is synced with realtime
+            const { data: { session } } = await supabase.auth.getSession();
+            if (session) supabase.realtime.setAuth(session.access_token);
+
+            // 1. V2 ROCKET BROADCAST (Aggressive Heartbeat)
+            notificationChannel = supabase.channel(`athlete_rocket_v2_${userId}`)
+                .on('broadcast', { event: 'ROCKET_NOTIFICATION' }, async (rawPayload) => {
+                    const payload = rawPayload.payload || rawPayload;
+                    console.log('🚀 ROCKET_V2: Received Instant Payload:', payload);
                     
-                    // A. Global Sound & Toast
                     playNotificationSound('bell');
                     
-                    // Show toast with translated message if possible
-                    let toastMsg = "Strategy updated!";
-                    if (payload.payload?.message?.startsWith('JSON_NOTIF:')) {
-                        try {
-                            const data = JSON.parse(payload.payload.message.replace('JSON_NOTIF:', ''));
-                            toastMsg = t(data.key, data.params || {});
-                        } catch (e) {}
+                    if (payload.notification) {
+                        setNotifications(prev => {
+                            if (prev.some(n => n.id === payload.notification.id)) return prev;
+                            const newList = [payload.notification, ...prev].slice(0, 20);
+                            processedIds.current.add(payload.notification.id);
+                            return newList;
+                        });
                     }
 
+                    // Instant Toast with branding
+                    const toastMsg = payload.notification?.message || "Tactical Update Received!";
                     toast.success(toastMsg, {
-                        icon: '🔔',
-                        style: { background: '#050510', color: '#fff', border: '1px solid #d4af37' }
+                        icon: '🚀',
+                        style: { background: '#050510', color: '#fff', border: '1px solid #10b981' },
+                        duration: 6000
                     });
 
-                    // B. FORCE RE-FETCH: Ensure Hub is updated
-                    const { data: latest } = await supabase
-                        .from('notifications')
-                        .select('*')
-                        .eq('user_id', userId)
-                        .order('created_at', { ascending: false })
-                        .limit(20);
-                    
-                    if (latest) {
-                        setNotifications(latest);
-                        // Force refresh processed IDs if needed
-                        latest.forEach(n => processedIds.current.add(n.id));
-                    }
+                    // Background re-sync (Backup)
+                    setTimeout(() => fetchNotifications(), 2000);
                 })
                 .subscribe((status) => {
-                    console.log('SYNC_ALERTS channel status:', status);
+                    console.log(`🚀 ROCKET_V2: Connection Status for [${userId}]:`, status);
+                    if (status === 'SUBSCRIBED') {
+                        setSyncStatus('connected');
+                        syncStatusRef.current = 'connected';
+                    } else if (status === 'JOINING') {
+                        setSyncStatus('reconnecting');
+                        syncStatusRef.current = 'reconnecting';
+                    } else {
+                        setSyncStatus('disconnected');
+                        syncStatusRef.current = 'disconnected';
+                    }
                 });
 
-            // 2. ATHLETE HUB MONITOR (UI Sync Trigger for PT/Sessions)
-            // Realtime DB Sync removed from global layout to prevent 400 Bad Request connection limit errors.
+            // 2. DB MONITOR (Fallback)
+            athleteMonitor = supabase.channel('db-notifications')
+                .on('postgres_changes', { 
+                    event: 'INSERT', 
+                    schema: 'public', 
+                    table: 'notifications', 
+                    filter: `user_id=eq.${userId}` 
+                }, (payload) => {
+                    console.log('🔔 DB_FALLBACK: Record Detected:', payload.new);
+                    fetchNotifications();
+                })
+                .subscribe();
         };
 
         setupGlobalSync();
 
+        // Heartbeat Monitor
+        const checkInterval = setInterval(() => {
+            if (syncStatusRef.current === 'disconnected' && userId) {
+                console.warn('🚀 ROCKET_V2: Connection Lost. Force Re-syncing...');
+                setupGlobalSync();
+            }
+        }, 30000);
+
         return () => {
+            clearInterval(checkInterval);
             if (notificationChannel) supabase.removeChannel(notificationChannel);
             if (athleteMonitor) supabase.removeChannel(athleteMonitor);
         };
-    }, [userId, role]);
+    }, [userId]);
 
 
     // PRE-RESUME AUDIO
@@ -314,7 +341,6 @@ export default function DashboardLayout() {
         navigate('/login');
     };
 
-    const normalizedRole = role?.toLowerCase().trim().replace(/\s+/g, '_');
 
     const allNavItems = [
         { to: '/app', icon: LayoutDashboard, label: t('common.dashboard'), roles: ['admin', 'head_coach', 'coach', 'reception', 'cleaner', 'student'] },
@@ -587,7 +613,7 @@ export default function DashboardLayout() {
                             <WalkieTalkie role={role || ''} userId={userId || ''} />
 
                             {/* Notifications Center */}
-                            <div className="relative">
+                            <div className="relative group/bell flex items-center gap-2">
                                 <button
                                     onClick={(e) => { e.stopPropagation(); setNotificationsOpen(!notificationsOpen); }}
                                     className={`w-9 h-9 flex items-center justify-center rounded-full transition-all relative ${notificationsOpen ? 'bg-primary/20 text-primary' : 'text-violet-300/70 hover:bg-violet-500/10'}`}
@@ -603,14 +629,16 @@ export default function DashboardLayout() {
                                 {/* ELITE NOTIFICATION DROPDOWN */}
                                 {notificationsOpen && (
                                     <div 
-                                        className={`absolute mt-4 w-80 sm:w-96 bg-[#050510]/95 backdrop-blur-3xl border border-white/10 rounded-[2rem] shadow-[0_40px_100px_rgba(0,0,0,0.8)] p-4 sm:p-6 z-[1000] animate-in slide-in-from-top-4 duration-500
+                                        className={`absolute top-full mt-4 w-80 sm:w-96 bg-[#050510]/95 backdrop-blur-3xl border border-white/10 rounded-[2rem] shadow-[0_40px_100px_rgba(0,0,0,0.8)] p-4 sm:p-6 z-[1000] animate-in slide-in-from-top-4 duration-500
                                             ${isRtl ? 'left-0 sm:-left-32' : 'right-0 sm:-right-8'}
                                         `}
                                         onClick={e => e.stopPropagation()}
                                     >
                                         <div className="flex justify-between items-center mb-6">
                                             <div className="flex flex-col">
-                                                <h3 className="text-sm font-black text-white uppercase tracking-[0.3em]">Intelligence Hub</h3>
+                                                <h3 className="text-sm font-black text-white uppercase tracking-[0.3em]">
+                                                    {normalizedRole === 'student' ? `Hello ${fullName?.split(' ')[0] || 'Athlete'}` : 'Intelligence Center'}
+                                                </h3>
                                                 <span className="text-[10px] font-black text-primary uppercase">{unreadCount} New</span>
                                             </div>
                                             {filteredNotifications.length > 0 && (

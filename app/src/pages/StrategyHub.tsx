@@ -23,6 +23,27 @@ const FloatingRemoteHub = ({ athlete, onClose }: { athlete: any, onClose: () => 
     const { sendDirectTargets, updateSessionStatus, isSending } = useSmartPlan();
     const [liveJumps, setLiveJumps] = useState<number | ''>('');
     const [liveTime, setLiveTime] = useState<number | ''>('');
+    const [isAthletePresent, setIsAthletePresent] = useState(false);
+    const hasToasted = React.useRef(false);
+
+    // ─── Bidirectional Handshake: Listen for Athlete Presence ─────────────────
+    useEffect(() => {
+        if (!athlete?.userId) return;
+        const channel = supabase.channel(`direct_broadcasts_${athlete.userId}`)
+            .on('broadcast', { event: 'STUDENT_ACK' }, () => {
+                setIsAthletePresent(true);
+                if (!hasToasted.current) {
+                    toast.success(`${athlete.name} is ready!`, {
+                        icon: '🚀',
+                        style: { background: '#0b0e18', color: '#10b981', border: '1px solid rgba(16,185,129,0.2)' }
+                    });
+                    hasToasted.current = true;
+                }
+            })
+            .subscribe();
+        return () => { supabase.removeChannel(channel); };
+    }, [athlete?.userId, athlete.name]);
+
     const now = useMemo(() => new Date(), []);
     const initialH24 = now.getHours();
     const initialMM = String(now.getMinutes()).padStart(2, '0');
@@ -48,6 +69,24 @@ const FloatingRemoteHub = ({ athlete, onClose }: { athlete: any, onClose: () => 
         if (pRef.current) pRef.current.scrollTop = pIdx * itemHeight;
     }, [initialH24, initialMM, initialPeriod]);
     const dragRef = React.useRef<{ startX: number; startY: number; startPosX: number; startPosY: number } | null>(null);
+    const hubRef = React.useRef<HTMLDivElement>(null);
+
+    // ─── Click Outside to Close ─────────────────
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (hubRef.current && !hubRef.current.contains(event.target as Node)) {
+                onClose();
+            }
+        };
+        // Add listener with a slight delay to avoid immediate closing on trigger
+        const timer = setTimeout(() => {
+            document.addEventListener('mousedown', handleClickOutside);
+        }, 10);
+        return () => {
+            clearTimeout(timer);
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, [onClose]);
 
     const onMouseDown = (e: React.MouseEvent) => {
         e.stopPropagation();
@@ -64,6 +103,7 @@ const FloatingRemoteHub = ({ athlete, onClose }: { athlete: any, onClose: () => 
     return createPortal(
         <div className="fixed inset-0 z-[999] pointer-events-none flex items-start sm:items-center justify-center pt-32 sm:pt-0 sm:block sm:inset-auto sm:bottom-10 sm:left-12 sm:translate-y-0">
             <div
+                ref={hubRef}
                 className="pointer-events-auto w-60 bg-[#0b0e18] border border-white/10 rounded-xl shadow-2xl p-4 flex flex-col gap-3 animate-in zoom-in-95 fade-in duration-200"
                 style={{ 
                     transform: window.innerWidth < 640 
@@ -227,30 +267,100 @@ const FloatingRemoteHub = ({ athlete, onClose }: { athlete: any, onClose: () => 
                 `}</style>
 
                 {/* Control Icons — gap-2 */}
-                <div className="flex items-center gap-2">
-                    <button onClick={(e) => { e.stopPropagation(); updateSessionStatus(athlete.userId, 'restarting'); }}
-                        className="flex-1 h-10 rounded-lg bg-orange-500/10 text-orange-500 hover:bg-orange-500 hover:text-black flex items-center justify-center transition-all active:scale-95">
+                <div className="flex items-center gap-2 mt-2">
+                    {/* Restart: Always Active */}
+                    <button onClick={(e) => { 
+                        e.stopPropagation(); 
+                        updateSessionStatus(athlete.userId, 'restarting'); 
+                    }}
+                        className="flex-1 h-10 rounded-lg bg-orange-500/10 text-orange-500 hover:bg-orange-500 hover:text-black flex items-center justify-center transition-all active:scale-95 shadow-lg shadow-orange-500/5">
                         <RotateCcw size={16} />
                     </button>
-                    <button onClick={(e) => { e.stopPropagation(); updateSessionStatus(athlete.userId, 'paused'); }}
-                        className="flex-1 h-10 rounded-lg bg-yellow-500/10 text-yellow-500 hover:bg-yellow-500 hover:text-black flex items-center justify-center transition-all active:scale-95">
-                        <Pause size={16} fill="currentColor" />
-                    </button>
-                    <button onClick={(e) => { e.stopPropagation(); updateSessionStatus(athlete.userId, 'idle'); }}
-                        className="flex-1 h-10 rounded-lg bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white flex items-center justify-center transition-all active:scale-95">
+                    
+                    {/* Professional Master Controller: Start / Scheduled / Pause / Resume */}
+                    {(() => {
+                        const status = athlete.status || 'idle';
+                        const isLive = status === 'live';
+                        const isPaused = status === 'paused';
+                        const isScheduled = status === 'scheduled';
+                        const isActive = isLive || isPaused;
+                        
+                        // 📅 CASE 1: Scheduled Session (Lock controls, allow Override)
+                        if (isScheduled) {
+                            return (
+                                <button 
+                                    onClick={(e) => { 
+                                        e.stopPropagation(); 
+                                        // 🚀 FORCE START NOW: Overrides schedule and starts immediately!
+                                        athlete.status = 'live'; 
+                                        sendDirectTargets(athlete.userId, Number(liveTime), Number(liveJumps), null); 
+                                    }}
+                                    className="flex-[2] h-10 rounded-lg bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 hover:bg-cyan-500 hover:text-black flex flex-col items-center justify-center transition-all active:scale-95 shadow-lg shadow-cyan-500/10">
+                                    <span className="text-[7px] font-black uppercase tracking-widest opacity-60">Override</span>
+                                    <span className="text-[9px] font-black uppercase tracking-[0.2em] -mt-1">START NOW</span>
+                                </button>
+                            );
+                        }
+
+                        // 🛑 CASE 2: No Active Session (Start or Schedule)
+                        if (!isActive) {
+                            const isPickingFuture = (() => {
+                                if (!scheduledStartTime) return false;
+                                const [h, m] = scheduledStartTime.split(':').map(Number);
+                                const picked = new Date();
+                                picked.setHours(h, m, 0, 0);
+                                return picked.getTime() > Date.now() + 60000; // More than 1 min in future
+                            })();
+
+                            return (
+                                <button 
+                                    onClick={(e) => { 
+                                        e.stopPropagation(); 
+                                        // 🎯 Check if we are scheduling or starting
+                                        athlete.status = isPickingFuture ? 'scheduled' : 'live';
+                                        sendDirectTargets(athlete.userId, Number(liveTime), Number(liveJumps), isPickingFuture ? scheduledStartTime : null); 
+                                    }}
+                                    className={`flex-[2] h-10 rounded-lg flex items-center justify-center gap-2 transition-all active:scale-95 font-black uppercase text-[10px] tracking-widest shadow-lg ${
+                                        isPickingFuture 
+                                            ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30 hover:bg-blue-500 hover:text-white shadow-blue-500/10'
+                                            : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500 hover:text-black shadow-emerald-500/10'
+                                    }`}>
+                                    {isPickingFuture ? <Clock size={14} /> : <PlayCircle size={14} fill="currentColor" />}
+                                    <span>{isPickingFuture ? 'SCHEDULE' : 'START'}</span>
+                                </button>
+                            );
+                        }
+
+                        // ⚡ CASE 3: Active Session (Handshake Lock applied)
+                        return (
+                            <button 
+                                disabled={!isAthletePresent}
+                                onClick={(e) => { 
+                                    e.stopPropagation(); 
+                                    const targetStatus = isPaused ? 'live' : 'paused';
+                                    athlete.status = targetStatus; 
+                                    updateSessionStatus(athlete.userId, targetStatus); 
+                                }}
+                                className={`flex-[2] h-10 rounded-lg flex items-center justify-center transition-all active:scale-95 shadow-lg disabled:opacity-20 disabled:grayscale disabled:cursor-wait ${
+                                    isPaused 
+                                        ? 'bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500 hover:text-black shadow-emerald-500/5' 
+                                        : 'bg-yellow-500/10 text-yellow-500 hover:bg-yellow-500 hover:text-black shadow-yellow-500/5'
+                                }`}>
+                                {isPaused ? <PlayCircle size={18} fill="currentColor" /> : <Pause size={16} fill="currentColor" />}
+                            </button>
+                        );
+                    })()}
+
+                    {/* Stop: Always Active */}
+                    <button onClick={(e) => { 
+                        e.stopPropagation(); 
+                        athlete.status = 'idle';
+                        updateSessionStatus(athlete.userId, 'idle'); 
+                    }}
+                        className="flex-1 h-10 rounded-lg bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white flex items-center justify-center transition-all active:scale-95 shadow-lg shadow-red-500/5">
                         <X size={16} />
                     </button>
                 </div>
-
-                {/* Start button — Glassmorphism Green Style */}
-                <button
-                    onClick={(e) => { e.stopPropagation(); sendDirectTargets(athlete.userId, Number(liveTime), Number(liveJumps), scheduledStartTime || null); }}
-                    disabled={isSending}
-                    className="w-full h-11 rounded-xl bg-emerald-500/10 border border-emerald-500/40 text-emerald-400 flex items-center justify-center gap-2 font-black uppercase tracking-widest text-[10px] hover:bg-emerald-500 hover:text-black transition-all active:scale-95 disabled:opacity-50 shadow-[0_0_15px_rgba(16,185,129,0.1)]"
-                >
-                    <Send size={14} className="-rotate-12" />
-                    {isSending ? 'SYNCING...' : scheduledStartTime ? 'SCHEDULE SESSION' : 'START SESSION'}
-                </button>
             </div>
         </div>,
         document.body

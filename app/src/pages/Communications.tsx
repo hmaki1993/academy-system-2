@@ -2373,82 +2373,9 @@ export default function Communications() {
         return () => { supabase.removeChannel(channel); };
     }, [activeConvo]);
 
-    // Global Message Listener (updates sidebar for ALL chats instantly)
-    useEffect(() => {
-        if (!currentUserId) return;
-        const channel = supabase
-            .channel('global-messages')
-            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' },
-                () => { loadConversations(); }
-            )
-            .subscribe();
-        return () => { supabase.removeChannel(channel); };
-    }, [currentUserId, loadConversations]);
-
-    // Supabase Presence (Instant online/offline)
-    useEffect(() => {
-        if (!currentUserId) return;
-        const channel = supabase.channel('global-presence', {
-            config: { presence: { key: currentUserId } }
-        });
-
-        channel
-            .on('presence', { event: 'sync' }, () => {
-                setPresenceState(channel.presenceState());
-            })
-            .subscribe(async (status) => {
-                if (status === 'SUBSCRIBED') {
-                    await channel.track({
-                        online_at: new Date().toISOString(),
-                        user_id: currentUserId
-                    });
-                }
-            });
-
-        return () => { supabase.removeChannel(channel); };
-    }, [currentUserId]);
-
-
-
-    // ─── Profile changes subscription ─────────────────────────────────────────────
-    useEffect(() => {
-        if (!currentUserId) return;
-
-        const channel = supabase
-            .channel('public_profiles_presence')
-            .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'profiles' },
-                (payload) => {
-                    const updatedProfile = payload.new as Profile;
-
-                    // Update in conversations
-                    setConversations(prev => prev.map(c => {
-                        if (c.otherUser?.id === updatedProfile.id) {
-                            return { ...c, otherUser: { ...c.otherUser, ...updatedProfile } };
-                        }
-                        return c;
-                    }));
-
-                    // Update active conversation if it matches
-                    if (activeConvo?.otherUser?.id === updatedProfile.id) {
-                        setActiveConvo(prev => prev ? {
-                            ...prev,
-                            otherUser: { ...prev.otherUser, ...updatedProfile }
-                        } : null);
-                    }
-
-                    // Update in messages sender info
-                    setMessages(prev => prev.map(m => {
-                        if (m.sender_id === updatedProfile.id) {
-                            return { ...m, sender: { ...m.sender, ...updatedProfile } };
-                        }
-                        return m;
-                    }));
-                }
-            )
-            .subscribe();
-
-        return () => { supabase.removeChannel(channel); };
-    }, [currentUserId, activeConvo?.otherUser?.id]);
+    // Global Message Listener removed to avoid 400 Bad Request errors and network congestion.
+    // Presence is handled by the primary channel.
+    // Profile updates are fetched on-demand or during session init.
 
     // ─── Send text message (and pending images) ────────────────────────────────────
     const sendMessage = async (e?: React.FormEvent) => {

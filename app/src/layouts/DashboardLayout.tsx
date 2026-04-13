@@ -33,11 +33,13 @@ import {
 import { supabase } from '../lib/supabase';
 import toast from 'react-hot-toast';
 import { useTheme } from '../context/ThemeContext';
+import { useSettings } from '../context/SettingsContext';
 import PremiumClock from '../components/PremiumClock';
 import MinimalCountdown from '../components/MinimalCountdown';
 import WalkieTalkie from '../components/WalkieTalkie';
 import { playHoverSound } from '../utils/audio';
-import { usePresence } from '../hooks/usePresence';
+import { playNotificationSound, resumeAudioContext } from '../utils/notifications';
+import { usePresenceContext } from '../context/PresenceContext';
 
 export default function DashboardLayout() {
     const { t, i18n } = useTranslation();
@@ -111,94 +113,61 @@ export default function DashboardLayout() {
         };
 
         fetchNotifications();
+    }, [userId]);
 
-        const channel = supabase
-            .channel('notifications-changes')
-            .on(
-                'postgres_changes',
-                { event: 'INSERT', schema: 'public', table: 'notifications' },
-                async (payload) => {
-                    const newNote = payload.new as any;
+    // 🔔 GLOBAL NOTIFICATION & SYNC ENGINE
+    useEffect(() => {
+        if (!userId) return;
+
+        let notificationChannel: any = null;
+        let athleteMonitor: any = null;
+
+        const setupGlobalSync = async () => {
+            // 1. BROADCAST PROTOCOL (Zero-Refresh Signal Listener)
+            notificationChannel = supabase.channel(`athlete-broadcast-${userId}`)
+                .on('broadcast', { event: 'SYNC_ALERTS' }, async (payload) => {
+                    // 🔔 SIGNAL RECEIVED: Coach pushed an update
                     
-                    // 🛡️ CRITICAL: Simplified & Robust Logic for Admin/Role-based toasts
-                    const target = (newNote.target_role || '').toLowerCase().trim();
-                    const isGlobal = !newNote.user_id && !newNote.target_role;
-                    const matchesMe = (userId && newNote.user_id === userId) || 
-                                    (target === 'admin' && role === 'admin') ||
-                                    (target === 'admin_head_reception' && ['admin', 'head_coach', 'reception'].includes(role || ''));
+                    // A. Global Sound & Toast
+                    playNotificationSound('bell');
+                    toast.success(`TACTICAL BLUEPRINT: Strategy updated!`, {
+                        icon: '🔔',
+                        style: { background: '#050510', color: '#fff', border: '1px solid #d4af37' }
+                    });
 
-                    if (isGlobal || matchesMe) {
-                        if (processedIds.current.has(newNote.id)) return;
-                        processedIds.current.add(newNote.id);
-
-                        // PLAY SOUND IMMEDIATELY 🔊
-                        if (settings.notify_sounds !== false) {
-                            import('../utils/notifications').then(m => m.playNotificationSound('success'));
-                        }
-
-                        // Update State Instantly
-                        setNotifications(prev => {
-                            if (prev.some(n => n.id === newNote.id)) return prev;
-                            const updated = [newNote, ...prev];
-                            return updated.slice(0, 50);
-                        });
-
-                        // Toast Logic
-                        const isDuplicate = Array.from(processedToasts.current).some(msg => msg === newNote.message);
-                        if (!isDuplicate) {
-                            processedToasts.current.add(newNote.message);
-                            toast.success(`${newNote.title.toUpperCase()}: ${newNote.message}`, {
-                                icon: '🔔',
-                                duration: 6000,
-                                style: { 
-                                    background: '#050510', 
-                                    color: '#fff', 
-                                    border: '1px solid rgba(212,175,55,0.3)',
-                                    fontSize: '11px',
-                                    fontWeight: '900',
-                                    padding: '16px 24px',
-                                    borderRadius: '16px',
-                                    boxShadow: '0 20px 40px rgba(0,0,0,0.6)'
-                                }
-                            });
-                        }
+                    // B. FORCE RE-FETCH: Ensure Hub is updated
+                    const { data: latest } = await supabase
+                        .from('notifications')
+                        .select('*')
+                        .eq('user_id', userId)
+                        .order('created_at', { ascending: false })
+                        .limit(20);
+                    
+                    if (latest) {
+                        setNotifications(latest);
+                        latest.forEach(n => processedIds.current.add(n.id));
                     }
-                }
-            )
-            .subscribe();
+                })
+                .subscribe();
 
-        // ⚡ ZERO-LATENCY DIRECT MONITORING (Saves ~60s of delay)
-        const directMonitor = supabase.channel('direct-system-monitor')
-            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'pt_bookings' }, (payload) => {
-                const booking = payload.new as any;
-                toast.success(`PT BOOKED: ${booking.student_name || 'Expert Athlete'}`, {
-                    icon: '🦾', 
-                    duration: 8000,
-                    style: { background: '#050510', color: '#fff', border: '1px solid #d4af37' }
-                });
-                import('../utils/notifications').then(m => m.playNotificationSound('success'));
-            })
-            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'consultation_requests' }, (payload) => {
-                const req = payload.new as any;
-                toast.success(`CONSULTATION: ${req.full_name}`, {
-                    icon: '🩺',
-                    duration: 8000,
-                    style: { background: '#050510', color: '#fff', border: '1px solid #d4af37' }
-                });
-                import('../utils/notifications').then(m => m.playNotificationSound('success'));
-            })
-            .subscribe();
-
-        return () => { 
-            supabase.removeChannel(channel); 
-            supabase.removeChannel(directMonitor); 
+            // 2. ATHLETE HUB MONITOR (UI Sync Trigger for PT/Sessions)
+            // Realtime DB Sync removed from global layout to prevent 400 Bad Request connection limit errors.
         };
-    }, [settings, role, userId]);
 
-    // PRE-RESUME AUDIO on first interaction
+        setupGlobalSync();
+
+        return () => {
+            if (notificationChannel) supabase.removeChannel(notificationChannel);
+            if (athleteMonitor) supabase.removeChannel(athleteMonitor);
+        };
+    }, [userId, role]);
+
+
+    // PRE-RESUME AUDIO
     useEffect(() => {
         const resumeAudio = () => {
-            import('../utils/notifications').then(m => m.playNotificationSound('success'));
+            // ✅ MUST be synchronous — async callbacks (dynamic import .then) are rejected by browser autoplay policy
+            resumeAudioContext();
             window.removeEventListener('mousedown', resumeAudio);
             window.removeEventListener('touchstart', resumeAudio);
         };
@@ -217,18 +186,6 @@ export default function DashboardLayout() {
             try {
                 const { data: { user } } = await supabase.auth.getUser();
                 if (!user) return;
-
-                const { data: profile } = await supabase.from('profiles').select('full_name, role').eq('id', user.id).single();
-                
-                // Track with fallback info if profile query fails or is incomplete
-                const trackingData = {
-                    id: user.id,
-                    full_name: profile?.full_name || user.user_metadata?.full_name || user.email?.split('@')[0] || 'Unknown Athlete',
-                    role: profile?.role || 'student',
-                    last_seen: new Date().toISOString()
-                };
-
-                channel = supabase.channel('online-users', { config: { presence: { key: user.id } } });
 
                 const { data: student } = await supabase
                     .from('students')
@@ -251,38 +208,27 @@ export default function DashboardLayout() {
                     return;
                 }
 
+                setIsVerifiedStudent(true);
                 const { data: plan } = await supabase
                     .from('training_plans')
                     .select('status, scheduled_start')
                     .eq('student_id', student.id)
                     .maybeSingle();
-
                 if (plan) {
                     setScheduledStart(plan.scheduled_start);
                     setPlanStatus(plan.status);
                 }
-
-                setIsVerifiedStudent(!!student);
-
-                channel = supabase.channel(`layout-session-sync-${student.id}`)
-                    .on('postgres_changes' as any, {
-                        event: '*',
-                        table: 'training_plans',
-                        filter: `student_id=eq.${student.id}`
-                    }, (payload: any) => {
-                        setScheduledStart(payload.new?.scheduled_start || null);
-                        setPlanStatus(payload.new?.status || null);
-                    }).subscribe();
             } catch (err) {
-                console.error('Timer Sync Error:', err);
+                console.error('Session monitor initialization failed:', err);
             }
         };
 
-        setupSessionMonitor();
-
-        return () => {
-            if (channel) supabase.removeChannel(channel);
+        const init = async () => {
+            await setupSessionMonitor();
         };
+
+        init();
+        return () => { };
     }, []);
 
     useEffect(() => {
@@ -301,83 +247,9 @@ export default function DashboardLayout() {
         }
     }, [userProfile, userId]);
 
-    // --- 🚀 UNIFIED ROCKET MONITOR (High-Sensitivity State Watcher) ---
-    const { onlineStudents } = usePresence();
-    const prevStudentsRef = useRef<any[]>([]);
-    const isPresenceInited = useRef(false);
+    // ─── Live Floor data (unchanged) ────────────────────────────────────────────
+    const { onlineStudents } = usePresenceContext();
 
-    useEffect(() => {
-        if (role !== 'admin') return;
-        
-        const current = onlineStudents;
-        const prev = prevStudentsRef.current;
-
-        // On first real data, just initialize
-        if (!isPresenceInited.current && current.length > 0) {
-            prevStudentsRef.current = current;
-            isPresenceInited.current = true;
-            return;
-        }
-        isPresenceInited.current = true;
-
-        // Detect Joins
-        current.forEach(s => {
-            if (!prev.find(p => p.id === s.id) && s.id !== userId) {
-                toast.success(
-                    <div className="flex items-center gap-3">
-                        <div className="w-2.5 h-2.5 rounded-full bg-[#10b981] shadow-[0_0_10px_#10b981,0_0_20px_#10b981] animate-pulse" />
-                        <span className="font-black tracking-widest">{s.full_name.toUpperCase()} IS ONLINE</span>
-                    </div>,
-                    {
-                        icon: null,
-                        duration: 6000,
-                        style: { 
-                            background: '#050505', 
-                            color: '#fff', 
-                            border: '1px solid rgba(16,185,129,0.3)',
-                            boxShadow: '0 0 40px rgba(0,0,0,0.8), 0 0 20px rgba(16,185,129,0.1)',
-                            fontSize: '11px',
-                            padding: '20px 32px',
-                            borderRadius: '24px',
-                            fontFamily: 'var(--font-outfit)'
-                        }
-                    }
-                );
-                
-                // PLAY SOUND 🔊
-                if (settings.notify_sounds !== false) {
-                    import('../utils/notifications').then(m => m.playNotificationSound('bell'));
-                }
-            }
-        });
-
-        // Detect Leaves
-        prev.forEach(p => {
-            if (!current.find(s => s.id === p.id) && p.id !== userId) {
-                toast(
-                    <div className="flex items-center gap-3">
-                        <div className="w-2.5 h-2.5 rounded-full bg-[#ef4444] shadow-[0_0_10px_#ef4444,0_0_20px_#ef4444] animate-pulse" />
-                        <span className="font-black tracking-widest">{p.full_name.toUpperCase()} WENT OFFLINE</span>
-                    </div>,
-                    {
-                        icon: null,
-                        duration: 4000,
-                        style: { 
-                            background: '#050505', 
-                            color: 'rgba(255,255,255,0.6)', 
-                            border: '1px solid rgba(239,68,68,0.2)',
-                            fontSize: '11px',
-                            padding: '16px 24px',
-                            borderRadius: '16px',
-                            fontFamily: 'var(--font-outfit)'
-                        }
-                    }
-                );
-            }
-        });
-
-        prevStudentsRef.current = current;
-    }, [onlineStudents, role, userId]);
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -489,6 +361,7 @@ export default function DashboardLayout() {
             toast.success('All notifications cleared', {
                 style: { background: '#050510', color: '#fff', border: '1px solid rgba(212,175,55,0.3)' }
             });
+            setNotificationsOpen(false);
         } catch (e) { }
     };
 
@@ -528,7 +401,7 @@ export default function DashboardLayout() {
             >
                 {/* DESKTOP SIDEBAR */}
                 <div className="hidden lg:flex w-full flex-1 flex-col relative no-scrollbar pb-6 lg:pb-0">
-                    <div className={`flex flex-col items-center transition-all duration-700 ${isHoveringSidebar ? 'pt-12 mb-10 min-h-[100px]' : 'pt-8 mb-4 min-h-[40px]'}`}>
+                    <div className={`flex flex-col items-center transition-all duration-700 ${isHoveringSidebar ? 'pt-6 mb-4 min-h-[80px]' : 'pt-4 mb-2 min-h-[30px]'}`}>
                         {isHoveringSidebar && (
                             <div className="flex flex-col items-center animate-in fade-in zoom-in-95 duration-1000">
                                 <h1 className="flex flex-col items-center gap-1 font-[var(--font-orbitron)] leading-none text-center">

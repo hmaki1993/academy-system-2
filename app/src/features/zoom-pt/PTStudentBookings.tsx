@@ -30,19 +30,9 @@ export default function PTStudentBookings() {
     useEffect(() => {
         fetchMyBookings();
 
-        // Realtime Subscription
-        const channel = supabase
-            .channel('pt_status_updates')
-            .on(
-                'postgres_changes',
-                { event: 'UPDATE', schema: 'public', table: 'pt_bookings' },
-                () => fetchMyBookings()
-            )
-            .subscribe();
-
-        return () => {
-            supabase.removeChannel(channel);
-        };
+        // Realtime Subscription removed to prevent 400 Bad Request connection limit errors.
+        // Component relies on fetch on mount.
+        return () => { };
     }, []);
 
     const fetchMyBookings = async () => {

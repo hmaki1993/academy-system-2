@@ -4,7 +4,7 @@ import { useOutletContext, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { supabase } from '../lib/supabase';
 import { useAdminAnalytics, RevenueDetail } from '../hooks/useAdminAnalytics';
-import { usePresence } from '../hooks/usePresence';
+import { usePresenceContext } from '../context/PresenceContext';
 import { useTheme } from '../context/ThemeContext';
 import { useCurrency } from '../context/CurrencyContext';
 import { playHoverSound } from '../utils/audio';
@@ -30,7 +30,7 @@ export default function Dashboard() {
     const { formatPrice, currency } = useCurrency();
     const { userProfile } = useTheme();
     const { data: analytics, isLoading: analyticsLoading } = useAdminAnalytics();
-    const { onlineStudents, onlineCount } = usePresence();
+    const { onlineStudents, onlineCount } = usePresenceContext();
     const [selectedMetric, setSelectedMetric] = useState<'Total Revenue' | 'Consultations' | 'PT Sessions' | 'Athletes' | null>(null);
     const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
 

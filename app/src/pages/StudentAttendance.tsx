@@ -166,14 +166,9 @@ export default function StudentAttendance() {
 
     useEffect(() => {
         fetchTodaysClasses();
-        // Subscribe to changes
-        const sub = supabase
-            .channel('student_attendance_page')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'student_attendance' }, () => fetchTodaysClasses())
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'training_groups' }, () => fetchTodaysClasses())
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'students' }, () => fetchTodaysClasses())
-            .subscribe();
-        return () => { supabase.removeChannel(sub); };
+        // Realtime monitoring removed to stabilize the system and prevent 400 Bad Request errors.
+        // Data is fetched on mount and updated via handleStatusUpdate.
+        return () => { };
     }, []);
 
     const filteredGymnasts = useMemo(() => {

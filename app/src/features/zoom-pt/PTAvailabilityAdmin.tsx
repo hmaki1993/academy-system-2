@@ -301,27 +301,9 @@ export default function PTAvailabilityAdmin() {
         fetchCoaches();
         fetchBookings();
 
-        // Realtime Subscription for Bookings
-        const channel = supabase
-            .channel('admin_bookings_sync')
-            .on(
-                'postgres_changes',
-                { event: '*', schema: 'public', table: 'pt_bookings' },
-                (payload) => {
-                    if (payload.eventType === 'INSERT') {
-                        fetchBookings();
-                    } else if (payload.eventType === 'DELETE') {
-                        setBookings(prev => prev.filter(b => b.id !== payload.old.id));
-                    } else if (payload.eventType === 'UPDATE') {
-                        setBookings(prev => prev.map(b => b.id === payload.new.id ? { ...b, ...payload.new } : b));
-                    }
-                }
-            )
-            .subscribe();
-
-        return () => {
-            supabase.removeChannel(channel);
-        };
+        // Realtime Subscription removed to prevent 400 Bad Request connection limit errors.
+        // Component relies on fetch on mount, and state is preserved locally.
+        return () => { };
     }, []);
 
     useEffect(() => {

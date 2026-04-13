@@ -18,7 +18,7 @@ import AssessmentHistoryModal from '../components/AssessmentHistoryModal';
 import PremiumCalendarModal from '../components/PremiumCalendarModal';
 import CoachPTCalendar from '../features/zoom-pt/CoachPTCalendar';
 import FinancialProgressChart from '../components/FinancialProgressChart';
-import { usePresence } from '../hooks/usePresence';
+import { usePresenceContext } from '../context/PresenceContext';
 import PerformanceAnalyticsCard from '../components/PerformanceAnalyticsCard';
 import { useFinancialTrends } from '../hooks/useData';
 import PageHeader from '../components/PageHeader';
@@ -64,7 +64,7 @@ export default function CoachDashboard() {
     const [attendanceHistory, setAttendanceHistory] = useState<any[]>([]);
     const [loadingAttendanceHistory, setLoadingAttendanceHistory] = useState(false);
     const { data: financialTrends } = useFinancialTrends();
-    const { onlineStudents } = usePresence();
+    const { onlineStudents } = usePresenceContext();
 
     // History Modal State
     // No longer need interval here as PremiumClock handles it
@@ -190,39 +190,8 @@ export default function CoachDashboard() {
         initializeDashboard();
     }, []);
 
-    useEffect(() => {
-        if (!coachId) return;
-
-        // If Head Coach, listen to ALL changes, otherwise only for THIS coach
-        const filter = (role === 'head_coach') ? undefined : `coach_id = eq.${coachId}`;
-
-        const ptSessionsSubscription = supabase.channel(`pt_sessions_changes_${coachId}`)
-            .on('postgres_changes', {
-                event: '*',
-                schema: 'public',
-                table: 'pt_sessions',
-                filter: filter
-            }, () => {
-                fetchTodaySessions(coachId);
-            })
-            .subscribe();
-
-        const ptSubscriptionsChannel = supabase.channel(`pt_subscriptions_changes_${coachId}`)
-            .on('postgres_changes', {
-                event: '*',
-                schema: 'public',
-                table: 'pt_subscriptions',
-                filter: filter
-            }, () => {
-                fetchPTSubscriptions(coachId, ptRate);
-            })
-            .subscribe();
-
-        return () => {
-            ptSessionsSubscription.unsubscribe();
-            ptSubscriptionsChannel.unsubscribe();
-        };
-    }, [coachId, ptRate, role]);
+    // Realtime monitoring removed to avoid 400 Bad Request errors.
+    // Dashboard relies on initial fetch and manual sync triggers.
 
     const [attendanceStatus, setAttendanceStatus] = useState<'present' | 'absent' | 'idle'>('idle');
 

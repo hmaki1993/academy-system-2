@@ -3,7 +3,6 @@ import { Users, Activity, Clock, Zap, Globe } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { format } from 'date-fns';
 import { useTranslation } from 'react-i18next';
-import { usePresence } from '../hooks/usePresence';
 
 interface Student {
     id: string;

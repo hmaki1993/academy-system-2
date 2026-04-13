@@ -119,13 +119,9 @@ export default function StaffAttendance() {
 
     useEffect(() => {
         fetchCoachesStatus();
-        const sub = supabase
-            .channel('staff_attendance_page')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'coach_attendance' }, () => {
-                fetchCoachesStatus();
-            })
-            .subscribe();
-        return () => { supabase.removeChannel(sub); };
+        // Realtime monitoring removed to stabilize the system and prevent 400 Bad Request errors.
+        // Data is fetched on mount and updated via handleStaffStatusUpdate/handleMarkAbsent/handleMarkPresent.
+        return () => { };
     }, []);
 
     const filteredCoaches = useMemo(() => {

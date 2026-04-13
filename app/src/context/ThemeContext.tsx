@@ -530,33 +530,8 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
                 finalSettings = { ...finalSettings, ...filteredGlobal };
             }
 
-            // 2. Setup Realtime for GLOBAL GYM SETTINGS (Sticky & Indepedent)
-            const gymChannelId = 'global_gym_settings_channel';
-            supabase.removeChannel(supabase.channel(gymChannelId));
-            supabase
-                .channel(gymChannelId)
-                .on(
-                    'postgres_changes',
-                    { event: '*', schema: 'public', table: 'gym_settings' },
-                    (payload) => {
-                        console.log('🔔 Realtime update for global gym settings');
-                        const newGymSettings = payload.new as any;
-                        // IMPORTANT: Exclude USER_SPECIFIC_KEYS (like primary_color, secondary_color, accent_color etc.)
-                        // from gym_settings realtime updates. These keys are user-personal and should ONLY
-                        // come from user_settings realtime events. This prevents login design saves from
-                        // accidentally overriding the user's locally configured theme colors.
-                        const filteredGym = Object.fromEntries(
-                            Object.entries(newGymSettings).filter(([key, v]) =>
-                                v !== null &&
-                                (GYM_WIDE_KEYS.includes(key as any) || key.startsWith('login_')) &&
-                                !USER_SPECIFIC_KEYS.includes(key as keyof GymSettings)
-                            )
-                        );
-                        // Safe merge: only update non-user-specific keys from global gym settings
-                        setSettings(prev => ({ ...prev, ...filteredGym }));
-                    }
-                )
-                .subscribe();
+            // 2. Clear stale state (Realtime moved to event-driven sync)
+            console.log('🔔 ThemeContext: Using event-driven sync for global settings');
 
             // 3. Get Auth User
             const { data: { user } } = await supabase.auth.getUser();
@@ -682,36 +657,6 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
             console.log('📥 FINAL SETTINGS LOADED:', finalSettings);
             setSettings(finalSettings);
             setHasLoaded(true);
-
-            // 4. Setup Realtime for THIS USER specifically if logged in
-            if (user) {
-                console.log('🔔 Subscribing to user-specific updates:', user.id);
-                const channelId = `user_settings_${user.id}_channel`;
-                supabase.removeChannel(supabase.channel(channelId));
-
-                supabase
-                    .channel(channelId)
-                    .on(
-                        'postgres_changes',
-                        {
-                            event: '*',
-                            schema: 'public',
-                            table: 'user_settings',
-                            filter: `user_id=eq.${user.id}`
-                        },
-                        (payload) => {
-                            console.log('🔔 Realtime update for user settings');
-                            const newUserSettings = payload.new as any;
-                            const filteredUser = Object.fromEntries(
-                                Object.entries(newUserSettings).filter(([key, v]) =>
-                                    v !== null && USER_SPECIFIC_KEYS.includes(key as any)
-                                )
-                            );
-                            setSettings(prev => ({ ...prev, ...filteredUser }));
-                        }
-                    )
-                    .subscribe();
-            }
 
 
         } catch (error) {

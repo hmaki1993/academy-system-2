@@ -80,8 +80,6 @@ export default function PTAttendance() {
 
     useEffect(() => {
         fetchPtStatus();
-        const sub = supabase.channel('pt_page').on('postgres_changes', { event: '*', schema: 'public', table: 'pt_sessions' }, fetchPtStatus).subscribe();
-        return () => { supabase.removeChannel(sub); };
     }, []);
 
     const filteredPT = useMemo(() => {

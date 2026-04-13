@@ -57,23 +57,8 @@ export default function NewPTBookingFlow({ onSuccess, onBack }: NewPTBookingFlow
         if (selectedCoach) {
             fetchAvailability(selectedCoach.id);
 
-            const channel = supabase
-                .channel('pt_booking_sync_unified')
-                .on(
-                    'postgres_changes',
-                    { event: '*', schema: 'public', table: 'pt_availability', filter: `coach_id=eq.${selectedCoach.id}` },
-                    () => fetchAvailability(selectedCoach.id)
-                )
-                .on(
-                    'postgres_changes',
-                    { event: '*', schema: 'public', table: 'pt_bookings', filter: `coach_id=eq.${selectedCoach.id}` },
-                    () => fetchAvailability(selectedCoach.id)
-                )
-                .subscribe();
-
-            return () => {
-                supabase.removeChannel(channel);
-            };
+            // Realtime Subscription removed to prevent 400 Bad Request connection limit errors.
+            return () => { };
         }
     }, [selectedCoach?.id]);
 

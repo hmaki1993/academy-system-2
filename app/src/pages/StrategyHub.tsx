@@ -346,7 +346,32 @@ const InlinePlanBuilder = ({ studentId, studentName, onClose, onSendReady, exist
             };
             
             await sendPlan(studentId, finalPlan);
-            toast.success('Strategy committed successfully!', { id: 'save-plan' });
+
+            // 🔔 PERSISTENT NOTIFICATION: Record in DB
+            await supabase.from('notifications').insert({
+                user_id: studentId, 
+                title: 'Tactical Blueprint',
+                message: 'Coach updated your Training Strategy. Check it now.',
+                type: 'info',
+                is_read: false
+            });
+
+            // 📻 BROADCAST SIGNAL: Tell student to refresh UI instantly (Bypasses 400 DB errors)
+            const syncChannel = supabase.channel(`athlete-broadcast-${studentId}`);
+            await syncChannel.subscribe(async (status) => {
+                if (status === 'SUBSCRIBED') {
+                    await syncChannel.send({
+                        type: 'broadcast',
+                        event: 'SYNC_ALERTS',
+                        payload: { type: 'STRATEGY_UPDATE', timestamp: new Date().toISOString() }
+                    });
+                    // Clean up temp channel
+                    supabase.removeChannel(syncChannel);
+                }
+            });
+
+            // Duplicate toast removed, hook handles notification.
+
             onClose();
         } catch (err: any) {
             console.error("handleSend FAILED: ", err);
@@ -834,19 +859,9 @@ export default function StrategyHub() {
     }, [athletes]);
 
     useEffect(() => {
-        const channel = supabase.channel('profiles-presence-sync')
-            .on('postgres_changes' as any, { event: 'UPDATE', table: 'profiles', schema: 'public' }, (payload: any) => {
-                setLiveAthletes(prev => prev.map(a => 
-                    a.userId === payload.new.id 
-                        ? { ...a, lastActiveAt: payload.new.last_active_at } 
-                        : a
-                ));
-            })
-            .subscribe();
-
-        return () => { 
-            supabase.removeChannel(channel); 
-        };
+        // Realtime monitoring for profiles presence removed to stabilize the system 
+        // and eliminate 400 Bad Request errors. Data is fetched on mount.
+        return () => { };
     }, []);
 
     const [searchQuery, setSearchQuery] = useState('');

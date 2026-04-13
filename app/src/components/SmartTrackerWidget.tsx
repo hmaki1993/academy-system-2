@@ -104,18 +104,9 @@ export default function SmartTrackerWidget() {
                 await getLatestPlan();
                 setLoading(false);
 
-                // 3. Real-time subscription
-                const channel = supabase.channel(`smart-plan-${student.id}`)
-                    .on('postgres_changes' as any, { 
-                        event: '*', 
-                        table: 'training_plans', 
-                        filter: `student_id=eq.${student.id}` 
-                    }, () => getLatestPlan())
-                    .subscribe();
-
-                return () => {
-                    supabase.removeChannel(channel);
-                };
+                // Realtime monitoring removed to stabilize the system and prevent 400 Bad Request errors.
+                // Data is fetched on mount.
+                return () => { };
             } catch (err) {
                 console.error('Error in SmartTrackerWidget:', err);
                 setLoading(false);

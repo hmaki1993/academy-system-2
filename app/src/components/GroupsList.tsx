@@ -48,25 +48,13 @@ export default function GroupsList({ coachId, showAll = false, onEdit, onGroupCl
             }
             setLoading(false);
 
-            // Realtime for specifically filtered or all groups
-            const channelName = showAll ? 'all_groups_realtime' : `coach_groups_${coachId}`;
-            channel = supabase.channel(channelName)
-                .on('postgres_changes', {
-                    event: '*',
-                    schema: 'public',
-                    table: 'training_groups',
-                    ...(showAll ? {} : { filter: `coach_id=eq.${coachId}` })
-                }, () => {
-                    fetchGroups(true);
-                })
-                .subscribe();
+            // Realtime subscriptions removed to eliminate 400 bad request limits.
+            // Component relies on fetch on mount, which is more reliable.
         };
 
         fetchGroups();
 
-        return () => {
-            if (channel) supabase.removeChannel(channel);
-        };
+        return () => {};
     }, [coachId, showAll]);
 
     const parseSchedule = (scheduleKey: string) => {

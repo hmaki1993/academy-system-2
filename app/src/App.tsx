@@ -1,6 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
-import { usePresence } from './hooks/usePresence';
+import { BrowserView, MobileView } from 'react-device-detect';
 import { lazy, Suspense, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -59,6 +59,7 @@ import GlobalCallOverlay from './components/GlobalCallOverlay';
 import NotificationSoundHandler from './components/NotificationSoundHandler';
 
 import BackButtonHandler from './components/BackButtonHandler';
+import { PresenceProvider } from './context/PresenceContext';
 
 // Premium Loading Fallback
 const PageLoader = ({ name }: { name?: string }) => {
@@ -131,9 +132,6 @@ function AppContent() {
   console.log('App: Rendering component');
   const { i18n } = useTranslation();
   const { settings, userProfile } = useTheme();
-
-  // Activate real-time presence tracking (heartbeat)
-  usePresence();
 
   useEffect(() => {
     if (i18n) {
@@ -269,7 +267,9 @@ function App() {
   return (
     <CurrencyProvider>
       <ThemeProvider>
-        <AppContent />
+        <PresenceProvider>
+          <AppContent />
+        </PresenceProvider>
       </ThemeProvider>
     </CurrencyProvider>
   )

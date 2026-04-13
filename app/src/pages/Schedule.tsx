@@ -139,25 +139,9 @@ export default function Schedule() {
             fetchAttendanceStatus();
         }
 
-        // Realtime subscription for schedules
-        const channel = supabase
-            .channel('training_groups_realtime')
-            .on(
-                'postgres_changes',
-                {
-                    event: '*',
-                    schema: 'public',
-                    table: 'training_groups'
-                },
-                () => {
-                    fetchSessions(true);
-                }
-            )
-            .subscribe();
-
-        return () => {
-            supabase.removeChannel(channel);
-        };
+        // Realtime subscription removed to stop 400 Bad Request limits.
+        // Data is fetched on mount and can be re-fetched after actions.
+        return () => { };
     }, [role]);
 
     useEffect(() => {

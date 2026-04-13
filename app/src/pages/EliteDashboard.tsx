@@ -7,10 +7,27 @@ import { supabase } from '../lib/supabase';
 import { useCurrency } from '../context/CurrencyContext';
 import { playHoverSound } from '../utils/audio';
 import MinimalCountdown from '../components/MinimalCountdown';
+import toast from 'react-hot-toast';
+import { playNotificationSound, resumeAudioContext } from '../utils/notifications';
 
 export default function EliteDashboard() {
     const { currency } = useCurrency();
     const [loading, setLoading] = useState(true);
+
+    // 🔊 Audio Engine Pre-warm
+    useEffect(() => {
+        const warmUp = () => {
+            resumeAudioContext();
+            window.removeEventListener('click', warmUp);
+            window.removeEventListener('touchstart', warmUp);
+        };
+        window.addEventListener('click', warmUp);
+        window.addEventListener('touchstart', warmUp);
+        return () => {
+            window.removeEventListener('click', warmUp);
+            window.removeEventListener('touchstart', warmUp);
+        };
+    }, []);
 
     const [studentName, setStudentName] = useState('');
     const [attendedSessions, setAttendedSessions] = useState(0);
@@ -25,6 +42,43 @@ export default function EliteDashboard() {
     const [paymentsHistory, setPaymentsHistory] = useState<any[]>([]);
     const [activeModal, setActiveModal] = useState<'pt' | 'cons' | 'money' | null>(null);
 
+    // 📻 Real-time Broadcast Sync (UI Focus)
+    useEffect(() => {
+        let channel: any = null;
+
+        const initSync = async () => {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user || !studentName) return; 
+
+            // Unique broadcast channel for direct signaling
+            channel = supabase.channel(`athlete-broadcast-${user.id}`)
+                .on('broadcast', { event: 'SYNC_ALERTS' }, async () => {
+                    // 🔔 SIGNAL RECEIVED: Force local data re-fetch
+                    const { data: student } = await supabase.from('students').select('id').eq('profile_id', user.id).maybeSingle();
+                    if (student) {
+                        const { data: planData } = await supabase.from('training_plans')
+                            .select('plan_content, status, scheduled_start')
+                            .eq('student_id', student.id)
+                            .maybeSingle();
+                        
+                        if (planData) {
+                            const raw = planData.plan_content;
+                            const extracted = Array.isArray(raw) ? raw : (raw?.weeklyPlan || []);
+                            setPlanStatus(planData.status);
+                            setScheduledStart(planData.scheduled_start);
+                            setTrainingPlan(extracted);
+                        }
+                    }
+                })
+                .subscribe();
+        };
+
+        initSync();
+
+        return () => {
+            if (channel) supabase.removeChannel(channel);
+        };
+    }, [studentName]); 
 
     useEffect(() => {
         const fetchAllData = async () => {
@@ -86,18 +140,6 @@ export default function EliteDashboard() {
                 setPlanStatus(planData?.status || null);
                 setScheduledStart(planData?.scheduled_start || null);
 
-                const channel = supabase.channel(`student-live-${student.id}`)
-                    .on('postgres_changes' as any, { event: '*', table: 'training_plans', filter: `student_id=eq.${student.id}` }, (payload: any) => {
-                        const newRaw = payload.new?.plan_content;
-                        const newExtracted = Array.isArray(newRaw) ? newRaw : (newRaw?.weeklyPlan || []);
-                        
-                        setPlanStatus(payload.new?.status || null);
-                        setScheduledStart(payload.new?.scheduled_start || null);
-                        setTrainingPlan(newExtracted);
-                    }).subscribe();
-
-                return channel;
-
             } catch (err) {
                 console.error(err);
             } finally {
@@ -105,16 +147,11 @@ export default function EliteDashboard() {
             }
         };
 
-        let activeChannel: any;
-        const syncData = async () => {
-            await fetchAllData().then(channel => {
-                if (channel) activeChannel = channel;
-            });
-        };
+        fetchAllData();
+    }, []);
 
-        syncData();
-
-        // 🟢 Presence Pulse: Update last_active_at every 45s to stay "online" in Coach Hub
+    // 🟢 Presence Pulse: Update last_active_at every 45s to stay "online" in Coach Hub
+    useEffect(() => {
         const updatePresence = async () => {
             const { data: { user } } = await supabase.auth.getUser();
             if (user) {
@@ -145,7 +182,6 @@ export default function EliteDashboard() {
         }, 10000); // Poll every 10s for maximum responsiveness
 
         return () => { 
-            if (activeChannel) supabase.removeChannel(activeChannel); 
             clearInterval(pollInterval);
             clearInterval(pulseInterval);
         };
@@ -289,18 +325,29 @@ export default function EliteDashboard() {
 
                             {activeModal === 'cons' && (
                                 consHistory.length > 0 ? consHistory.map((req, i) => (
-                                    <div key={i} className="flex items-center justify-between py-4 border-b border-white/[0.03] last:border-none">
-                                        <div className="flex flex-col gap-1">
-                                            <span className="text-xs font-black text-white uppercase italic">{new Date(req.created_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</span>
-                                            <span className="text-[9px] font-bold text-white/20 uppercase tracking-widest">Consultation Request</span>
+                                    <div key={i} className="flex items-center justify-between py-5 border-b border-white/[0.03] last:border-none group/cons">
+                                        <div className="flex flex-col gap-2">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-1.5 h-1.5 rounded-full bg-amber-500 shadow-[0_0_10px_rgba(245,158,11,0.5)]" />
+                                                <span className="text-sm font-black text-white uppercase italic">
+                                                    {new Date(req.booked_date || req.created_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+                                                </span>
+                                            </div>
+                                            <div className="flex items-center gap-2 pl-4.5 ml-[3px]">
+                                                <span className="text-[10px] font-black text-amber-500 uppercase tracking-[0.2em]">{req.booked_time || 'TIME UNKNOWN'}</span>
+                                                <span className="text-[8px] font-bold text-white/10 uppercase tracking-widest">• Consultation Session</span>
+                                            </div>
                                         </div>
-                                        <span className={`text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full border ${
-                                            req.status === 'completed' ? 'text-emerald-400 bg-emerald-500/5 border-emerald-500/10' :
-                                            req.status === 'pending' ? 'text-amber-500 bg-amber-500/5 border-amber-500/10' :
-                                            'text-white/20 bg-white/5 border-white/10'
-                                        }`}>
-                                            {req.status}
-                                        </span>
+                                        <div className="flex flex-col items-end gap-2">
+                                            <span className={`text-[9px] font-black uppercase tracking-widest px-3 py-1 rounded-full border shadow-sm ${
+                                                req.status === 'completed' ? 'text-emerald-400 bg-emerald-500/5 border-emerald-500/10' :
+                                                req.status === 'pending' ? 'text-amber-500 bg-amber-500/5 border-amber-500/10 animate-pulse' :
+                                                'text-white/20 bg-white/5 border-white/10'
+                                            }`}>
+                                                {req.status}
+                                            </span>
+                                            <span className="text-[8px] font-black text-white/10 uppercase tracking-tighter italic">ID: {req.id.slice(0, 8)}</span>
+                                        </div>
                                     </div>
                                 )) : <p className="text-center py-10 text-[10px] font-black text-white/10 uppercase tracking-[.3em]">No consultation logs found</p>
                             )}

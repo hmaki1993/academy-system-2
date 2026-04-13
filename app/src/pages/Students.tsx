@@ -419,16 +419,9 @@ export default function Students() {
             }
         }
 
-        const channel = supabase
-            .channel('pt_subscriptions_changes')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'pt_subscriptions' }, () => {
-                fetchPTSubscriptions();
-            })
-            .subscribe();
-
-        return () => {
-            supabase.removeChannel(channel);
-        };
+        // Realtime monitoring for pt_subscriptions removed to stabilize the system
+        // and eliminate 400 Bad Request errors. Data is fetched on mount and explicitly on updates.
+        return () => { };
     }, [role, userId]);
 
     const handleDeletePT = async () => {

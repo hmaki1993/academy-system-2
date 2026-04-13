@@ -206,45 +206,9 @@ export default function ReceptionDashboard({ role }: { role?: string }) {
         fetchCoachesStatus();
         fetchPtStatus(); // Fetch PTs
 
-        // Realtime Subscription for Student Attendance
-        const studentAttendanceSub = supabase
-            .channel('public:student_attendance')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'student_attendance' }, () => {
-                fetchRecentCheckIns();
-                fetchTodaysClasses(); // Auto refresh class list on changes
-            })
-            .subscribe();
-
-        // Realtime Subscription for Coach Attendance
-        const coachAttendanceSub = supabase
-            .channel('public:coach_attendance')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'coach_attendance' }, () => {
-                fetchCoachesStatus();
-            })
-            .subscribe();
-
-        // Realtime Subscription for PT Sessions
-        const ptSessionsSub = supabase
-            .channel('public:pt_sessions')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'pt_sessions' }, () => {
-                fetchPtStatus();
-            })
-            .subscribe();
-
-        // Realtime Subscription for PT Subscriptions
-        const ptSubscriptionsSub = supabase
-            .channel('public:pt_subscriptions')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'pt_subscriptions' }, () => {
-                fetchPtStatus();
-            })
-            .subscribe();
-
-        return () => {
-            supabase.removeChannel(studentAttendanceSub);
-            supabase.removeChannel(coachAttendanceSub);
-            supabase.removeChannel(ptSessionsSub);
-            supabase.removeChannel(ptSubscriptionsSub);
-        };
+        // Realtime monitoring removed to stabilize the system and eliminate 400 Bad Request errors.
+        // The dashboard relies on initial fetch and periodic polling for secondary updates.
+        return () => { };
     }, []);
 
     // --- Class Attendance Logic ---

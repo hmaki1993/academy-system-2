@@ -107,19 +107,9 @@ export default function UpcomingAgendaWidget() {
     useEffect(() => {
         fetchAgenda();
 
-        // Subscribe to changes in both tables
-        const ptChannel = supabase.channel('agenda-pt')
-            .on('postgres_changes', { event: '*', table: 'pt_bookings', schema: 'public' }, () => fetchAgenda())
-            .subscribe();
-
-        const consultChannel = supabase.channel('agenda-consult')
-            .on('postgres_changes', { event: '*', table: 'consultation_requests', schema: 'public' }, () => fetchAgenda())
-            .subscribe();
-
-        return () => {
-            supabase.removeChannel(ptChannel);
-            supabase.removeChannel(consultChannel);
-        };
+        // Realtime monitoring removed to stabilize the system and prevent 400 Bad Request errors.
+        // Data is fetched on mount.
+        return () => { };
     }, []);
 
     const formatDisplayDate = (dateStr: string) => {

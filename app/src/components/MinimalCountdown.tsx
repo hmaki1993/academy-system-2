@@ -3,7 +3,7 @@ import { Activity, Zap } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 interface Props {
-    targetDate: string;
+    targetDate: string | null;
     status: string | null;
 }
 
@@ -15,6 +15,12 @@ export default function MinimalCountdown({ targetDate, status }: Props) {
     useEffect(() => {
         const calculate = () => {
             let target: Date;
+            if (!targetDate) {
+                setTimeLeft(null);
+                setElapsedTime(null);
+                return;
+            }
+
             if (targetDate.includes(':') && !targetDate.includes('-') && !targetDate.includes('/')) {
                 const [h, m] = targetDate.split(':').map(Number);
                 target = new Date();
@@ -100,7 +106,7 @@ export default function MinimalCountdown({ targetDate, status }: Props) {
                 /* IDLE STATE: ULTRA COMPACT */
                 <div className="flex flex-col items-end leading-none opacity-20 group-hover:opacity-40 transition-opacity">
                     <span className="text-4xl font-black text-white italic tracking-tighter tabular-nums leading-none">
-                        00:00
+                        00:00:00
                     </span>
                 </div>
             )}

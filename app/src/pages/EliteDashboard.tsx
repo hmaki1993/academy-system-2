@@ -218,7 +218,7 @@ export default function EliteDashboard() {
 
                 {/* REAL-TIME SESSION WIDGET */}
                 {scheduledStart && (
-                    <div className="animate-in fade-in slide-in-from-right-4 duration-1000 mt-4">
+                    <div className="animate-in fade-in slide-in-from-right-4 duration-1000 mt-4 w-fit ml-auto">
                         <MinimalCountdown targetDate={scheduledStart} status={planStatus} />
                     </div>
                 )}

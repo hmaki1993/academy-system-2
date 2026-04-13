@@ -8,8 +8,8 @@ interface Props {
 }
 
 export default function MinimalCountdown({ targetDate, status }: Props) {
-    const [timeLeft, setTimeLeft] = useState<{ m: string, s: string } | null>(null);
-    const [elapsedTime, setElapsedTime] = useState<{ m: string, s: string } | null>(null);
+    const [timeLeft, setTimeLeft] = useState<{ h?: string, m: string, s: string } | null>(null);
+    const [elapsedTime, setElapsedTime] = useState<{ h?: string, m: string, s: string } | null>(null);
     const isLive = status?.toLowerCase() === 'live';
 
     useEffect(() => {
@@ -27,9 +27,15 @@ export default function MinimalCountdown({ targetDate, status }: Props) {
             
             if (isLive) {
                 const diff = Math.max(0, now.getTime() - target.getTime());
-                const m = Math.floor(diff / (1000 * 60)).toString();
-                const s = Math.floor((diff / 1000) % 60).toString().padStart(2, '0');
-                setElapsedTime({ m, s });
+                const hours = Math.floor(diff / (1000 * 60 * 60));
+                const minutes = Math.floor((diff / (1000 * 60)) % 60);
+                const seconds = Math.floor((diff / 1000) % 60);
+                
+                setElapsedTime({ 
+                    h: hours > 0 ? hours.toString() : undefined,
+                    m: hours > 0 ? minutes.toString().padStart(2, '0') : minutes.toString(),
+                    s: seconds.toString().padStart(2, '0')
+                });
                 setTimeLeft(null);
                 return;
             }
@@ -41,9 +47,15 @@ export default function MinimalCountdown({ targetDate, status }: Props) {
                 return;
             }
 
-            const m = Math.floor((diff / (1000 * 60))).toString();
+            const h = Math.floor(diff / (1000 * 60 * 60));
+            const m = Math.floor((diff / (1000 * 60)) % 60);
             const s = Math.floor((diff / 1000) % 60).toString().padStart(2, '0');
-            setTimeLeft({ m, s });
+
+            setTimeLeft({ 
+                h: h > 0 ? h.toString() : undefined,
+                m: h > 0 ? m.toString().padStart(2, '0') : m.toString(),
+                s 
+            });
         };
 
         calculate();
@@ -58,7 +70,7 @@ export default function MinimalCountdown({ targetDate, status }: Props) {
     return (
         <Link 
             to="/app/smart-training" 
-            className="group relative flex flex-col items-end transition-all duration-500 hover:scale-105 active:scale-95"
+            className="group relative flex flex-col items-end w-fit ml-auto transition-all duration-500 hover:scale-105 active:scale-95"
         >
             {isReadyToJoin ? (
                 /* LIVE/READY/PAUSED STATE: JOIN ACTION */
@@ -81,7 +93,7 @@ export default function MinimalCountdown({ targetDate, status }: Props) {
                 <div className="flex flex-col items-end leading-none animate-in fade-in duration-500">
                     <span className="text-[9px] font-black text-white/20 uppercase tracking-[0.4em] mb-2 italic">SYNCING</span>
                     <span className="text-5xl font-black text-white italic tracking-tighter tabular-nums leading-none">
-                        {timeLeft.m}:{timeLeft.s}
+                        {timeLeft.h && `${timeLeft.h}:`}{timeLeft.m}:{timeLeft.s}
                     </span>
                 </div>
             ) : (

@@ -127,10 +127,21 @@ export default function DashboardLayout() {
             notificationChannel = supabase.channel(`athlete-broadcast-${userId}`)
                 .on('broadcast', { event: 'SYNC_ALERTS' }, async (payload) => {
                     // 🔔 SIGNAL RECEIVED: Coach pushed an update
+                    console.log('SYNC_ALERTS received:', payload);
                     
                     // A. Global Sound & Toast
                     playNotificationSound('bell');
-                    toast.success(`TACTICAL BLUEPRINT: Strategy updated!`, {
+                    
+                    // Show toast with translated message if possible
+                    let toastMsg = "Strategy updated!";
+                    if (payload.payload?.message?.startsWith('JSON_NOTIF:')) {
+                        try {
+                            const data = JSON.parse(payload.payload.message.replace('JSON_NOTIF:', ''));
+                            toastMsg = t(data.key, data.params || {});
+                        } catch (e) {}
+                    }
+
+                    toast.success(toastMsg, {
                         icon: '🔔',
                         style: { background: '#050510', color: '#fff', border: '1px solid #d4af37' }
                     });
@@ -145,10 +156,13 @@ export default function DashboardLayout() {
                     
                     if (latest) {
                         setNotifications(latest);
+                        // Force refresh processed IDs if needed
                         latest.forEach(n => processedIds.current.add(n.id));
                     }
                 })
-                .subscribe();
+                .subscribe((status) => {
+                    console.log('SYNC_ALERTS channel status:', status);
+                });
 
             // 2. ATHLETE HUB MONITOR (UI Sync Trigger for PT/Sessions)
             // Realtime DB Sync removed from global layout to prevent 400 Bad Request connection limit errors.
@@ -635,20 +649,38 @@ export default function DashboardLayout() {
                                                             </div>
                                                             <div className="space-y-1.5 flex-1 bg-white/[0.01] p-1 rounded-xl">
                                                                 <div className="flex justify-between items-start">
-                                                                    <p className="text-[12px] font-black text-white uppercase tracking-[0.15em] group-hover:text-primary transition-colors font-[var(--font-outfit)] leading-none">{note.title}</p>
+                                                                    <p className="text-[12px] font-black text-white uppercase tracking-[0.15em] group-hover:text-primary transition-colors font-[var(--font-outfit)] leading-none">
+                                                                        {(() => {
+                                                                            if (note.message.startsWith('JSON_NOTIF:')) {
+                                                                                try {
+                                                                                    const data = JSON.parse(note.message.replace('JSON_NOTIF:', ''));
+                                                                                    return t(data.titleKey || 'common.notifications');
+                                                                                } catch (e) { return note.title; }
+                                                                            }
+                                                                            return note.title;
+                                                                        })()}
+                                                                    </p>
                                                                     <p className="text-[8px] font-black text-white/20 uppercase tracking-widest font-[var(--font-orbitron)]">
                                                                         {new Date(note.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                                                     </p>
                                                                 </div>
                                                                 <p className="text-[11px] leading-relaxed text-white/80 font-medium font-[var(--font-outfit)] bg-white/[0.02] p-2 rounded-lg border border-white/5">
-                                                                    {note.message.split(' ').map((word: string, i: number) => {
-                                                                        const isName = i < 3 && (word.toLowerCase() === 'trainee' || word.toLowerCase() === 'athlete' || (i > 0 && note.message.toLowerCase().split(' ')[i-1] === 'trainee'));
-                                                                        return (
-                                                                            <span key={i} className={isName ? "text-primary font-black" : ""}>
-                                                                                {word}{' '}
-                                                                            </span>
-                                                                        );
-                                                                    })}
+                                                                    {(() => {
+                                                                        if (note.message.startsWith('JSON_NOTIF:')) {
+                                                                            try {
+                                                                                const data = JSON.parse(note.message.replace('JSON_NOTIF:', ''));
+                                                                                return t(data.key, data.params || {});
+                                                                            } catch (e) { return note.message; }
+                                                                        }
+                                                                        return note.message.split(' ').map((word: string, i: number) => {
+                                                                            const isName = i < 3 && (word.toLowerCase() === 'trainee' || word.toLowerCase() === 'athlete' || (i > 0 && note.message.toLowerCase().split(' ')[i-1] === 'trainee'));
+                                                                            return (
+                                                                                <span key={i} className={isName ? "text-primary font-black" : ""}>
+                                                                                    {word}{' '}
+                                                                                </span>
+                                                                            );
+                                                                        });
+                                                                    })()}
                                                                 </p>
                                                             </div>
                                                         </div>

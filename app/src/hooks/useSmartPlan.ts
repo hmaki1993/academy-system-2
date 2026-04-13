@@ -187,37 +187,42 @@ export function useSmartPlan() {
                 .single();
 
             if (studentProfile?.profile_id) {
-                const msg = `الكوتش بعتلك جدول تدريب جديد للأسبوع! افتح صفحة التدريب عشان تشوف التفاصيل.`;
+                const msgData = {
+                    key: 'notifications.jumpRopePlanSet',
+                    titleKey: 'notifications.jumpRopePlanTitle'
+                };
+                const msgString = `JSON_NOTIF:${JSON.stringify(msgData)}`;
 
                 await supabase.from('notifications').insert({
                     user_id: studentProfile.profile_id,
                     type: 'training',
-                    title: 'جدول تدريب جديد 🗓️',
-                    message: msg,
+                    title: 'New Schedule 🗓️', // Fallback
+                    message: msgString,
                     is_read: false
                 });
 
                 // 4. Direct Broadcast (Instant Sync for Notification Bell)
                 const channel = supabase.channel(`athlete-broadcast-${studentProfile.profile_id}`);
-                await channel.subscribe(async (statusSub) => {
+                channel.subscribe(async (statusSub) => {
                     if (statusSub === 'SUBSCRIBED') {
                         await channel.send({
                             type: 'broadcast',
                             event: 'SYNC_ALERTS',
                             payload: { 
                                 type: 'training_update',
-                                message: msg,
+                                message: msgString,
                                 timestamp: new Date().toISOString()
                             }
                         });
-                        supabase.removeChannel(channel);
+                        // Remove channel after a short delay to ensure delivery
+                        setTimeout(() => supabase.removeChannel(channel), 2000);
                     }
                 });
             }
 
             // 5. legacy Broadcast for JumpRopeTraining page internal sync
             const legacyChannel = supabase.channel(`direct_broadcasts_${studentId}`);
-            await legacyChannel.subscribe(async (statusSub) => {
+            legacyChannel.subscribe(async (statusSub) => {
                 if (statusSub === 'SUBSCRIBED') {
                     await legacyChannel.send({
                         type: 'broadcast',
@@ -228,7 +233,7 @@ export function useSmartPlan() {
                             refresh_plan: true 
                         }
                     });
-                    supabase.removeChannel(legacyChannel);
+                    setTimeout(() => supabase.removeChannel(legacyChannel), 2000);
                 }
             });
 
@@ -282,39 +287,45 @@ export function useSmartPlan() {
                 .single();
 
             if (studentProfile?.profile_id) {
-                const timeDesc = targetTime ? `${targetTime} دقيقة` : 'غير محدد';
-                const jumpsDesc = targetJumps ? `${targetJumps} قفزة` : 'غير محدد';
-                const msg = `الكوتش حددلك تمرين جديد! الهدف: ${jumpsDesc} | الوقت: ${timeDesc}`;
+                const msgData = {
+                    key: 'notifications.jumpRopeGoalSet',
+                    params: {
+                        jumps: targetJumps || '0',
+                        time: targetTime || '0'
+                    },
+                    titleKey: 'notifications.jumpRopeTitle'
+                };
+                const msgString = `JSON_NOTIF:${JSON.stringify(msgData)}`;
 
                 await supabase.from('notifications').insert({
                     user_id: studentProfile.profile_id,
                     type: 'training',
-                    title: 'تمرين جديد 🎯',
-                    message: msg,
+                    title: 'New Training 🎯', // Fallback
+                    message: msgString,
                     is_read: false
                 });
 
                 // 3. Direct Broadcast (Instant Sync for Remote Unlock & Notification Bell)
                 const channel = supabase.channel(`athlete-broadcast-${studentProfile.profile_id}`);
-                await channel.subscribe(async (statusSub) => {
+                channel.subscribe(async (statusSub) => {
                     if (statusSub === 'SUBSCRIBED') {
                         await channel.send({
                             type: 'broadcast',
-                            event: 'SYNC_ALERTS', // This triggers the red dot and notification fetch in DashboardLayout
+                            event: 'SYNC_ALERTS', 
                             payload: { 
                                 type: 'training_update',
-                                message: msg,
+                                message: msgString,
                                 timestamp: new Date().toISOString()
                             }
                         });
-                        supabase.removeChannel(channel);
+                        setTimeout(() => supabase.removeChannel(channel), 2000);
                     }
                 });
             }
 
             // 4. legacy Broadcast for JumpRopeTraining page internal sync
             const legacyChannel = supabase.channel(`direct_broadcasts_${studentId}`);
-            await legacyChannel.subscribe(async (statusSub) => {
+            legacyChannel.subscribe(async (statusSub) => {
                 if (statusSub === 'SUBSCRIBED') {
                     await legacyChannel.send({
                         type: 'broadcast',
@@ -329,7 +340,7 @@ export function useSmartPlan() {
                             refresh_plan: true 
                         }
                     });
-                    supabase.removeChannel(legacyChannel);
+                    setTimeout(() => supabase.removeChannel(legacyChannel), 2000);
                 }
             });
 

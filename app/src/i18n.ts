@@ -504,7 +504,11 @@ i18n
                         attendanceHistory: 'Attendance History'
                     },
                     notifications: {
-                        for: 'For {{student}}'
+                        for: 'For {{student}}',
+                        jumpRopeTitle: 'New Training 🎯',
+                        jumpRopeGoalSet: 'New Goal: {{jumps}} jumps | {{time}} min',
+                        jumpRopePlanSet: 'Table Updated: New weekly training plan!',
+                        jumpRopePlanTitle: 'New Schedule 🗓️'
                     },
                     jumpCounter: {
                         title: 'Performance Tracker',
@@ -1056,7 +1060,11 @@ i18n
                         attendanceHistory: 'سجل الحضور'
                     },
                     notifications: {
-                        for: 'لـ {{student}}'
+                        for: 'لـ {{student}}',
+                        jumpRopeTitle: 'تمرين جديد 🎯',
+                        jumpRopeGoalSet: 'الهدف: {{jumps}} قفزة | {{time}} دقيقة',
+                        jumpRopePlanSet: 'تم تحديث الجدول: خطة تدريب أسبوعية جديدة!',
+                        jumpRopePlanTitle: 'جدول جديد 🗓️'
                     },
                     jumpCounter: {
                         title: 'متبع التمارين',

@@ -200,9 +200,9 @@ export default function JumpRopeTraining() {
             }
         }
 
-        // Always update targets if the coach sends a new plan or a sync command
+        // Update targets ONLY if session is not already active to prevent timer reset "jumps"
         if (plan.target_jumps != null) setTargetJumps(Number(plan.target_jumps));
-        if (plan.target_time != null) {
+        if (plan.target_time != null && !isSessionActiveRef.current) {
             const total = Number(plan.target_time) * 60;
             setCountdownMins(Number(plan.target_time));
             setCountdownSecs(0);

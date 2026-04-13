@@ -109,10 +109,11 @@ export function usePresence(config?: {
     // ─── 2. WebSocket Presence ───────────────────────────────────────────────────
     useEffect(() => {
         let channel: any = null;
+        let isMounted = true;
         const setupPresence = async () => {
             try {
                 const { data: { user: authUser } } = await supabase.auth.getUser();
-                if (!authUser) return;
+                if (!authUser || !isMounted) return;
 
                 channel = supabase.channel('online-users', {
                     config: { presence: { key: authUser.id } }
@@ -178,31 +179,37 @@ export function usePresence(config?: {
                         if (subStatus === 'SUBSCRIBED') {
                             const { data: profile } = await supabase
                                 .from('profiles')
-                                .select('full_name, role')
+                                .select('id, full_name, role')
                                 .eq('id', authUser.id)
-                                .single();
+                                .maybeSingle();
 
-                            const fullName = profile?.full_name || authUser.user_metadata?.full_name || 'Guest';
-                            const role = (profile?.role || 'student').toLowerCase();
+                            if (profile) {
+                                channel.track({
+                                    id: profile.id,
+                                    full_name: profile.full_name,
+                                    role: profile.role,
+                                    last_seen: new Date().toISOString()
+                                });
 
-                            channel.send({
-                                type: 'broadcast',
-                                event: 'pulse:join',
-                                payload: { id: authUser.id, full_name: fullName, role }
-                            });
-
-                            channel.track({
-                                id: authUser.id,
-                                full_name: fullName,
-                                role: role,
-                                last_seen: new Date().toISOString()
-                            });
+                                // Broadcast pulse for instant dashboard update
+                                channel.send({
+                                    type: 'broadcast',
+                                    event: 'pulse:join',
+                                    payload: profile
+                                });
+                            }
                         }
                     });
             } catch (error) { setStatus('error'); }
         };
         setupPresence();
-        return () => { if (channel) channel.unsubscribe(); };
+        return () => {
+            isMounted = false;
+            if (channel) {
+                channel.unsubscribe();
+                supabase.removeChannel(channel);
+            }
+        };
     }, [config?.currentUserId]); // Re-subscribe if user changes
 
     // ─── 3. Database Pulse (Backup for offline detection) ──────────────────────

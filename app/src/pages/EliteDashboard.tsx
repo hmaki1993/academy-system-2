@@ -45,15 +45,17 @@ export default function EliteDashboard() {
     // 📻 Real-time Broadcast Sync (UI Focus)
     useEffect(() => {
         let channel: any = null;
+        let isMounted = true;
 
         const initSync = async () => {
             const { data: { user } } = await supabase.auth.getUser();
-            if (!user || !studentName) return; 
+            if (!user || !studentName || !isMounted) return; 
 
             // Unique broadcast channel for direct signaling
             channel = supabase.channel(`athlete-broadcast-${user.id}`)
                 .on('broadcast', { event: 'SYNC_ALERTS' }, async () => {
                     // 🔔 SIGNAL RECEIVED: Force local data re-fetch
+                    if (!isMounted) return;
                     const { data: student } = await supabase.from('students').select('id').eq('profile_id', user.id).maybeSingle();
                     if (student) {
                         const { data: planData } = await supabase.from('training_plans')
@@ -61,7 +63,7 @@ export default function EliteDashboard() {
                             .eq('student_id', student.id)
                             .maybeSingle();
                         
-                        if (planData) {
+                        if (planData && isMounted) {
                             const raw = planData.plan_content;
                             const extracted = Array.isArray(raw) ? raw : (raw?.weeklyPlan || []);
                             setPlanStatus(planData.status);
@@ -76,7 +78,11 @@ export default function EliteDashboard() {
         initSync();
 
         return () => {
-            if (channel) supabase.removeChannel(channel);
+            isMounted = false;
+            if (channel) {
+                channel.unsubscribe();
+                supabase.removeChannel(channel);
+            }
         };
     }, [studentName]); 
 

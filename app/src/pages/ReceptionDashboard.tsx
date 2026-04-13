@@ -400,7 +400,7 @@ export default function ReceptionDashboard({ role }: { role?: string }) {
                     // Filter out non-coaching roles for Head Coach
                     if (contextRole === 'head_coach') {
                         const coachRole = coach.role?.toLowerCase().trim();
-                        return coachRole !== 'reception' && coachRole !== 'receptionist' && coachRole !== 'cleaner';
+                        return coachRole !== 'reception' && coachRole !== 'receptionist';
                     }
                     return true;
                 })

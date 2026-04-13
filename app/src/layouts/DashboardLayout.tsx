@@ -342,14 +342,14 @@ export default function DashboardLayout() {
 
 
     const allNavItems = [
-        { to: '/app', icon: LayoutDashboard, label: t('common.dashboard'), roles: ['admin', 'head_coach', 'coach', 'reception', 'cleaner', 'student'] },
+        { to: '/app', icon: LayoutDashboard, label: t('common.dashboard'), roles: ['admin', 'head_coach', 'coach', 'reception', 'student'] },
         {
             to: (normalizedRole === 'admin' || normalizedRole === 'head_coach' || normalizedRole === 'coach') ? '/app/pt-availability' : '/app/pt-booking',
             icon: CreditCard,
             label: (normalizedRole === 'admin' || normalizedRole === 'head_coach' || normalizedRole === 'coach') ? t('common.ptManagement') : t('common.ptHub'),
             roles: ['admin', 'head_coach', 'coach', 'reception', 'student']
         },
-        { to: '/app/communications', icon: MessageSquare, label: t('common.communications'), roles: ['admin', 'head_coach', 'coach', 'reception', 'cleaner', 'student'] },
+        { to: '/app/communications', icon: MessageSquare, label: t('common.communications'), roles: ['admin', 'head_coach', 'coach', 'reception', 'student'] },
         {
             to: (normalizedRole === 'student') ? '/app/book-consultation' : '/app/consultations',
             icon: Video,
@@ -359,7 +359,7 @@ export default function DashboardLayout() {
         { to: '/app/strategy-hub', icon: Sparkles, label: t('common.strategyHub', 'Strategy Hub'), roles: ['admin', 'head_coach', 'coach'] },
         { to: '/app/smart-training', icon: Activity, label: t('common.smartTraining', 'AI Camera Tracker'), roles: ['admin', 'head_coach', 'coach', 'student'] },
         { to: '/app/video-library', icon: Film, label: t('common.videoLibrary'), roles: ['admin', 'head_coach', 'coach', 'student'] },
-        { to: '/app/settings', icon: Settings, label: t('common.settings'), roles: ['admin', 'head_coach', 'coach', 'reception', 'cleaner', 'student'] },
+        { to: '/app/settings', icon: Settings, label: t('common.settings'), roles: ['admin', 'head_coach', 'coach', 'reception', 'student'] },
     ];
 
     const navItems = allNavItems.filter(item => normalizedRole && item.roles.includes(normalizedRole));

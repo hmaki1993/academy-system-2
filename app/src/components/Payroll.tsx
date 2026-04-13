@@ -32,7 +32,7 @@ export default function Payroll({ onViewAttendance }: PayrollProps) {
             head_coach: 'bg-amber-500/20 text-amber-300 border-amber-500/30 shadow-[0_0_10px_rgba(245,158,11,0.15)]',
             coach: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30 shadow-[0_0_10px_rgba(16,185,129,0.15)]',
             reception: 'bg-blue-500/20 text-blue-300 border-blue-500/30 shadow-[0_0_10px_rgba(59,130,246,0.15)]',
-            cleaner: 'bg-slate-500/20 text-slate-300 border-slate-500/30 shadow-[0_0_10px_rgba(148,163,184,0.15)]'
+            receptionist: 'bg-blue-500/20 text-blue-300 border-blue-500/30 shadow-[0_0_10px_rgba(59,130,246,0.15)]'
         };
         return styles[role?.toLowerCase()] || 'bg-white/10 text-white/50 border-white/10';
     };

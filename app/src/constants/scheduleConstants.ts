@@ -53,7 +53,7 @@ export const normalizeTime = (time: string): string => {
 /**
  * Staff roles that are NOT coaching staff (excluded from coach dropdowns).
  */
-export const NON_COACH_ROLES = ['reception', 'cleaner'] as const;
+export const NON_COACH_ROLES = ['reception'] as const;
 
 /**
  * Default training session capacity when auto-creating a session.

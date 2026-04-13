@@ -347,7 +347,7 @@ export default function GroupFormModal({ initialData, onClose, onSuccess }: Grou
                                     className="w-full px-5 py-3 bg-white/[0.02] border border-white/5 rounded-2xl focus:border-primary/40 outline-none transition-all text-white appearance-none cursor-pointer pr-12 text-xs tracking-wide font-bold"
                                 >
                                     <option value="" className="bg-[#0a0a0f]"></option>
-                                    {coaches?.filter((c: any) => c.role !== 'reception' && c.role !== 'cleaner').map((coach: any) => (
+                                    {coaches?.filter((c: any) => c.role !== 'reception').map((coach: any) => (
                                         <option key={coach.id} value={coach.id} className="bg-[#0a0a0f]">
                                             {coach.full_name}
                                         </option>

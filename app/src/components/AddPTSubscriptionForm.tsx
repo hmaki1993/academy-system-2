@@ -84,7 +84,7 @@ export default function AddPTSubscriptionForm({ onClose, onSuccess, editData, ro
             const enrichedCoaches = (data || []).map((c: any) => ({
                 ...c,
                 role: c.profiles?.role
-            })).filter((c: any) => c.role !== 'reception' && c.role !== 'cleaner');
+            })).filter((c: any) => c.role !== 'reception');
 
             setCoaches(enrichedCoaches);
         }

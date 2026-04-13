@@ -12,7 +12,6 @@ import { playHoverSound } from '../utils/audio';
 import CoachDashboard from './CoachDashboard';
 import HeadCoachDashboard from './HeadCoachDashboard';
 import ReceptionDashboard from './ReceptionDashboard';
-import CleanerDashboard from './CleanerDashboard';
 const StudentDashboard = lazy(() => import('./EliteDashboard'));
 
 import LiveStudentsWidget from '../components/LiveStudentsWidget';
@@ -68,11 +67,10 @@ export default function Dashboard() {
         );
     }
     
-    // PRIORITY 1: Explicit Staff Roles (Head Coach, Coach, Reception, Cleaner)
+    // PRIORITY 1: Explicit Staff Roles (Head Coach, Coach, Reception)
     if (normalizedRole === 'head_coach') return <HeadCoachDashboard />;
     if (normalizedRole === 'coach') return <CoachDashboard />;
     if (normalizedRole === 'reception' || normalizedRole === 'receptionist') return <ReceptionDashboard role={role} />;
-    if (normalizedRole === 'cleaner') return <CleanerDashboard />;
 
     // PRIORITY 2: Admin check - If it's admin, stay here and DON'T go to Student Dashboard
     if (normalizedRole === 'admin') {

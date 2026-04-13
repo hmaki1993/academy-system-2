@@ -38,11 +38,10 @@ export default function GroupsList({ coachId, showAll = false, onEdit, onGroupCl
             if (error) {
                 console.error('Error fetching groups:', error);
             } else {
-                // Filter out groups where the coach is a 'reception' or 'cleaner' 
-                // but keep everything else (especially roles like 'coach' or 'head_coach')
-                const filtered = (data || []).filter(group => {
+                // Filter out groups where the coach is a 'reception'
+                const filtered = data?.filter((group: any) => {
                     const coachRole = group.coaches?.role?.toLowerCase().trim();
-                    return coachRole !== 'reception' && coachRole !== 'receptionist' && coachRole !== 'cleaner';
+                    return coachRole !== 'reception' && coachRole !== 'receptionist';
                 });
                 setGroups(filtered);
             }

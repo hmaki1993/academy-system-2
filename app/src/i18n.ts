@@ -449,8 +449,7 @@ i18n
                         admin: 'Administrator',
                         head_coach: 'Head Coach',
                         coach: 'Coach',
-                        reception: 'Receptionist',
-                        cleaner: 'Cleaner'
+                        reception: 'Receptionist'
                     },
                     chat: {
                         online: 'Online',

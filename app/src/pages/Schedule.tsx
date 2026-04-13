@@ -93,7 +93,7 @@ export default function Schedule() {
                 if (role === 'head_coach') {
                     filtered = filtered.filter((session: any) => {
                         const coachRole = session.coaches?.role?.toLowerCase().trim();
-                        return coachRole !== 'reception' && coachRole !== 'receptionist' && coachRole !== 'cleaner';
+                        return coachRole !== 'reception' && coachRole !== 'receptionist';
                     });
                 }
                 setSessions(filtered);

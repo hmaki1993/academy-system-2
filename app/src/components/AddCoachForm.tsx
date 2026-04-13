@@ -290,7 +290,7 @@ export default function AddCoachForm({ onClose, onSuccess, initialData }: AddCoa
                     </div>
 
                     {/* Specialization */}
-                    {!['reception', 'cleaner'].includes(formData.role) && (
+                    {!['reception'].includes(formData.role) && (
                         <div className="space-y-2 group/field">
                             <label className="text-[9px] font-black uppercase tracking-[0.3em] text-white/20 ml-1 group-focus-within/field:text-primary transition-colors">Program</label>
                             <PremiumSelect
@@ -346,8 +346,7 @@ export default function AddCoachForm({ onClose, onSuccess, initialData }: AddCoa
                                     { value: "coach", label: t('roles.coach') },
                                     { value: "head_coach", label: t('roles.head_coach') },
                                     { value: "admin", label: t('roles.admin') },
-                                    { value: "reception", label: t('roles.reception') },
-                                    { value: "cleaner", label: t('roles.cleaner') }
+                                    { value: "reception", label: t('roles.reception') }
                                 ]}
                                 fallbackRole="Role"
                             />
@@ -366,7 +365,7 @@ export default function AddCoachForm({ onClose, onSuccess, initialData }: AddCoa
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
-                        {!['reception', 'cleaner'].includes(formData.role) && (
+                        {!['reception'].includes(formData.role) && (
                             <div className="space-y-2 group/field">
                                 <label className="text-[9px] font-black uppercase tracking-[0.3em] text-white/20 ml-1 group-focus-within/field:text-primary transition-colors">Session Rate</label>
                                 <input

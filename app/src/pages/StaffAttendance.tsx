@@ -56,7 +56,7 @@ export default function StaffAttendance() {
                     if (coachRole === 'admin') return false;
 
                     if (contextRole === 'head_coach') {
-                        return coachRole !== 'reception' && coachRole !== 'receptionist' && coachRole !== 'cleaner';
+                        return coachRole !== 'reception' && coachRole !== 'receptionist';
                     }
                     return true;
                 })
@@ -187,7 +187,7 @@ export default function StaffAttendance() {
         }
     };
 
-    // Handle marking staff as present (only for cleaners)
+    // Handle marking staff as present
     const handleMarkPresent = async (coachId: string) => {
         if (processingIds.has(coachId)) return;
 

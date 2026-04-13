@@ -123,7 +123,7 @@ const CoachCard = memo(({ coach, role, t, currency, onEdit, onDelete, onAttendan
                                     {t(`roles.${coach.role}`)}
                                 </p>
                             )}
-                            {coach.specialty && !['reception', 'cleaner'].includes(coachRole || '') && (
+                            {coach.specialty && !['reception'].includes(coachRole || '') && (
                                 <p className="text-[9px] font-bold uppercase tracking-widest text-white/20">
                                     {coach.specialty}
                                 </p>
@@ -145,7 +145,7 @@ const CoachCard = memo(({ coach, role, t, currency, onEdit, onDelete, onAttendan
                             </div>
                         )}
 
-                        {!['reception', 'cleaner'].includes(coachRole || '') && (
+                        {!['reception'].includes(coachRole || '') && (
                             <div className="flex items-center gap-2 text-[10px] font-mono font-black uppercase tracking-widest text-white/40 bg-white/[0.03] p-2 rounded-lg border border-white/5">
                                 <div className="flex items-center gap-1.5 flex-1">
                                     <span className="text-white/20 text-[8px]">SESSIONS:</span>
@@ -228,7 +228,7 @@ export default function Coaches() {
 
         // 2. Role-based view filtering (Head Coach cannot see support staff)
         if (role === 'head_coach') {
-            if (['reception', 'receptionist', 'cleaner'].includes(normalizedRole || '')) {
+            if (['reception', 'receptionist'].includes(normalizedRole || '')) {
                 return false;
             }
         }
@@ -252,10 +252,6 @@ export default function Coaches() {
     const [selectedCoachForAttendance, setSelectedCoachForAttendance] = useState<Coach | null>(null);
     const [attendanceLogs, setAttendanceLogs] = useState<any[]>([]);
     const [loadingAttendance, setLoadingAttendance] = useState(false);
-
-    // Manual Attendance (Cleaner)
-    const [showManualAttendance, setShowManualAttendance] = useState(false);
-    const [selectedCoachForManual, setSelectedCoachForManual] = useState<Coach | null>(null);
 
     // Delete Modal State
     const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -428,8 +424,8 @@ export default function Coaches() {
                             </div>
                         )}
 
-                        {/* 3. Support Staff Section (Receptionist, Cleaner) */}
-                        {coaches.some(c => ['receptionist', 'reception', 'cleaner'].includes(c.role?.toLowerCase() || '')) && (
+                        {/* 3. Support Staff Section (Receptionist) */}
+                        {coaches.some(c => ['receptionist', 'reception'].includes(c.role?.toLowerCase() || '')) && (
                             <div className="space-y-4">
                                 <div className="flex items-center gap-4 px-2">
                                     <div className="h-px flex-1 bg-gradient-to-r from-transparent via-white/5 to-transparent"></div>
@@ -438,7 +434,7 @@ export default function Coaches() {
                                 </div>
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4 opacity-80 hover:opacity-100 transition-opacity duration-500">
                                     {coaches
-                                        .filter(c => ['receptionist', 'reception', 'cleaner'].includes(c.role?.toLowerCase() || ''))
+                                        .filter(c => ['receptionist', 'reception'].includes(c.role?.toLowerCase() || ''))
                                         .map(coach => (
                                             <CoachCard
                                                 key={coach.id}
@@ -578,9 +574,7 @@ export default function Coaches() {
                                                             <td className="px-6 py-6 font-black font-mono text-sm text-white/50">
                                                                 {log.status === 'absent' ? <span className="text-rose-400">ABSENT</span> : start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                                             </td>
-                                                            {selectedCoachForAttendance.role !== 'cleaner' && (
-                                                                <td className="px-6 py-6 font-black font-mono text-sm text-white/50">{end ? end.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-'}</td>
-                                                            )}
+                                                        <td className="px-6 py-6 font-black font-mono text-sm text-white/50">{end ? end.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-'}</td>
                                                             <td className={`px-6 py-6 font-black text-right text-sm ${end ? 'text-emerald-400' : 'text-orange-400'}`}>
                                                                 {duration}
                                                             </td>
@@ -606,16 +600,6 @@ export default function Coaches() {
                 message={t('common.deleteConfirm', 'Are you sure to delete this coach? This action cannot be undone.')}
             />
 
-            {showManualAttendance && selectedCoachForManual && (
-                <ManualAttendanceModal
-                    coach={selectedCoachForManual}
-                    onClose={() => setShowManualAttendance(false)}
-                    onSuccess={() => {
-                        refetch();
-                        toast.success(t('common.saved'));
-                    }}
-                />
-            )}
 
             <ImageLightbox
                 imageUrl={enlargedImage}

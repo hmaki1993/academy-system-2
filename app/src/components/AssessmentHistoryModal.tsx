@@ -59,7 +59,7 @@ export default function AssessmentHistoryModal({ isOpen, onClose, currentCoachId
             const filtered = data.filter((c: any) => {
                 const role = (c.role || '').toLowerCase();
                 const name = (c.full_name || '').toLowerCase();
-                const forbidden = ['admin', 'reception', 'cleaner', 'reciption'];
+                const forbidden = ['admin', 'reception', 'reciption'];
                 return !forbidden.some(f => role.includes(f) || name.includes(f));
             });
             setCoachesList(filtered);

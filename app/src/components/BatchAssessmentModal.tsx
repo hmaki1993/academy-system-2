@@ -88,7 +88,7 @@ export default function BatchAssessmentModal({ isOpen, onClose, onSuccess, curre
             const filtered = data.filter((c: any) => {
                 const role = (c.role || '').toLowerCase();
                 const name = (c.full_name || '').toLowerCase();
-                const forbidden = ['admin', 'reception', 'cleaner', 'reciption'];
+                const forbidden = ['admin', 'reception', 'reciption'];
 
                 // If this is the current coach, ALWAYS keep them regardless of filters
                 if (c.id === currentCoachId) return true;

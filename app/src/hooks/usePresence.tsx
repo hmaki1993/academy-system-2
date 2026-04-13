@@ -17,7 +17,7 @@ export interface PresenceUser {
     last_seen: string;
 }
 
-const STAFF_ROLES = new Set(['admin', 'coach', 'head_coach', 'reception', 'cleaner']);
+const STAFF_ROLES = new Set(['admin', 'coach', 'head_coach', 'reception']);
 
 export function usePresence(config?: {
     currentUserId?: string | null;

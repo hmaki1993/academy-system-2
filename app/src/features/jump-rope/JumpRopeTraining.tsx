@@ -185,11 +185,11 @@ export default function JumpRopeTraining() {
                 speak('Session ready. Jump to start the timer!');
             }
         } else if (plan.status === 'scheduled') {
-            setIsRemoteLocked(true); // Keep locked until time reached
+            setIsRemoteLocked(!isAdmin); // Admins bypass lock
         } else if (plan.status === 'paused') {
             setIsRemotePaused(true);
         } else if (plan.status === 'idle') {
-            setIsRemoteLocked(true);
+            setIsRemoteLocked(!isAdmin); // Admins bypass lock
         } else if (plan.status === 'restarting') {
             setIsRemoteLocked(false);
             setIsRemotePaused(false);
@@ -210,7 +210,7 @@ export default function JumpRopeTraining() {
             timerRemainingRef.current = total;
         }
         lastPlanIdRef.current = plan.id;
-    }, [handleRestart, speak]);
+    }, [handleRestart, speak, isAdmin]);
 
     const fetchLatestPlan = useCallback(async () => {
         if (!user?.id) return;
@@ -664,7 +664,7 @@ export default function JumpRopeTraining() {
 
 
 
-    const handleStart = () => {
+    const handleStart = async () => {
         const total = (countdownMins * 60) + countdownSecs;
         setTimerRemaining(total > 0 ? total : null);
         timerRemainingRef.current = total > 0 ? total : null;
@@ -673,6 +673,12 @@ export default function JumpRopeTraining() {
         isSessionActiveRef.current = true;
         setIsTimerActive(true);
         isTimerActiveRef.current = true;
+
+        // Sync to Database so background polling doesn't reset status to idle
+        if (resolvedStudentId) {
+            updateSessionStatus(resolvedStudentId, 'live');
+        }
+
         console.log("Timer started manually via button");
         speak("Session ready. Start jumping now!");
         jumpCountRef.current = 0; setJumps(0); setRpm(0); setTotalSeconds(0);
@@ -817,7 +823,7 @@ export default function JumpRopeTraining() {
                                         <button
                                             onClick={handleStart}
                                             disabled={isRemoteLocked}
-                                            className="w-full h-10 rounded-full border border-blue-400/20 bg-blue-400/5 backdrop-blur-md text-blue-400/80 font-black uppercase tracking-[0.2em] text-[10px] shadow-2xl transition-all active:scale-95 flex items-center justify-center gap-2"
+                                            className="w-full h-10 rounded-full border border-blue-400/20 bg-blue-400/5 backdrop-blur-md text-blue-400/80 font-black uppercase tracking-[0.2em] text-[10px] shadow-2xl transition-all active:scale-95 disabled:opacity-40 disabled:grayscale disabled:cursor-not-allowed flex items-center justify-center gap-2"
                                         >
                                             <Play size={14} fill="currentColor" /> START TRAINING
                                         </button>

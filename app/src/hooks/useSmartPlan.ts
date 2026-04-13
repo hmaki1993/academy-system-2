@@ -363,8 +363,26 @@ export function useSmartPlan() {
             const payload: any = {};
 
             if (status === 'restarting') {
-                finalStatus = 'live'; // Effectively starts it immediately from 0
-                payload.scheduled_start = new Date().toISOString();
+                // Fetch current status to decide behavior
+                const { data: currentPlan } = await supabase
+                    .from('training_plans')
+                    .select('status')
+                    .eq('student_id', studentId)
+                    .maybeSingle();
+                
+                const currentStatus = currentPlan?.status || 'idle';
+                
+                // ONLY restart to 'live' if it was already performing (live/paused)
+                // If it was idle, stoped, or just scheduled, DO NOT open it.
+                const isPerforming = ['live', 'paused'].includes(currentStatus);
+
+                if (isPerforming) {
+                    finalStatus = 'live'; 
+                    payload.scheduled_start = new Date().toISOString();
+                } else {
+                    finalStatus = 'idle'; // Just zero it out
+                    payload.scheduled_start = null;
+                }
             }
 
             if (status === 'idle') {
@@ -383,11 +401,18 @@ export function useSmartPlan() {
 
             if (error) throw error;
 
-            // 2. Direct Broadcast (Instant Sync)
-            const channel = supabase.channel(`direct_broadcasts_${studentId}`);
-            await channel.subscribe(async (statusSub) => {
+            // 2. Direct Broadcasts (Instant Sync)
+            const { data: studentProfile } = await supabase
+                .from('students')
+                .select('profile_id')
+                .eq('id', studentId)
+                .single();
+
+            // 2a. Legacy Broadcast (for JumpRopeTraining page)
+            const legacyChannel = supabase.channel(`direct_broadcasts_${studentId}`);
+            await legacyChannel.subscribe(async (statusSub) => {
                 if (statusSub === 'SUBSCRIBED') {
-                    await channel.send({
+                    await legacyChannel.send({
                         type: 'broadcast',
                         event: 'session_update',
                         payload: { 
@@ -396,9 +421,28 @@ export function useSmartPlan() {
                             refresh_plan: status === 'idle'
                         }
                     });
-                    supabase.removeChannel(channel);
+                    supabase.removeChannel(legacyChannel);
                 }
             });
+
+            // 2b. Unified Sync Signal (for EliteDashboard & Layout)
+            if (studentProfile?.profile_id) {
+                const syncChannel = supabase.channel(`athlete-broadcast-${studentProfile.profile_id}`);
+                await syncChannel.subscribe(async (statusSub) => {
+                    if (statusSub === 'SUBSCRIBED') {
+                        await syncChannel.send({
+                            type: 'broadcast',
+                            event: 'SYNC_ALERTS',
+                            payload: { 
+                                type: 'session_status_update',
+                                status: finalStatus,
+                                timestamp: new Date().toISOString()
+                            }
+                        });
+                        setTimeout(() => supabase.removeChannel(syncChannel), 1000);
+                    }
+                });
+            }
             
             if (status === 'live') toast.success('Session Resumed');
             if (status === 'paused') toast.success('Session Paused');

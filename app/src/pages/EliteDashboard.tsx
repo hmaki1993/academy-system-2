@@ -185,7 +185,7 @@ export default function EliteDashboard() {
                 }
             };
             refreshDynamicData();
-        }, 10000); // Poll every 10s for maximum responsiveness
+        }, 30000); // Polling fallback (30s) since broadcast handles instant updates
 
         return () => { 
             clearInterval(pollInterval);

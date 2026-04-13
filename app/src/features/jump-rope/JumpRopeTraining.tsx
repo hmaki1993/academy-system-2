@@ -701,16 +701,22 @@ export default function JumpRopeTraining() {
                     <div className="flex items-center gap-3 sm:gap-6">
                         {!isSessionActive && (
                             <div className="flex items-center gap-2">
-                                <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-transparent border border-white/10">
-                                    <Trophy size={10} className="text-accent/60" />
-                                    <input
-                                        type="number"
-                                        value={targetJumps || ''}
-                                        onChange={(e) => setTargetJumps(e.target.value ? parseInt(e.target.value) : null)}
-                                        placeholder="0"
-                                        readOnly={!isAdmin}
-                                        className="bg-transparent border-none text-[10px] font-black text-white focus:ring-0 p-0 w-8 placeholder:text-white/10"
-                                    />
+                                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 shadow-inner group">
+                                    <Trophy size={12} className="text-yellow-400 group-hover:scale-110 transition-transform" />
+                                    {isAdmin ? (
+                                        <input
+                                            type="number"
+                                            value={targetJumps || ''}
+                                            onChange={(e) => setTargetJumps(e.target.value ? parseInt(e.target.value) : null)}
+                                            placeholder="0"
+                                            className="bg-transparent border-none text-xs font-black text-white focus:ring-0 p-0 w-12 placeholder:text-white/20"
+                                        />
+                                    ) : (
+                                        <div className="flex flex-col -space-y-1">
+                                            <span className="text-[7px] font-bold text-white/30 uppercase tracking-tighter">Goal</span>
+                                            <span className="text-xs font-black text-white tabular-nums">{targetJumps || 0}</span>
+                                        </div>
+                                    )}
                                 </div>
                                 <button onClick={isAdmin ? openTimerPicker : undefined} className={`flex items-center gap-1.5 px-2 py-1 rounded-lg bg-transparent border border-white/10 ${isAdmin ? 'hover:bg-white/5 active:scale-95 cursor-pointer' : 'cursor-default'}`}>
                                     <Clock size={10} className="text-blue-400/60" />

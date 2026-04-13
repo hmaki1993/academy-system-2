@@ -146,26 +146,26 @@ export default function Settings() {
     const handleSecretTrigger = () => {
         const next = secretClicks + 1;
         if (next >= 5) {
-            setSecretClicks(0);
-            const newState = !isSecretRevealed;
-            setIsSecretRevealed(newState);
-            localStorage.setItem('academy_settings_secret_revealed', String(newState));
+                setSecretClicks(0);
+                const newState = !isSecretRevealed;
+                setIsSecretRevealed(newState);
+                localStorage.setItem('academy_settings_secret_revealed', String(newState));
 
-            if (newState) {
-                setActiveTab('login');
-                toast.success('🤫 Access Granted: Login Designer Revealed', {
-                    duration: 3000,
-                    position: 'bottom-center',
-                    style: { background: '#0f172a', color: '#fff', border: '1px solid rgba(255,255,255,0.1)' }
-                });
-            } else {
-                if (activeTab === 'login') setActiveTab('appearance');
-                toast.success('🔒 Access Restricted: Login Designer Hidden', {
-                    duration: 3000,
-                    position: 'bottom-center',
-                    style: { background: '#0f172a', color: '#fff', border: '1px solid rgba(255,255,255,0.1)' }
-                });
-            }
+                if (newState) {
+                    setActiveTab('login');
+                    toast.success(t('settings.secretAccessGranted', '🤫 Access Granted: Login Designer Revealed'), {
+                        duration: 3000,
+                        position: 'bottom-center',
+                        style: { background: '#0f172a', color: '#fff', border: '1px solid rgba(255,255,255,0.1)' }
+                    });
+                } else {
+                    if (activeTab === 'login') setActiveTab('appearance');
+                    toast.success(t('settings.secretAccessRestricted', '🔒 Access Restricted: Login Designer Hidden'), {
+                        duration: 3000,
+                        position: 'bottom-center',
+                        style: { background: '#0f172a', color: '#fff', border: '1px solid rgba(255,255,255,0.1)' }
+                    });
+                }
         } else {
             setSecretClicks(next);
         }
@@ -247,11 +247,11 @@ export default function Settings() {
 
             if (result?.partial) {
                 toast(
-                    (t) => (
+                    (toastItem) => (
                         <span className="flex items-center gap-2">
-                            <span className="flex-1">✨ Theme saved (Colors Only). Run SQL migration in Dashboard for full feature persistence.</span>
+                            <span className="flex-1">{t('settings.themeSavedPartial', '✨ Theme saved (Colors Only). Run SQL migration in Dashboard for full feature persistence.')}</span>
                             <button
-                                onClick={() => toast.dismiss(t.id)}
+                                onClick={() => toast.dismiss(toastItem.id)}
                                 className="p-1 hover:bg-white/10 rounded"
                             >
                                 <X className="w-4 h-4" />
@@ -415,7 +415,7 @@ export default function Settings() {
 
         setDraftSettings(newSettings);
         await publishThemeSettings(newSettings);
-        toast.success('✨ Palette applied & saved!', { duration: 2500 });
+        toast.success(t('settings.paletteApplied', '✨ Palette applied & saved!'), { duration: 2500 });
     };
 
     const applyMagicTheme = (themeId: string) => {
@@ -825,7 +825,7 @@ export default function Settings() {
                             <div className="space-y-2">
                                 <p className="text-[8px] font-black uppercase tracking-[0.8em] animate-pulse"
                                     style={{ color: draftSettings.primary_color }}>
-                                    {publishProgress === 100 ? 'SUCCESSFULLY DEPLOYED' : 'SYSTEM DEPLOYMENT IN PROGRESS'}
+                                    {publishProgress === 100 ? t('settings.publishComplete').toUpperCase() : t('settings.publishingDesign').toUpperCase()}
                                 </p>
                                 <h3 className="text-2xl md:text-3xl font-black text-white uppercase tracking-tighter">
                                     {publishProgress === 100 ? t('settings.publishComplete') : t('settings.publishingDesign')}
@@ -889,29 +889,29 @@ export default function Settings() {
                         {t('settings.academy')}
                     </button>
                 )}
-                <button
-                    onClick={() => setActiveTab('appearance')}
-                    className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all duration-300 ${activeTab === 'appearance' ? 'bg-primary text-white shadow-lg shadow-primary/20 scale-105 ring-1 ring-white/10' : 'text-white/40 hover:text-white hover:bg-white/5'}`}
-                >
-                    <Palette className="w-3.5 h-3.5" />
-                    {t('settings.appearance')}
-                </button>
-                {role === 'admin' && isSecretRevealed && (
                     <button
-                        onClick={() => setActiveTab('login')}
-                        className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all duration-300 ${activeTab === 'login' ? 'bg-primary text-white shadow-lg shadow-primary/20 scale-105 ring-1 ring-white/10' : 'text-white/40 hover:text-white hover:bg-white/5'}`}
+                        onClick={() => setActiveTab('appearance')}
+                        className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all duration-300 ${activeTab === 'appearance' ? 'bg-primary text-white shadow-lg shadow-primary/20 scale-105 ring-1 ring-white/10' : 'text-white/40 hover:text-white hover:bg-white/5'}`}
                     >
-                        <Layout className="w-3.5 h-3.5" />
-                        {t('settings.login')}
+                        <Palette className="w-3.5 h-3.5" />
+                        {t('settings.appearance')}
                     </button>
-                )}
-                <button
-                    onClick={() => setActiveTab('profile')}
-                    className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all duration-300 ${activeTab === 'profile' ? 'bg-primary text-white shadow-lg shadow-primary/20 scale-105 ring-1 ring-white/10' : 'text-white/40 hover:text-white hover:bg-white/5'}`}
-                >
-                    <User className="w-3.5 h-3.5" />
-                    {t('settings.profile')}
-                </button>
+                    {role === 'admin' && isSecretRevealed && (
+                        <button
+                            onClick={() => setActiveTab('login')}
+                            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all duration-300 ${activeTab === 'login' ? 'bg-primary text-white shadow-lg shadow-primary/20 scale-105 ring-1 ring-white/10' : 'text-white/40 hover:text-white hover:bg-white/5'}`}
+                        >
+                            <Layout className="w-3.5 h-3.5" />
+                            {t('settings.login')}
+                        </button>
+                    )}
+                    <button
+                        onClick={() => setActiveTab('profile')}
+                        className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all duration-300 ${activeTab === 'profile' ? 'bg-primary text-white shadow-lg shadow-primary/20 scale-105 ring-1 ring-white/10' : 'text-white/40 hover:text-white hover:bg-white/5'}`}
+                    >
+                        <User className="w-3.5 h-3.5" />
+                        {t('settings.profile')}
+                    </button>
                 <button
                     onClick={() => setActiveTab('notifications')}
                     className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all duration-300 ${activeTab === 'notifications' ? 'bg-primary text-white shadow-lg shadow-primary/20 scale-105 ring-1 ring-white/10' : 'text-white/40 hover:text-white hover:bg-white/5'}`}
@@ -937,7 +937,7 @@ export default function Settings() {
                                         </h2>
                                         <div className="flex items-center gap-3 mt-1">
                                             <div className="h-[1px] w-12 md:w-24 bg-gradient-to-r from-primary/50 to-transparent"></div>
-                                            <p className="text-[9px] font-black text-white/20 uppercase tracking-[0.4em] whitespace-nowrap">Visual Identity & Schemes</p>
+                                            <p className="text-[9px] font-black text-white/20 uppercase tracking-[0.4em] whitespace-nowrap">{t('settings.themeDescription')}</p>
                                         </div>
                                     </div>
                                     <button
@@ -1033,7 +1033,7 @@ export default function Settings() {
                                                 </div>
                                             </div>
                                             <span className={`block text-center font-black text-[7px] uppercase tracking-[0.15em] transition-colors ${currentTheme === theme.id ? 'text-white' : 'text-white/40 group-hover:text-white'}`}>
-                                                {theme.name}
+                                                {t(`settings.${theme.id}`, theme.name)}
                                             </span>
                                         </div>
                                     ))}
@@ -1051,7 +1051,7 @@ export default function Settings() {
                                         </h2>
                                         <div className="flex items-center gap-3 mt-1">
                                             <div className="h-[1px] w-12 md:w-24 bg-gradient-to-r from-purple-500/50 to-transparent"></div>
-                                            <p className="text-[9px] font-black text-white/20 uppercase tracking-[0.4em] whitespace-nowrap">Fine Tuning & Experience</p>
+                                            <p className="text-[9px] font-black text-white/20 uppercase tracking-[0.4em] whitespace-nowrap">{t('settings.designCustomization')}</p>
                                         </div>
                                     </div>
                                 </div>
@@ -1064,7 +1064,7 @@ export default function Settings() {
                                             <div className="space-y-4">
                                                 <div className="flex items-center gap-2 mb-2">
                                                     <div className="w-1 h-3 bg-primary rounded-full"></div>
-                                                    <span className="text-[9px] font-black text-white/40 uppercase tracking-widest">Core Identity</span>
+                                                    <span className="text-[9px] font-black text-white/40 uppercase tracking-widest">{t('settings.colorsAtmosphere')}</span>
                                                 </div>
                                                 <PremiumColorPicker label={t('settings.primaryColor')} value={draftSettings.primary_color} onChange={(val) => setDraftSettings({ ...draftSettings, primary_color: val })} />
                                                 <PremiumColorPicker label={t('settings.backgroundColor')} value={draftSettings.secondary_color} onChange={(val) => setDraftSettings({ ...draftSettings, secondary_color: val })} />
@@ -1148,7 +1148,7 @@ export default function Settings() {
                                             <div className="grid grid-cols-1 gap-6 bg-white/[0.01] p-6 rounded-[2.5rem] border border-white/[0.02]">
                                                 <div className="space-y-3">
                                                     <div className="flex justify-between">
-                                                        <label className="text-[9px] text-white/60 font-black uppercase tracking-widest">Fine Tuning</label>
+                                                        <label className="text-[9px] text-white/60 font-black uppercase tracking-widest">{t('settings.fontScale')}</label>
                                                         <span className="text-[9px] text-primary font-bold">{Math.round((draftSettings.font_scale || 1) * 100)}%</span>
                                                     </div>
                                                     <input
@@ -1172,7 +1172,7 @@ export default function Settings() {
 
                                             {/* Integration Switches */}
                                             <div className="space-y-4 pt-2">
-                                                <h4 className="text-[9px] font-black text-white/30 uppercase tracking-widest mb-3">Widgets & Integrations</h4>
+                                                <h4 className="text-[9px] font-black text-white/30 uppercase tracking-widest mb-3">{t('settings.designCustomization')}</h4>
                                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                                     <PremiumSwitch label={t('settings.clockIntegration')} checked={draftSettings.clock_position !== 'none'} onChange={(checked) => setDraftSettings({ ...draftSettings, clock_position: checked ? 'header' : 'none' })} />
                                                     <PremiumSwitch label={t('settings.weatherIntegration')} checked={draftSettings.weather_integration || false} onChange={(checked) => setDraftSettings({ ...draftSettings, weather_integration: checked })} />
@@ -1192,12 +1192,12 @@ export default function Settings() {
                                     {isPublishing ? (
                                         <>
                                             <Loader2 className="w-4 h-4 relative z-10 animate-spin" />
-                                            <span className="relative z-10">SAVING...</span>
+                                            <span className="relative z-10">{t('common.saving', 'SAVING...')}</span>
                                         </>
                                     ) : (
                                         <>
                                             <Save className="w-4 h-4 relative z-10 drop-shadow-md" />
-                                            <span className="relative z-10 drop-shadow-md">SAVE</span>
+                                            <span className="relative z-10 drop-shadow-md">{t('common.save', 'SAVE')}</span>
                                         </>
                                     )}
                                 </button>
@@ -1205,7 +1205,7 @@ export default function Settings() {
                                     onClick={() => setDraftSettings(defaultSettings)}
                                     className="bg-white/[0.03] hover:bg-white/[0.08] text-white/40 hover:text-white px-6 py-3 rounded-xl font-black uppercase tracking-[0.2em] text-[10px] transition-all hover:scale-105 border border-white/5 hover:border-white/20 backdrop-blur-md flex items-center justify-center gap-2 min-w-[120px]"
                                 >
-                                    RESET
+                                    {t('common.reset', 'RESET')}
                                 </button>
                             </div>
                             </div>
@@ -1227,7 +1227,7 @@ export default function Settings() {
                             <div className="space-y-6">
                                 <div className="p-8 bg-white/[0.02] rounded-[2.5rem] border border-white/[0.03] space-y-6">
                                     <h3 className="text-[10px] font-black text-white/30 uppercase tracking-[0.3em] mb-4">
-                                        Preferences
+                                        {t('settings.preferences')}
                                     </h3>
 
                                     <div className="space-y-4">
@@ -1237,13 +1237,13 @@ export default function Settings() {
                                             onChange={(val) => setDraftSettings({ ...draftSettings, notify_sounds: val })}
                                         />
                                         <p className="text-[10px] text-white/20 font-bold uppercase tracking-wide ml-12">
-                                            {t('settings.soundsDescription', 'Play a premium chime when receiving new alerts')}
+                                            {t('settings.soundsDescription')}
                                         </p>
                                     </div>
 
                                     <div className="pt-6 border-t border-white/5 space-y-6">
                                         <h3 className="text-[10px] font-black text-white/30 uppercase tracking-[0.3em] mb-4">
-                                            Alert Types
+                                            {t('settings.alertTypes')}
                                         </h3>
                                         
                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
@@ -1567,7 +1567,7 @@ export default function Settings() {
                                                             <span className="text-[6px] font-black text-emerald-400 uppercase tracking-tighter">Synced</span>
                                                         </div>
                                                     </div>
-                                                    <p className="text-[8px] text-white/30 font-bold uppercase tracking-tight truncate mt-0.5">Primary brand identity for all pages</p>
+                                                    <p className="text-[8px] text-white/30 font-bold uppercase tracking-tight truncate mt-0.5">{t('settings.gymProfileDescription')}</p>
                                                 </div>
 
                                                 {/* Actions Removed - Now in Media Library */}

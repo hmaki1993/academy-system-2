@@ -33,7 +33,6 @@ import {
 import { supabase } from '../lib/supabase';
 import toast from 'react-hot-toast';
 import { useTheme } from '../context/ThemeContext';
-import { useSettings } from '../context/SettingsContext';
 import PremiumClock from '../components/PremiumClock';
 import MinimalCountdown from '../components/MinimalCountdown';
 import WalkieTalkie from '../components/WalkieTalkie';
@@ -160,10 +159,10 @@ export default function DashboardLayout() {
                 })
                 .subscribe((status) => {
                     console.log(`🚀 ROCKET_V2: Connection Status for [${userId}]:`, status);
-                    if (status === 'SUBSCRIBED') {
+                    if ((status as string) === 'SUBSCRIBED') {
                         setSyncStatus('connected');
                         syncStatusRef.current = 'connected';
-                    } else if (status === 'JOINING') {
+                    } else if (((status as any) as string) === 'JOINING') {
                         setSyncStatus('reconnecting');
                         syncStatusRef.current = 'reconnecting';
                     } else {
@@ -347,18 +346,18 @@ export default function DashboardLayout() {
         {
             to: (normalizedRole === 'admin' || normalizedRole === 'head_coach' || normalizedRole === 'coach') ? '/app/pt-availability' : '/app/pt-booking',
             icon: CreditCard,
-            label: (normalizedRole === 'admin' || normalizedRole === 'head_coach' || normalizedRole === 'coach') ? t('common.ptManagement', 'PT Management') : t('common.ptHub', 'PT HUB'),
+            label: (normalizedRole === 'admin' || normalizedRole === 'head_coach' || normalizedRole === 'coach') ? t('common.ptManagement') : t('common.ptHub'),
             roles: ['admin', 'head_coach', 'coach', 'reception', 'student']
         },
-        { to: '/app/communications', icon: MessageSquare, label: t('common.communications', 'Chats'), roles: ['admin', 'head_coach', 'coach', 'reception', 'cleaner', 'student'] },
+        { to: '/app/communications', icon: MessageSquare, label: t('common.communications'), roles: ['admin', 'head_coach', 'coach', 'reception', 'cleaner', 'student'] },
         {
             to: (normalizedRole === 'student') ? '/app/book-consultation' : '/app/consultations',
             icon: Video,
-            label: (normalizedRole === 'student') ? t('common.bookConsultation', 'Book Consultation') : t('common.consultations', 'Consultations'),
+            label: (normalizedRole === 'student') ? t('common.bookConsultation') : t('common.consultations'),
             roles: ['admin', 'student']
         },
-        { to: '/app/strategy-hub', icon: Sparkles, label: 'Strategy Hub', roles: ['admin', 'head_coach', 'coach'] },
-        { to: '/app/smart-training', icon: Activity, label: 'AI Camera Tracker', roles: ['admin', 'head_coach', 'coach', 'student'] },
+        { to: '/app/strategy-hub', icon: Sparkles, label: t('common.strategyHub', 'Strategy Hub'), roles: ['admin', 'head_coach', 'coach'] },
+        { to: '/app/smart-training', icon: Activity, label: t('common.smartTraining', 'AI Camera Tracker'), roles: ['admin', 'head_coach', 'coach', 'student'] },
         { to: '/app/video-library', icon: Film, label: t('common.videoLibrary'), roles: ['admin', 'head_coach', 'coach', 'student'] },
         { to: '/app/settings', icon: Settings, label: t('common.settings'), roles: ['admin', 'head_coach', 'coach', 'reception', 'cleaner', 'student'] },
     ];
@@ -682,7 +681,7 @@ export default function DashboardLayout() {
                                                                             if (note.message.startsWith('JSON_NOTIF:')) {
                                                                                 try {
                                                                                     const data = JSON.parse(note.message.replace('JSON_NOTIF:', ''));
-                                                                                    return t(data.titleKey || 'common.notifications');
+                                                                                    return t(data.titleKey || 'common.notifications') as string;
                                                                                 } catch (e) { return note.title; }
                                                                             }
                                                                             return note.title;
@@ -697,7 +696,7 @@ export default function DashboardLayout() {
                                                                         if (note.message.startsWith('JSON_NOTIF:')) {
                                                                             try {
                                                                                 const data = JSON.parse(note.message.replace('JSON_NOTIF:', ''));
-                                                                                return t(data.key, data.params || {});
+                                                                                return t(data.key, data.params || {}) as string;
                                                                             } catch (e) { return note.message; }
                                                                         }
                                                                         return note.message.split(' ').map((word: string, i: number) => {

@@ -38,6 +38,7 @@ function PremiumSelect({
     icon?: any
 }) {
     const [isOpen, setIsOpen] = useState(false);
+    const { t } = useTranslation();
     const selectedOption = options.find(o => o.id === value);
 
     // Close on click outside
@@ -80,7 +81,7 @@ function PremiumSelect({
                     >
                         {options.length === 0 ? (
                             <div className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-center" style={{ color: textColorMuted }}>
-                                No options available
+                                {t('common.noResults', 'No options available')}
                             </div>
                         ) : (
                             options.map((opt) => (
@@ -230,7 +231,7 @@ export default function PublicRegistration() {
         e.preventDefault();
 
         if (!formData.full_name || !formData.father_name || !formData.mother_name || !formData.birth_date || !formData.parent_contact || !formData.subscription_type) {
-            toast.error('Please fill in all required fields');
+            toast.error(t('common.fillRequiredFields', 'Please fill in all required fields'));
             return;
         }
 
@@ -389,7 +390,7 @@ export default function PublicRegistration() {
 
             // Success Animation
             setSuccess(true);
-            toast.success('Registration Successful!');
+            toast.success(t('common.registrationSuccessful', 'Registration Successful!'));
 
             // 6. Trigger n8n Automation (Welcome Message)
             try {
@@ -459,10 +460,10 @@ export default function PublicRegistration() {
                         <CheckCircle className="w-16 h-16 text-white" />
                     </div>
                     <h1 className="text-5xl font-black uppercase tracking-tighter mb-4 premium-gradient-text-mind" style={{ color: textColor }}>
-                        Welcome to the Family!
+                        {t('register.welcomeFamily')}
                     </h1>
                     <p className="text-xl font-medium tracking-widest uppercase" style={{ color: `${textColor}99` }}>
-                        Registration Complete
+                        {t('register.registrationComplete')}
                     </p>
                 </div>
 
@@ -499,7 +500,7 @@ export default function PublicRegistration() {
                 >
                     <ArrowLeft className="w-3.5 h-3.5 md:w-4 md:h-4 text-white/70 group-hover:text-white transition-colors" />
                     <span className="text-[10px] md:text-xs font-black text-white/70 group-hover:text-white uppercase tracking-wider transition-colors">
-                        Back to App
+                        {t('common.backToApp', 'Back to App')}
                     </span>
                 </a>
             </div>
@@ -511,7 +512,7 @@ export default function PublicRegistration() {
                     <img src={logoUrl} alt="Logo" className="relative h-32 w-auto object-contain drop-shadow-2xl brightness-110" />
                 </div>
                 <h2 className="text-5xl font-black uppercase tracking-tight premium-gradient-text-mind leading-tight" style={{ color: textColor }}>
-                    Join The Legacy
+                    {t('register.joinLegacy')}
                 </h2>
                 <div className="h-1 w-24 mx-auto mt-4 opacity-50" style={{ background: `linear-gradient(to r, transparent, ${primaryColor}66, transparent)` }}></div>
             </div>
@@ -529,16 +530,16 @@ export default function PublicRegistration() {
                             <div className="space-y-8">
                                 <h3 className="text-xs font-black uppercase tracking-[0.4em] flex items-center gap-3 ml-2" style={{ color: `${textColor}80` }}>
                                     <div className="p-2 rounded-lg" style={{ backgroundColor: `${primaryColor}1a`, color: primaryColor }}><User className="w-4 h-4" /></div>
-                                    Personal Identity
+                                    {t('register.personalIdentity')}
                                 </h3>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                     <div className="group">
-                                        <label className="text-[10px] font-black text-[#ABAFB5]/40 uppercase tracking-[0.2em] mb-3 ml-6 block group-focus-within:text-[#677E8A] transition-colors">Gymnast Name</label>
+                                        <label className="text-[10px] font-black text-[#ABAFB5]/40 uppercase tracking-[0.2em] mb-3 ml-6 block group-focus-within:text-[#677E8A] transition-colors">{t('common.studentName', 'Gymnast Name')}</label>
                                         <input type="text" value={formData.full_name} onChange={e => setFormData({ ...formData, full_name: e.target.value })} className="input-mind" required placeholder="" />
                                     </div>
                                     <div className="group">
                                         <div className="flex justify-between items-center mb-3 ml-6 mr-6">
-                                            <label className="text-[10px] font-black uppercase tracking-[0.2em] block" style={{ color: `${textColor}40` }}>Born On</label>
+                                            <label className="text-[10px] font-black uppercase tracking-[0.2em] block" style={{ color: `${textColor}40` }}>{t('register.bornOn')}</label>
                                             {formData.birth_date && (
                                                 <span className="text-[10px] font-black uppercase tracking-[0.2em] animate-in fade-in slide-in-from-right-4" style={{ color: primaryColor }}>
                                                     {(() => {
@@ -547,7 +548,7 @@ export default function PublicRegistration() {
                                                         let age = now.getFullYear() - birth.getFullYear();
                                                         const m = now.getMonth() - birth.getMonth();
                                                         if (m < 0 || (m === 0 && now.getDate() < birth.getDate())) age--;
-                                                        return age >= 0 ? `${age} YR OLD` : '';
+                                                        return age >= 0 ? `${age} ${t('common.yrs').toUpperCase()}` : '';
                                                     })()}
                                                 </span>
                                             )}
@@ -555,21 +556,21 @@ export default function PublicRegistration() {
                                         <input type="date" value={formData.birth_date} onChange={e => setFormData({ ...formData, birth_date: e.target.value })} className="input-mind calendar-picker-indicator-white" required />
                                     </div>
                                     <div className="group">
-                                        <label className="text-[10px] font-black text-[#ABAFB5]/40 uppercase tracking-[0.2em] mb-3 ml-6 block">Legacy of (Father)</label>
+                                        <label className="text-[10px] font-black text-[#ABAFB5]/40 uppercase tracking-[0.2em] mb-3 ml-6 block">{t('register.legacyOfFather')}</label>
                                         <input type="text" value={formData.father_name} onChange={e => setFormData({ ...formData, father_name: e.target.value })} className="input-mind" required placeholder="" />
                                     </div>
                                     <div className="group">
-                                        <label className="text-[10px] font-black text-[#ABAFB5]/40 uppercase tracking-[0.2em] mb-3 ml-6 block">Heart of (Mother)</label>
+                                        <label className="text-[10px] font-black text-[#ABAFB5]/40 uppercase tracking-[0.2em] mb-3 ml-6 block">{t('register.heartOfMother')}</label>
                                         <input type="text" value={formData.mother_name} onChange={e => setFormData({ ...formData, mother_name: e.target.value })} className="input-mind" required placeholder="" />
                                     </div>
                                     <div className="group md:col-span-2">
-                                        <label className="text-[10px] font-black uppercase tracking-[0.2em] mb-3 ml-6 block" style={{ color: `${textColor}40` }}>Gender Identity</label>
+                                        <label className="text-[10px] font-black uppercase tracking-[0.2em] mb-3 ml-6 block" style={{ color: `${textColor}40` }}>{t('register.genderIdentity')}</label>
                                         <div className="flex rounded-[2rem] p-2 border border-white/5" style={{ backgroundColor: `${secondaryColor}80` }}>
                                             {['male', 'female'].map(g => (
                                                 <button key={g} type="button" onClick={() => setFormData({ ...formData, gender: g })}
                                                     className={`flex-1 py-4 rounded-[1.5rem] text-[10px] font-black uppercase tracking-[0.2em] transition-all duration-500 ${formData.gender === g ? 'text-white shadow-2xl scale-[1.02]' : 'text-[#677E8A]/50 hover:text-white hover:bg-white/5'}`}
                                                     style={formData.gender === g ? { backgroundColor: `${primaryColor}33`, borderColor: `${primaryColor}4d` } : {}}>
-                                                    {g}
+                                                    {t(`common.${g}`, g)}
                                                 </button>
                                             ))}
                                         </div>
@@ -581,7 +582,7 @@ export default function PublicRegistration() {
                             <div className="space-y-8 pt-4">
                                 <h3 className="text-xs font-black uppercase tracking-[0.4em] flex items-center gap-3 ml-2" style={{ color: `${textColor}80` }}>
                                     <div className="p-2 rounded-lg" style={{ backgroundColor: `${accentColor}1a`, color: accentColor }}><Phone className="w-4 h-4" /></div>
-                                    Connectivity
+                                    {t('register.connectivity')}
                                 </h3>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                     <div className="group z-30">
@@ -640,7 +641,7 @@ export default function PublicRegistration() {
                                     </div>
 
                                     <div className="group md:col-span-2 z-10">
-                                        <label className="text-[10px] font-black uppercase tracking-[0.2em] mb-3 ml-6 block" style={{ color: `${textColor}40` }}>Physical Address</label>
+                                        <label className="text-[10px] font-black uppercase tracking-[0.2em] mb-3 ml-6 block" style={{ color: `${textColor}40` }}>{t('register.physicalAddress')}</label>
                                         <div className="relative">
                                             <MapPin className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5" style={{ color: primaryColor }} />
                                             <input type="text" value={formData.address} onChange={e => setFormData({ ...formData, address: e.target.value })} className="input-mind pl-16" placeholder="" />
@@ -654,19 +655,19 @@ export default function PublicRegistration() {
                             <div className="space-y-8 pt-4">
                                 <h3 className="text-xs font-black uppercase tracking-[0.4em] flex items-center gap-3 ml-2" style={{ color: `${textColor}80` }}>
                                     <div className="p-2 rounded-lg" style={{ backgroundColor: `${primaryColor}1a`, color: primaryColor }}><TrendingUp className="w-4 h-4" /></div>
-                                    Elite Program
+                                    {t('register.eliteProgram')}
                                 </h3>
 
                                 <div className="space-y-6">
-                                    <label className="text-[10px] font-black text-[#ABAFB5]/40 uppercase tracking-[0.2em] ml-6 block">Training Cadence</label>
+                                    <label className="text-[10px] font-black text-[#ABAFB5]/40 uppercase tracking-[0.2em] ml-6 block">{t('register.trainingCadence')}</label>
                                     <div className="flex flex-wrap gap-3">
                                         {daysOfWeek.map(day => (
                                             <button key={day} type="button" onClick={() => toggleDay(day)}
                                                 className={`flex-1 min-w-[4rem] py-4 rounded-[1.5rem] text-[10px] font-black uppercase tracking-[0.2em] border transition-all duration-500 ${formData.training_days.includes(day)
                                                     ? 'text-white shadow-xl scale-[1.05]'
-                                                    : 'border-white/5 text-[#677E8A]/40 hover:bg-white/5 hover:border-white/10'}`}
+                                                        : 'border-white/5 text-[#677E8A]/40 hover:bg-white/5 hover:border-white/10'}`}
                                                 style={formData.training_days.includes(day) ? { backgroundColor: `${primaryColor}33`, borderColor: `${primaryColor}66` } : { backgroundColor: `${secondaryColor}4d` }}>
-                                                {day}
+                                                {t(`common.day.${day}`, day)}
                                             </button>
                                         ))}
                                     </div>
@@ -689,9 +690,9 @@ export default function PublicRegistration() {
 
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-10">
                                     <PremiumSelect
-                                        label="Discipline"
+                                        label={t('register.discipline')}
                                         value={formData.training_type}
-                                        placeholder="Select Discipline"
+                                        placeholder={t('register.selectDiscipline', 'Select Discipline')}
                                         options={[
                                             { id: "Artistic Gymnastics", name: "Artistic Gymnastics" },
                                             { id: "Rhythmic Gymnastics", name: "Rhythmic Gymnastics" },
@@ -707,9 +708,9 @@ export default function PublicRegistration() {
                                         icon={TrendingUp}
                                     />
                                     <PremiumSelect
-                                        label="Membership Tier"
+                                        label={t('register.membershipTier')}
                                         value={formData.subscription_type}
-                                        placeholder="Select Membership"
+                                        placeholder={t('register.selectMembership', 'Select Membership')}
                                         options={plans.map(p => ({ id: p.id, name: p.name }))}
                                         onChange={(val) => setFormData({ ...formData, subscription_type: val })}
                                         secondaryColor={secondaryColor}
@@ -721,9 +722,9 @@ export default function PublicRegistration() {
                                     />
                                     <div className="md:col-span-2">
                                         <PremiumSelect
-                                            label="Guided By (Coach Picker)"
+                                            label={t('register.guidedBy')}
                                             value={formData.coach_id}
-                                            placeholder="Assign a Coach (Optional)"
+                                            placeholder={t('register.assignCoach', 'Assign a Coach (Optional)')}
                                             options={coaches.map(c => ({ id: c.id, name: `Coach / ${c.full_name}` }))}
                                             onChange={(val) => setFormData({ ...formData, coach_id: val })}
                                             secondaryColor={secondaryColor}
@@ -738,11 +739,11 @@ export default function PublicRegistration() {
 
                                 {/* Payment Method Selection */}
                                 <div className="space-y-6 pt-6">
-                                    <label className="text-[10px] font-black text-[#ABAFB5]/40 uppercase tracking-[0.2em] ml-6 block">Settlement Strategy</label>
+                                    <label className="text-[10px] font-black text-[#ABAFB5]/40 uppercase tracking-[0.2em] ml-6 block">{t('register.settlementStrategy')}</label>
                                     <div className="flex flex-wrap gap-4">
                                         {[
-                                            { id: 'card', label: 'Credit / Debit Card', icon: CreditCard },
-                                            { id: 'wallet', label: 'Mobile Wallet / InstaPay', icon: Smartphone }
+                                            { id: 'card', label: t('common.card', 'Credit / Debit Card'), icon: CreditCard },
+                                            { id: 'wallet', label: t('common.wallet', 'Mobile Wallet / InstaPay'), icon: Smartphone }
                                         ].map(method => (
                                             <button 
                                                 key={method.id} 
@@ -775,7 +776,7 @@ export default function PublicRegistration() {
                                     {loading ? (
                                         <Clock className="w-6 h-6 animate-spin" />
                                     ) : (
-                                        'Initiate Membership'
+                                        t('register.initiateMembership')
                                     )}
                                 </span>
                                 <div className="absolute inset-0 bg-gradient-to-tr from-white/0 via-white/10 to-white/0 translate-x-[-100%] group-hover/btn:translate-x-[100%] transition-transform duration-1000"></div>

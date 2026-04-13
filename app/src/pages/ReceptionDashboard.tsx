@@ -273,7 +273,7 @@ export default function ReceptionDashboard({ role }: { role?: string }) {
                     const record = attendance?.find(a => a.student_id === student.id);
                     let scheduledStart = '';
                     let scheduledEnd = '';
-                    let displayCoach = student.coaches?.full_name || 'Unassigned';
+                    let displayCoach = student.coaches?.full_name || t('common.unassigned', 'Unassigned');
 
                     if (student.training_groups) {
                         const group = student.training_groups;
@@ -288,7 +288,7 @@ export default function ReceptionDashboard({ role }: { role?: string }) {
                                 if (timeMatch.length >= 5) scheduledEnd = `${timeMatch[3]}:${timeMatch[4]}`;
                             }
                         }
-                        displayCoach = group.coaches?.full_name || 'Group Coach';
+                        displayCoach = group.coaches?.full_name || t('common.groupCoach', 'Group Coach');
                     } else {
                         const todaySchedule = student.training_schedule?.find((s: any) => s.day === todayDayShort || s.day === todayDayFull);
                         scheduledStart = todaySchedule?.start || '';
@@ -634,7 +634,7 @@ export default function ReceptionDashboard({ role }: { role?: string }) {
                 if (error) throw error;
             }
 
-            toast.success(newStatus === 'present' ? 'Marked as Present' : newStatus === 'completed' ? 'Session Completed' : 'Marked as Absent');
+            toast.success(newStatus === 'present' ? t('common.markedPresent', 'Marked as Present') : newStatus === 'completed' ? t('common.sessionCompleted', 'Session Completed') : t('common.markedAbsent', 'Marked as Absent'));
 
             // Notification: Student Attendance (Admin + Head Coach + Reception)
             if (newStatus === 'present' || newStatus === 'completed') {
@@ -643,7 +643,7 @@ export default function ReceptionDashboard({ role }: { role?: string }) {
 
                 await supabase.from('notifications').insert({
                     type: 'attendance',
-                    title: `Student ${action}`,
+                    title: newStatus === 'present' ? t('common.studentCheckedIn', 'Student Checked In') : t('common.studentCheckedOut', 'Student Checked Out'),
                     message: `${studentName} has ${action.toLowerCase()}.`,
                     target_role: 'admin_head_reception',
                     is_read: false
@@ -698,7 +698,7 @@ export default function ReceptionDashboard({ role }: { role?: string }) {
                     .delete()
                     .eq('id', existing.id);
                 if (error) throw error;
-                toast.success('Status reset to pending');
+                toast.success(t('common.statusReset', 'Status reset to pending'));
             } else if (newStatus === 'absent') {
                 const payload = {
                     coach_id: coachId,
@@ -720,7 +720,7 @@ export default function ReceptionDashboard({ role }: { role?: string }) {
                         .insert(payload);
                     if (error) throw error;
                 }
-                toast.success('Marked as Absent');
+                toast.success(t('common.markedAbsent', 'Marked as Absent'));
             }
 
             // Notification: Staff Attendance (Admin + Head Coach + Reception)
@@ -730,7 +730,7 @@ export default function ReceptionDashboard({ role }: { role?: string }) {
 
                 await supabase.from('notifications').insert({
                     type: 'attendance',
-                    title: `Staff ${action}`,
+                    title: newStatus === 'present' ? t('common.staffCheckedIn', 'Staff Checked In') : t('common.staffMarkedAbsent', 'Staff Marked Absent'),
                     message: `${coachName} has been ${action.toLowerCase()}.`,
                     target_role: 'admin_head_reception',
                     is_read: false
@@ -804,7 +804,7 @@ export default function ReceptionDashboard({ role }: { role?: string }) {
             }, 1000);
         } catch (error: any) {
             console.error('Full Self check-in error:', error);
-            toast.error(error.message || 'Check-in failed');
+            toast.error(error.message || t('common.checkInFailed', 'Check-in failed'));
         }
     };
 
@@ -869,7 +869,7 @@ export default function ReceptionDashboard({ role }: { role?: string }) {
             }, 1000);
         } catch (error: any) {
             console.error('Full Self check-out error:', error);
-            toast.error('Check-out failed');
+            toast.error(t('common.checkOutFailed', 'Check-out failed'));
         }
     };
 
@@ -884,7 +884,7 @@ export default function ReceptionDashboard({ role }: { role?: string }) {
     return (
         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
             <PageHeader
-                title={`${t('dashboard.welcome') || 'WELCOME BACK'}, ${userProfile?.full_name?.split(' ')[0] || contextRole?.replace('_', ' ') || 'Staff'}`}
+                title={`${t('dashboard.welcome') || 'WELCOME BACK'}, ${userProfile?.full_name?.split(' ')[0] || contextRole?.replace('_', ' ') || t('common.staff', 'Staff')}`}
                 subtitle={t('dashboard.receptionSubtitle', 'Academy Reception & Real-time Management')}
             >
                 <div className="flex flex-wrap items-center gap-4">
@@ -903,7 +903,7 @@ export default function ReceptionDashboard({ role }: { role?: string }) {
                             </button>
 
                             <div className="min-w-[60px]">
-                                <p className="text-[7px] font-black text-white/20 uppercase tracking-widest leading-none mb-1">On Duty</p>
+                                <p className="text-[7px] font-black text-white/20 uppercase tracking-widest leading-none mb-1">{t('dashboard.onDuty', 'On Duty')}</p>
                                 {isCheckedIn ? (
                                     <div className="flex items-baseline gap-1">
                                         <span className="text-xs font-black text-white font-mono tracking-tight leading-none tabular-nums">
@@ -911,7 +911,7 @@ export default function ReceptionDashboard({ role }: { role?: string }) {
                                         </span>
                                     </div>
                                 ) : (
-                                    <p className="text-[10px] font-black text-white/40 uppercase tracking-tight leading-none">Offline</p>
+                                    <p className="text-[10px] font-black text-white/40 uppercase tracking-tight leading-none">{t('dashboard.offline', 'Offline')}</p>
                                 )}
                             </div>
                         </div>
@@ -931,8 +931,8 @@ export default function ReceptionDashboard({ role }: { role?: string }) {
                     <div className="absolute -bottom-24 -right-24 w-48 h-48 bg-amber-500/5 rounded-full blur-3xl transition-all duration-700"></div>
                     <div className="flex items-center justify-between mb-3 relative z-10">
                         <div>
-                            <h2 className="text-base font-black text-white uppercase tracking-tight">Personal Earnings</h2>
-                            <p className="text-[8px] font-black text-white/40 uppercase tracking-[0.2em] mt-0.5">Salary {contextRole !== 'reception' && '+ PT Month'}</p>
+                            <h2 className="text-base font-black text-white uppercase tracking-tight">{t('dashboard.personalEarnings', 'Personal Earnings')}</h2>
+                            <p className="text-[8px] font-black text-white/40 uppercase tracking-[0.2em] mt-0.5">{t('dashboard.salary', 'Salary')} {contextRole !== 'reception' && t('dashboard.plusPTMonth', '+ PT Month')}</p>
                         </div>
                         <div className="p-2.5 bg-amber-500/20 rounded-xl text-amber-500">
                             <Wallet className="w-4 h-4" />
@@ -1032,7 +1032,7 @@ export default function ReceptionDashboard({ role }: { role?: string }) {
                                 {t('common.schedule') || 'View Schedule'}
                             </h3>
                             <p className="text-[10px] text-white/50 font-bold uppercase tracking-wider">
-                                Check classes timing
+                                {t('reception.checkClassesTiming', 'Check classes timing')}
                             </p>
                         </div>
                     </div>
@@ -1061,7 +1061,7 @@ export default function ReceptionDashboard({ role }: { role?: string }) {
                             <div className="px-3.5 py-1.5 bg-white/[0.03] backdrop-blur-xl rounded-full border border-white/10 shadow-2xl flex items-center gap-2 group-hover:border-primary/30 transition-all duration-500">
                                 <div className="w-1 h-1 rounded-full bg-primary animate-pulse shadow-[0_0_8px_rgba(var(--primary-rgb),0.8)]"></div>
                                 <span className="text-[9px] font-black text-white/60 uppercase tracking-[0.2em] leading-none">
-                                    {todaysClasses.length} SCHED
+                                    {todaysClasses.length} {t('common.sched', 'SCHED')}
                                 </span>
                             </div>
                         </div>
@@ -1070,7 +1070,7 @@ export default function ReceptionDashboard({ role }: { role?: string }) {
                                 {todaysClasses.filter(c => c.status === 'present' || c.status === 'completed' || c.status === 'absent').length}
                                 <span className="text-lg text-white/30 ml-2 font-bold uppercase">/ {todaysClasses.length}</span>
                             </h2>
-                            <p className="text-xs font-bold text-primary uppercase tracking-wider mt-1">Gymnast Attendance</p>
+                            <p className="text-xs font-bold text-primary uppercase tracking-wider mt-1">{t('dashboard.gymnastAttendance', 'Gymnast Attendance')}</p>
                         </div>
                         <div className="w-full bg-white/5 rounded-full h-1.5 overflow-hidden">
                             <div
@@ -1104,16 +1104,16 @@ export default function ReceptionDashboard({ role }: { role?: string }) {
                             <div className="px-3.5 py-1.5 bg-white/[0.03] backdrop-blur-xl rounded-full border border-white/10 shadow-2xl flex items-center gap-2 group-hover:border-emerald-500/30 transition-all duration-500">
                                 <div className="w-1 h-1 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_rgba(52,211,153,0.8)]"></div>
                                 <span className="text-[9px] font-black text-white/60 uppercase tracking-[0.2em] leading-none">
-                                    {filteredCoaches.length} STAFF
+                                    {filteredCoaches.length} {t('common.staffLabel', 'STAFF')}
                                 </span>
                             </div>
                         </div>
                         <div>
                             <h2 className="text-3xl font-black text-white tracking-tighter">
                                 {filteredCoaches.filter(c => c.status === 'present').length}
-                                <span className="text-lg text-white/30 ml-2 font-bold uppercase">Active</span>
+                                <span className="text-lg text-white/30 ml-2 font-bold uppercase">{t('dashboard.active', 'Active')}</span>
                             </h2>
-                            <p className="text-xs font-bold text-emerald-500 uppercase tracking-wider mt-1">Staff Attendance</p>
+                            <p className="text-xs font-bold text-emerald-500 uppercase tracking-wider mt-1">{t('dashboard.staffAttendance', 'Staff Attendance')}</p>
                         </div>
                         <div className="w-full bg-white/5 rounded-full h-1.5 overflow-hidden">
                             <div
@@ -1143,16 +1143,16 @@ export default function ReceptionDashboard({ role }: { role?: string }) {
                             <div className="px-3.5 py-1.5 bg-white/[0.03] backdrop-blur-xl rounded-full border border-white/10 shadow-2xl flex items-center gap-2 group-hover:border-accent/30 transition-all duration-500">
                                 <div className="w-1 h-1 rounded-full bg-accent animate-pulse shadow-[0_0_8px_rgba(var(--accent-rgb),0.8)]"></div>
                                 <span className="text-[9px] font-black text-white/60 uppercase tracking-[0.2em] leading-none">
-                                    {filteredPT.length} SUBS
+                                    {filteredPT.length} {t('common.subs', 'SUBS')}
                                 </span>
                             </div>
                         </div>
                         <div>
                             <h2 className="text-3xl font-black text-white tracking-tighter">
                                 {filteredPT.filter(s => s.status === 'present').length}
-                                <span className="text-lg text-white/30 ml-2 font-bold uppercase">Active</span>
+                                <span className="text-lg text-white/30 ml-2 font-bold uppercase">{t('dashboard.active', 'Active')}</span>
                             </h2>
-                            <p className="text-xs font-bold text-accent uppercase tracking-wider mt-1">PT Sessions</p>
+                            <p className="text-xs font-bold text-accent uppercase tracking-wider mt-1">{t('dashboard.ptSessions', 'PT Sessions')}</p>
                         </div>
                         <div className="w-full bg-white/5 rounded-full h-1.5 overflow-hidden">
                             <div
@@ -1210,11 +1210,11 @@ export default function ReceptionDashboard({ role }: { role?: string }) {
                             {/* Summary Cards */}
                             <div className="grid grid-cols-2 gap-4 mb-8">
                                 <div className="p-5 bg-white/5 rounded-[2rem] border border-white/5 flex flex-col items-center justify-center text-center">
-                                    <p className="text-[10px] font-black text-white/30 uppercase tracking-widest mb-2">Base Salary</p>
+                                    <p className="text-[10px] font-black text-white/30 uppercase tracking-widest mb-2">{t('dashboard.baseSalary', 'Base Salary')}</p>
                                     <p className="text-2xl font-black text-white">{salary.toLocaleString()} {currency.code || 'KWD'}</p>
                                 </div>
                                 <div className="p-5 bg-emerald-500/10 rounded-[2rem] border border-emerald-500/20 flex flex-col items-center justify-center text-center">
-                                    <p className="text-[10px] font-black text-emerald-500/50 uppercase tracking-widest mb-2">PT Earnings</p>
+                                    <p className="text-[10px] font-black text-emerald-500/50 uppercase tracking-widest mb-2">{t('dashboard.ptEarnings', 'PT Earnings')}</p>
                                     <p className="text-2xl font-black text-emerald-500">{totalEarnings.toLocaleString()} {currency.code || 'KWD'}</p>
                                 </div>
                             </div>
@@ -1224,7 +1224,7 @@ export default function ReceptionDashboard({ role }: { role?: string }) {
                         </div>
 
                         <div className="p-6 md:p-8 border-t border-white/5 bg-white/[0.02] flex items-center justify-between">
-                            <p className="text-[10px] font-black text-white/40 uppercase tracking-[0.3em]">Month Total</p>
+                            <p className="text-[10px] font-black text-white/40 uppercase tracking-[0.3em]">{t('dashboard.monthTotal', 'Month Total')}</p>
                             <p className="text-3xl font-black text-emerald-500 drop-shadow-[0_0_15px_rgba(16,185,129,0.3)] tracking-tighter">
                                 {(totalEarnings + salary).toLocaleString()} <span className="text-sm text-white/40 font-bold uppercase tracking-widest">{currency.code || 'KWD'}</span>
                             </p>

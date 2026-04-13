@@ -63,7 +63,7 @@ export default function Dashboard() {
         return (
             <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
                 <div className="w-12 h-12 border-2 border-primary/20 border-t-primary rounded-full animate-spin" />
-                <p className="text-[10px] font-black uppercase tracking-[0.3em] text-white/20">Syncing Intelligence...</p>
+                <p className="text-[10px] font-black uppercase tracking-[0.3em] text-white/20">{t('dashboard.syncingIntelligence')}</p>
             </div>
         );
     }
@@ -91,43 +91,47 @@ export default function Dashboard() {
     const metrics = [
         {
             id: 'Total Revenue',
-            label: 'Cycle Revenue',
+            label: t('dashboard.cycleRevenue'),
             value: formatPrice(analytics?.totalRevenue || 0),
-            subValue: 'Total Monthly Inbound',
+            subValue: t('dashboard.monthlyInbound'),
             icon: DollarSign,
             color: 'text-white',
             glow: 'shadow-[0_0_50px_rgba(255,255,255,0.05)]',
-            trend: 'Revenue Stream'
+            trend: t('dashboard.revenueStream'),
+            path: '/app/finance'
         },
         {
             id: 'Consultations',
-            label: 'Consultations',
+            label: t('dashboard.consultations'),
             value: analytics?.consultationCount || 0,
-            subValue: 'Strategy Sessions',
+            subValue: t('dashboard.strategySessions'),
             icon: Sparkles,
             color: 'text-emerald-400',
             glow: 'shadow-[0_0_50px_rgba(16,185,129,0.1)]',
-            trend: 'Active Bookings'
+            trend: t('dashboard.activeBookings'),
+            path: '/app/consultations'
         },
         {
             id: 'PT Sessions',
-            label: 'PT Sessions',
+            label: t('dashboard.ptSessions'),
             value: analytics?.ptCount || 0,
-            subValue: 'Personal Training',
+            subValue: t('dashboard.personalTraining'),
             icon: Medal,
             color: 'text-amber-400',
             glow: 'shadow-[0_0_50px_rgba(245,158,11,0.1)]',
-            trend: 'Confirmed Missions'
+            trend: t('dashboard.confirmedMissions'),
+            path: '/app/pt-availability'
         },
         {
             id: 'Athletes',
-            label: 'Elite Athletes',
+            label: t('dashboard.eliteAthletes'),
             value: analytics?.athleteCount || 0,
-            subValue: 'Active Roster',
+            subValue: t('dashboard.activeRoster'),
             icon: Users,
             color: 'text-blue-400',
             glow: 'shadow-[0_0_50px_rgba(59,130,246,0.1)]',
-            trend: 'Total Strength'
+            trend: t('dashboard.totalStrength'),
+            path: '/app/students'
         }
     ];
 
@@ -146,7 +150,7 @@ export default function Dashboard() {
                         {/* Greeting Cluster - Vertical Elite Hierarchy */}
                         <div className="flex flex-col items-start gap-1">
                             <span className="text-[10px] md:text-[11px] font-black text-white/20 uppercase tracking-[0.8em] leading-none mb-1 select-none">
-                                {t('dashboard.hello', 'Hello')}
+                                {t('dashboard.hello')}
                             </span>
                             <h1 className="text-3xl md:text-5xl font-black text-white tracking-tighter uppercase leading-none italic">
                                 <span className="premium-gradient-text drop-shadow-[0_15px_40px_rgba(255,255,255,0.3)]">
@@ -168,7 +172,7 @@ export default function Dashboard() {
                     {metrics.map((stat, i) => (
                         <div
                             key={stat.id}
-                            onClick={() => stat.id !== 'Athletes' ? setSelectedMetric(stat.id as any) : navigate(stat.path || '/')}
+                            onClick={() => (stat as any).id !== 'Athletes' ? setSelectedMetric((stat as any).id as any) : navigate((stat as any).path || '/')}
                             onMouseEnter={playHoverSound}
                             className="relative py-2 sm:py-4 px-1 sm:px-2 transition-all duration-500 cursor-pointer group flex flex-col items-center text-center sm:border-r sm:border-white/[0.03] last:border-r-0"
                         >
@@ -202,13 +206,13 @@ export default function Dashboard() {
                             <div className="flex items-center gap-4">
                                 <Globe className="w-5 h-5 text-primary animate-pulse" />
                                 <div>
-                                    <h3 className="text-lg font-black text-white uppercase tracking-[0.2em] leading-none mb-1.5">Live Floor</h3>
-                                    <p className="text-[9px] font-bold text-white/20 uppercase tracking-[0.4em]">Athlete Intelligence</p>
+                                    <h3 className="text-lg font-black text-white uppercase tracking-[0.2em] leading-none mb-1.5">{t('dashboard.liveFloor')}</h3>
+                                    <p className="text-[9px] font-bold text-white/20 uppercase tracking-[0.4em]">{t('dashboard.athleteIntelligence')}</p>
                                 </div>
                             </div>
                             <div className="flex items-center gap-2">
                                 <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
-                                <span className="text-[9px] font-black text-emerald-400 uppercase tracking-widest">{onlineStudents.length} Online</span>
+                                <span className="text-[9px] font-black text-emerald-400 uppercase tracking-widest">{onlineStudents.length} {t('dashboard.online')}</span>
                             </div>
                         </div>
                         <div className="flex-1">
@@ -238,9 +242,9 @@ export default function Dashboard() {
                         <div className="p-8 sm:p-10 border-b border-white/[0.03] flex items-center justify-between relative z-10">
                             <div className="space-y-1">
                                 <h3 className="text-xl sm:text-2xl font-black text-white uppercase tracking-tighter leading-tight drop-shadow-[0_0_15px_rgba(255,255,255,0.2)]">
-                                    {selectedMetric} <span className="text-primary italic">Intelligence</span>
+                                    {selectedMetric} <span className="text-primary italic">{t('dashboard.intelligence')}</span>
                                 </h3>
-                                <p className="text-[8px] sm:text-[10px] font-black text-white/30 uppercase tracking-[0.4em]">Tactical Data Stream Audit</p>
+                                <p className="text-[8px] sm:text-[10px] font-black text-white/30 uppercase tracking-[0.4em]">{t('dashboard.tacticalAudit')}</p>
                             </div>
                             <button 
                                 onClick={() => setSelectedMetric(null)}
@@ -254,7 +258,7 @@ export default function Dashboard() {
                         <div className="flex-1 overflow-y-auto p-8 sm:p-10 custom-scrollbar relative z-10">
                             {filteredDetails.length === 0 ? (
                                 <div className="py-24 text-center">
-                                    <p className="opacity-20 italic font-black uppercase tracking-[0.5em] text-[10px]">No active data streams detected</p>
+                                    <p className="opacity-20 italic font-black uppercase tracking-[0.5em] text-[10px]">{t('dashboard.noData')}</p>
                                 </div>
                             ) : (
                                 <div className="space-y-1">
@@ -270,7 +274,7 @@ export default function Dashboard() {
                                                 <p className="text-base sm:text-xl font-black text-white uppercase tracking-tight group-hover:text-primary transition-colors">
                                                     {item.student_name || item.name}
                                                 </p>
-                                                <p className="text-[8px] sm:text-[10px] font-bold text-white/20 uppercase tracking-widest">{item.notes || `STATUS: ${item.status || 'ACTIVE'}`}</p>
+                                                <p className="text-[8px] sm:text-[10px] font-bold text-white/20 uppercase tracking-widest">{item.notes || `${t('dashboard.status')}: ${item.status || t('dashboard.active')}`}</p>
                                             </div>
                                             <div className="text-right">
                                                 {item.amount !== undefined ? (

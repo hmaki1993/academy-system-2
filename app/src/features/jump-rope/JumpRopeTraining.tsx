@@ -11,6 +11,7 @@ import { useWebRTCBroadcast } from '../../hooks/useWebRTCBroadcast';
 import PageHeader from '../../components/PageHeader';
 import PremiumSelect from '../../components/PremiumSelect';
 import SmartPlanModal from './components/SmartPlanModal';
+import { toast } from 'react-hot-toast';
 
 const MEDIAPIPE_POSE_VERSION = '0.5.1675469404';
 
@@ -111,8 +112,8 @@ export default function JumpRopeTraining() {
         }
 
         setShowSummary(true);
-        speak(`${totalJumps} jumps completed.`);
-    }, [addSession, speak, resolvedStudentId, updateSessionStatus]);
+        speak(`${totalJumps} ${t('smartTraining.jumpsCompleted')}`);
+    }, [addSession, speak, resolvedStudentId, updateSessionStatus, t]);
 
     const handleRestart = useCallback(() => {
         // Reset everything to deep zero
@@ -140,8 +141,8 @@ export default function JumpRopeTraining() {
         setIsSessionActive(false);
         setIsTracking(false);
 
-        speak("Session Reset. Ready for a new start!");
-    }, [speak, countdownMins, countdownSecs]);
+        speak(t('smartTraining.sessionReset'));
+    }, [speak, countdownMins, countdownSecs, t]);
 
     // Admins are never locked; students start locked until coach sends 'live'
     const [isRemoteLocked, setIsRemoteLocked] = useState(true);
@@ -182,7 +183,7 @@ export default function JumpRopeTraining() {
                 restTimeRef.current = 0;
                 lastActivityTimeRef.current = 0;
                 intensityHistoryRef.current = [];
-                speak('Session ready. Jump to start the timer!');
+                speak(t('smartTraining.readyJump'));
             }
         } else if (plan.status === 'scheduled') {
             setIsRemoteLocked(!isAdmin); // Admins bypass lock
@@ -345,7 +346,7 @@ export default function JumpRopeTraining() {
                     if (payload.status) {
                         // 🚀 ROCKET FOR LIVE START:
                         if (payload.status === 'live') {
-                            toast.success('🚀 Mission Live! Let\'s Jump!', {
+                            toast.success(t('smartTraining.missionLive'), {
                                 duration: 5000,
                                 icon: '🔥',
                                 style: { background: '#0b0e18', color: '#10b981', border: '1px solid #10b981' }
@@ -354,7 +355,7 @@ export default function JumpRopeTraining() {
                         
                         // Internal state refresh
                         if (activePlan) {
-                            setActivePlan(prev => prev ? { ...prev, status: payload.status } : null);
+                            setActivePlan((prev: any) => prev ? { ...prev, status: payload.status } : null);
                         }
                         fetchLatestPlan();
                     }
@@ -364,7 +365,7 @@ export default function JumpRopeTraining() {
                 if (payload?.type === 'target_update') {
                     const tJumps = payload.target_jumps || '??';
                     const tTime = payload.target_time || '??';
-                    toast.success(`🚀 New Mission: ${tJumps} Jumps / ${tTime} Mins`, {
+                    toast.success(`${t('smartTraining.newMission')}: ${tJumps} ${t('smartTraining.jumps')} / ${tTime} ${t('smartTraining.mins')}`, {
                         duration: 5000,
                         position: 'top-center',
                         icon: '🎯',
@@ -648,7 +649,7 @@ export default function JumpRopeTraining() {
                         console.log("Timer started by first jump detection");
                         setIsTimerActive(true);
                         isTimerActiveRef.current = true;
-                        speak("Timer started!");
+                        speak(t('smartTraining.timerStarted'));
                     }
 
                     if (jumpCountRef.current % 10 === 0) speak(jumpCountRef.current.toString());
@@ -744,7 +745,7 @@ export default function JumpRopeTraining() {
         }
 
         console.log("Timer started manually via button");
-        speak("Session ready. Start jumping now!");
+        speak(t('smartTraining.readyStart'));
         jumpCountRef.current = 0; setJumps(0); setRpm(0); setTotalSeconds(0);
         workTimeRef.current = 0; restTimeRef.current = 0; lastActivityTimeRef.current = 0;
         intensityHistoryRef.current = [];
@@ -777,7 +778,7 @@ export default function JumpRopeTraining() {
                                         />
                                     ) : (
                                         <div className="flex flex-col -space-y-1">
-                                            <span className="text-[7px] font-bold text-white/30 uppercase tracking-tighter">Goal</span>
+                                            <span className="text-[7px] font-bold text-white/30 uppercase tracking-tighter">{t('smartTraining.goal')}</span>
                                             <span className="text-xs font-black text-white tabular-nums">{targetJumps || 0}</span>
                                         </div>
                                     )}
@@ -823,7 +824,7 @@ export default function JumpRopeTraining() {
                     {/* CENTER ZONE */}
                     <div className="relative flex-col flex items-center justify-center pt-2">
                         <div className="absolute inset-0 bg-blue-400/5 blur-[80px] rounded-full" />
-                        <span className="text-blue-400 text-[8px] font-black uppercase tracking-[0.8em] mb-0 relative z-10 opacity-30">JUMPS</span>
+                        <span className="text-blue-400 text-[8px] font-black uppercase tracking-[0.8em] mb-0 relative z-10 opacity-30">{t('smartTraining.jumps')}</span>
                         <span className="text-[7.5rem] sm:text-[180px] font-black leading-none tracking-tighter relative z-10 select-none text-white drop-shadow-2xl">
                             {jumps}
                         </span>
@@ -831,7 +832,7 @@ export default function JumpRopeTraining() {
                         <div className="mt-1 flex items-center gap-2 relative z-10">
                             <div className="px-3 py-1 rounded-full border border-white/5 bg-white/[0.03] backdrop-blur-3xl flex items-center gap-2">
                                 <Activity size={9} className="text-blue-400/50" />
-                                <span className="font-black text-[9px] tracking-[0.1em] text-white/80">{rpm} RPM</span>
+                                <span className="font-black text-[9px] tracking-[0.1em] text-white/80">{rpm} {t('smartTraining.rpm')}</span>
                             </div>
                         </div>
                     </div>
@@ -842,7 +843,7 @@ export default function JumpRopeTraining() {
                         {/* Status text */}
                         {!isTimerActive && (
                             <span className="text-[7px] font-black uppercase tracking-[0.5em] text-white/30 animate-pulse">
-                                {setupStatus === 'READY' ? 'Jump to start timer' : `Positioning: ${setupStatus}`}
+                                {setupStatus === 'READY' ? t('smartTraining.jumpToStart') : `${t('smartTraining.positioning')}: ${setupStatus}`}
                             </span>
                         )}
 
@@ -854,14 +855,14 @@ export default function JumpRopeTraining() {
                                     </span>
                                     <div className="flex items-center gap-6">
                                         <div className="flex flex-col items-center">
-                                            <span className="text-[7px] font-black uppercase tracking-widest text-white/30">Work</span>
+                                            <span className="text-[7px] font-black uppercase tracking-widest text-white/30">{t('smartTraining.work')}</span>
                                             <span className="text-sm font-black text-green-400/90 tabular-nums leading-none">
                                                 {String(Math.floor(activeSeconds / 60)).padStart(2, '0')}:{String(activeSeconds % 60).padStart(2, '0')}
                                             </span>
                                         </div>
                                         <div className="w-px h-5 bg-white/10" />
                                         <div className="flex flex-col items-center">
-                                            <span className="text-[7px] font-black uppercase tracking-widest text-white/30">Rest</span>
+                                            <span className="text-[7px] font-black uppercase tracking-widest text-white/30">{t('smartTraining.rest')}</span>
                                             <span className="text-sm font-black text-orange-400/90 tabular-nums leading-none">
                                                 {String(Math.floor(currentRestSecs / 60)).padStart(2, '0')}:{String(currentRestSecs % 60).padStart(2, '0')}
                                             </span>
@@ -877,13 +878,13 @@ export default function JumpRopeTraining() {
                                             onClick={handleRestart}
                                             className="flex-1 h-10 rounded-2xl border border-red-500/20 bg-red-500/5 backdrop-blur-md text-red-400 font-black uppercase tracking-[0.2em] text-[8px] flex items-center justify-center gap-2 active:scale-95 transition-all"
                                         >
-                                            <RotateCcw size={12} /> Restart
+                                            <RotateCcw size={12} /> {t('smartTraining.restart')}
                                         </button>
                                         <button
                                             onClick={() => setIsRemotePaused(!isRemotePaused)}
                                             className={`flex-1 h-10 rounded-2xl border backdrop-blur-md font-black uppercase tracking-[0.2em] text-[8px] flex items-center justify-center gap-2 active:scale-95 transition-all ${isRemotePaused ? 'border-green-500/30 bg-green-500/10 text-green-400' : 'border-yellow-500/30 bg-yellow-500/10 text-yellow-500'}`}
                                         >
-                                            {isRemotePaused ? <><Play size={12} fill="currentColor" /> Play</> : <><Pause size={12} fill="currentColor" /> Pause</>}
+                                            {isRemotePaused ? <><Play size={12} fill="currentColor" /> {t('smartTraining.play')}</> : <><Pause size={12} fill="currentColor" /> {t('smartTraining.pause')}</>}
                                         </button>
                                     </div>
                                 )}
@@ -895,7 +896,7 @@ export default function JumpRopeTraining() {
                                             disabled={isRemoteLocked}
                                             className="w-full h-10 rounded-full border border-blue-400/20 bg-blue-400/5 backdrop-blur-md text-blue-400/80 font-black uppercase tracking-[0.2em] text-[10px] shadow-2xl transition-all active:scale-95 disabled:opacity-40 disabled:grayscale disabled:cursor-not-allowed flex items-center justify-center gap-2"
                                         >
-                                            <Play size={14} fill="currentColor" /> START TRAINING
+                                            <Play size={14} fill="currentColor" /> {t('smartTraining.startTraining')}
                                         </button>
                                     </div>
                                 ) : (
@@ -903,7 +904,7 @@ export default function JumpRopeTraining() {
                                         onClick={handleFinish}
                                         className="w-full h-10 rounded-full border border-white/10 bg-white/10 backdrop-blur-md font-black uppercase tracking-[0.2em] text-[9px] transition-all active:scale-95 flex items-center justify-center gap-2 text-white/80 hover:text-white"
                                     >
-                                        <div className="w-2.5 h-2.5 bg-blue-400 rounded-sm shadow-[0_0_15px_rgba(96,165,250,0.6)]" /> FINISH SESSION
+                                        <div className="w-2.5 h-2.5 bg-blue-400 rounded-sm shadow-[0_0_15px_rgba(96,165,250,0.6)]" /> {t('smartTraining.finishSession')}
                                     </button>
                                 )}
                             </div>
@@ -921,10 +922,10 @@ export default function JumpRopeTraining() {
                                         <Timer size={56} className="text-emerald-400 drop-shadow-[0_0_20px_rgba(16,185,129,0.4)]" />
                                     </div>
                                     <div className="flex flex-col gap-4 max-w-xs items-center">
-                                        <h2 className="text-white font-black text-xl uppercase tracking-[0.3em] leading-none drop-shadow-lg">Scheduled Start</h2>
+                                        <h2 className="text-white font-black text-xl uppercase tracking-[0.3em] leading-none drop-shadow-lg">{t('smartTraining.scheduledStart')}</h2>
                                         <div className="flex flex-col items-center gap-1">
                                             <p className="text-emerald-400 text-[8px] font-black uppercase tracking-[0.4em] leading-relaxed opacity-60">
-                                                Starting In
+                                                {t('smartTraining.startingIn')}
                                             </p>
                                             {scheduledRemaining !== null && (
                                                 <span className="text-5xl font-black text-white tabular-nums tracking-tighter drop-shadow-[0_0_20px_rgba(255,255,255,0.3)] animate-in fade-in zoom-in-90 duration-500">
@@ -932,18 +933,18 @@ export default function JumpRopeTraining() {
                                                 </span>
                                             )}
                                             <p className="text-white/30 text-[7px] font-black uppercase tracking-[0.2em] mt-1">
-                                                Target: <span className="text-white/60">{activePlan.scheduled_start}</span>
+                                                {t('smartTraining.goal')}: <span className="text-white/60">{activePlan.scheduled_start}</span>
                                             </p>
                                         </div>
                                     </div>
 
                                     <div className="grid grid-cols-2 gap-4 w-full pt-4 border-t border-white/5">
                                         <div className="flex flex-col gap-1">
-                                            <span className="text-[7px] font-black text-white/20 uppercase tracking-[0.2em]">Goal Jumps</span>
+                                            <span className="text-[7px] font-black text-white/20 uppercase tracking-[0.2em]">{t('smartTraining.totalJumps')}</span>
                                             <span className="text-lg font-black text-white">{activePlan.target_jumps || '∞'}</span>
                                         </div>
                                         <div className="flex flex-col gap-1">
-                                            <span className="text-[7px] font-black text-white/20 uppercase tracking-[0.2em]">Goal Time</span>
+                                            <span className="text-[7px] font-black text-white/20 uppercase tracking-[0.2em]">{t('smartTraining.totalTime')}</span>
                                             <span className="text-lg font-black text-white">{activePlan.target_time ? `${activePlan.target_time}m` : '∞'}</span>
                                         </div>
                                     </div>
@@ -965,9 +966,9 @@ export default function JumpRopeTraining() {
                                         <div className="relative drop-shadow-[0_0_20px_rgba(249,115,22,0.4)]" style={{ fontSize: 56 }}>🔒</div>
                                     </div>
                                     <div className="flex flex-col gap-3 max-w-xs">
-                                        <h2 className="text-white font-black text-xl uppercase tracking-[0.3em] leading-none drop-shadow-lg">Waiting for Coach</h2>
+                                        <h2 className="text-white font-black text-xl uppercase tracking-[0.3em] leading-none drop-shadow-lg">{t('smartTraining.waitingForCoach')}</h2>
                                         <p className="text-white/40 text-[9px] font-black uppercase tracking-[0.4em] leading-relaxed">
-                                            Your session will start automatically when activated
+                                            {t('smartTraining.readyStart')}
                                         </p>
                                     </div>
                                     <div className="flex items-center gap-2">
@@ -984,7 +985,7 @@ export default function JumpRopeTraining() {
                         <div className="absolute inset-0 z-[100] backdrop-blur-2xl flex flex-col items-center justify-center gap-4 text-center pointer-events-auto" style={{ background: 'rgba(10,10,20,0.45)' }}>
                             <div className="flex flex-col items-center gap-6 px-10 py-10 rounded-[2.5rem] border border-white/10 shadow-2xl" style={{ background: 'rgba(255,255,255,0.04)', backdropFilter: 'blur(40px)' }}>
                                 <Pause size={36} className="text-yellow-400 drop-shadow-[0_0_20px_rgba(250,204,21,0.5)]" fill="currentColor" />
-                                <p className="text-white font-black text-base uppercase tracking-widest">Session Paused</p>
+                                <p className="text-white font-black text-base uppercase tracking-widest">{t('smartTraining.sessionPaused')}</p>
                             </div>
                         </div>
                     )}
@@ -997,7 +998,7 @@ export default function JumpRopeTraining() {
                     <div className="absolute inset-0 bg-black/60 backdrop-blur-md" />
                     <div className="relative z-10 rounded-3xl border overflow-hidden shadow-2xl" style={{ background: 'rgba(10,10,12,0.98)', borderColor: 'rgba(255,255,255,0.08)', width: 280 }} onClick={e => e.stopPropagation()}>
                         <div className="px-6 py-5 flex flex-col gap-4">
-                            <span className="text-[11px] font-black uppercase tracking-[0.3em] opacity-40 text-white text-center">SET TIMER</span>
+                            <span className="text-[11px] font-black uppercase tracking-[0.3em] opacity-40 text-white text-center">{t('smartTraining.setTimer')}</span>
                             <div className="flex justify-center gap-6 py-6">
                                 <div className="flex flex-col items-center gap-3">
                                     <button onClick={() => setCountdownMins(m => Math.min(60, m + 1))} className="w-10 h-10 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-white/50 hover:text-white transition-colors relative">
@@ -1005,7 +1006,7 @@ export default function JumpRopeTraining() {
                                     </button>
                                     <div className="flex flex-col items-center">
                                         <span className="text-4xl font-black text-white tabular-nums">{String(countdownMins).padStart(2, '0')}</span>
-                                        <span className="text-[9px] font-bold text-white/30 mb-1 tracking-widest uppercase">MIN</span>
+                                        <span className="text-[9px] font-bold text-white/30 mb-1 tracking-widest uppercase">{t('smartTraining.mins')}</span>
                                     </div>
                                     <button onClick={() => setCountdownMins(m => Math.max(0, m - 1))} className="w-10 h-10 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-white/50 hover:text-white transition-colors relative">
                                         <div className="w-3 h-0.5 bg-current absolute" />
@@ -1018,7 +1019,7 @@ export default function JumpRopeTraining() {
                                     </button>
                                     <div className="flex flex-col items-center">
                                         <span className="text-4xl font-black text-white tabular-nums">{String(countdownSecs).padStart(2, '0')}</span>
-                                        <span className="text-[9px] font-bold text-white/30 mb-1 tracking-widest uppercase">SEC</span>
+                                        <span className="text-[9px] font-bold text-white/30 mb-1 tracking-widest uppercase">{t('smartTraining.secs')}</span>
                                     </div>
                                     <button onClick={() => setCountdownSecs(s => (s - 5 < 0 ? 55 : s - 5))} className="w-10 h-10 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-white/50 hover:text-white transition-colors relative">
                                         <div className="w-3 h-0.5 bg-current absolute" />
@@ -1026,7 +1027,7 @@ export default function JumpRopeTraining() {
                                 </div>
                             </div>
                             <button onClick={() => setShowTimerPicker(false)} className="w-full py-4 mt-2 bg-blue-500 hover:bg-blue-400 transition-colors rounded-xl text-black font-black text-xs tracking-widest uppercase shadow-[0_0_20px_rgba(59,130,246,0.3)]">
-                                Confirm Time
+                                {t('smartTraining.confirmTime')}
                             </button>
                         </div>
                     </div>
@@ -1041,32 +1042,32 @@ export default function JumpRopeTraining() {
                             <div className="flex items-center justify-between">
                                 <div className="space-y-0.5">
                                     <h2 className="text-sm font-black uppercase tracking-tighter bg-clip-text text-transparent bg-gradient-to-r from-blue-400 via-primary to-cyan-400">
-                                        Workout Results
+                                        {t('smartTraining.workoutResults')}
                                     </h2>
-                                    <p className="text-[7px] font-bold text-white/20 uppercase tracking-[0.3em]">Session Summary</p>
+                                    <p className="text-[7px] font-bold text-white/20 uppercase tracking-[0.3em]">{t('smartTraining.sessionSummary')}</p>
                                 </div>
                                 <button onClick={() => setShowSummary(false)} className="text-white/20 hover:text-white/40"><X size={14} /></button>
                             </div>
                             <div className="grid grid-cols-2 gap-3">
                                 <div className="col-span-2 p-4 rounded-2xl bg-white/[0.02] border border-white/5 flex flex-col items-center gap-1">
                                     <span className="text-[140px] font-black text-white leading-none tracking-tighter drop-shadow-2xl">{jumps}</span>
-                                    <span className="text-[8px] font-black text-blue-400 uppercase tracking-[0.4em] -mt-2">Total Jumps</span>
+                                    <span className="text-[8px] font-black text-blue-400 uppercase tracking-[0.4em] -mt-2">{t('smartTraining.totalJumps')}</span>
                                 </div>
                                 <div className="p-3 rounded-xl bg-white/[0.01] border border-white/5 flex flex-col items-center">
                                     <span className="text-xs font-black text-white">{Math.floor(activeSeconds / 60)}:{String(activeSeconds % 60).padStart(2, '0')}</span>
-                                    <span className="text-[6px] font-bold text-green-400/30 uppercase tracking-widest mt-1">Work Time</span>
+                                    <span className="text-[6px] font-bold text-green-400/30 uppercase tracking-widest mt-1">{t('smartTraining.workTime')}</span>
                                 </div>
                                 <div className="p-3 rounded-xl bg-white/[0.01] border border-white/5 flex flex-col items-center">
                                     <span className="text-xs font-black text-white">{Math.floor(finalRestSecs / 60)}:{String(finalRestSecs % 60).padStart(2, '0')}</span>
-                                    <span className="text-[6px] font-bold text-orange-400/30 uppercase tracking-widest mt-1">Rest Time</span>
+                                    <span className="text-[6px] font-bold text-orange-400/30 uppercase tracking-widest mt-1">{t('smartTraining.restTime')}</span>
                                 </div>
                                 <div className="p-3 rounded-xl bg-white/[0.01] border border-white/5 flex flex-col items-center">
                                     <span className="text-xs font-black text-white">{rpm}</span>
-                                    <span className="text-[6px] font-bold text-blue-400/30 uppercase tracking-widest mt-1">Avg RPM</span>
+                                    <span className="text-[6px] font-bold text-blue-400/30 uppercase tracking-widest mt-1">{t('smartTraining.avgRpm')}</span>
                                 </div>
                                 <div className="p-3 rounded-xl bg-white/[0.01] border border-white/5 flex flex-col items-center">
                                     <span className="text-xs font-black text-white">{Math.floor(totalSeconds / 60)}:{String(totalSeconds % 60).padStart(2, '0')}</span>
-                                    <span className="text-[6px] font-bold text-white/10 uppercase tracking-widest mt-1">Total Time</span>
+                                    <span className="text-[6px] font-bold text-white/10 uppercase tracking-widest mt-1">{t('smartTraining.totalTime')}</span>
                                 </div>
                             </div>
                             <div className="flex flex-col items-center gap-4">
@@ -1074,14 +1075,14 @@ export default function JumpRopeTraining() {
                                     onClick={() => setShowSummary(false)}
                                     className="px-6 py-2.5 bg-transparent border border-white/10 rounded-full font-black uppercase text-[8px] text-white/60 tracking-[0.2em] hover:bg-white/5 transition-all self-center"
                                 >
-                                    Finish Workout
+                                    {t('smartTraining.finishWorkout')}
                                 </button>
                                 {isAdmin && (
                                     <button
                                         onClick={() => navigate('/jump-rope-hub')}
                                         className="text-[7px] font-black text-white/20 uppercase tracking-widest hover:text-white transition-colors flex items-center gap-1"
                                     >
-                                        <ArrowLeft size={8} /> Trainer Hub
+                                        <ArrowLeft size={8} /> {t('smartTraining.trainerHub')}
                                     </button>
                                 )}
                             </div>

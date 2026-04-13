@@ -231,11 +231,11 @@ export default function VideoLibrary() {
             {/* Minimalist Header */}
             <PageHeader 
                 title={t('videoLibrary.title')}
-                subtitle="Elite Training Collection"
+                subtitle={t('videoLibrary.subtitle')}
                 titleSuffix={!isInternal && (
                     <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-green-500/5 border border-green-500/10">
                         <div className="w-1 h-1 rounded-full bg-green-500" />
-                        <span className="text-[8px] font-black uppercase tracking-[0.2em] text-green-500/60">Elite Access</span>
+                        <span className="text-[8px] font-black uppercase tracking-[0.2em] text-green-500/60">{t('videoLibrary.eliteAccess')}</span>
                     </div>
                 )}
             >
@@ -253,7 +253,7 @@ export default function VideoLibrary() {
                             }`}
                         >
                             <CheckSquare size={14} />
-                            {isSelectionMode ? 'Exit' : 'Select'}
+                            {isSelectionMode ? t('videoLibrary.exit') : t('videoLibrary.select')}
                         </button>
                         <button 
                             onClick={() => setIsAddModalOpen(true)}
@@ -302,8 +302,10 @@ export default function VideoLibrary() {
                                     <Lock size={28} className="text-primary animate-pulse" />
                                 </div>
                                 <div className="space-y-4">
-                                    <h2 className="text-2xl md:text-3xl font-black uppercase tracking-tighter italic text-white/95 leading-none">Exclusive Access</h2>
-                                    <p className="text-[10px] md:text-[11px] text-white/30 font-bold uppercase tracking-[0.3em] leading-relaxed max-w-[280px] mx-auto">Unlock Level {selectedLevel} Elite Access</p>
+                                    <h2 className="text-2xl md:text-3xl font-black uppercase tracking-tighter italic text-white/95 leading-none">{t('videoLibrary.exclusiveAccess')}</h2>
+                                    <p className="text-[10px] md:text-[11px] text-white/30 font-bold uppercase tracking-[0.3em] leading-relaxed max-w-[280px] mx-auto">
+                                        {t('videoLibrary.unlockLevel', { level: selectedLevel })}
+                                    </p>
                                 </div>
                                 <button 
                                     onClick={() => {
@@ -314,7 +316,7 @@ export default function VideoLibrary() {
                                     className="bg-primary px-10 py-4 rounded-3xl font-black uppercase tracking-[0.25em] text-[9px] shadow-[0_15px_40px_rgba(110,89,255,0.3)] hover:scale-105 active:scale-95 transition-all text-white flex items-center gap-3 pointer-events-auto"
                                 >
                                     <CreditCard size={14} />
-                                    Unlock Access Now
+                                    {t('videoLibrary.unlockNow')}
                                 </button>
                             </div>
                         )}
@@ -384,7 +386,7 @@ export default function VideoLibrary() {
                                                 <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center border border-primary/30 shadow-2xl scale-110">
                                                     <Lock size={16} className="text-primary" />
                                                 </div>
-                                                <span className="text-[8px] font-black uppercase tracking-widest text-primary mt-3 opacity-0 group-hover:opacity-100 transition-all transform translate-y-2 group-hover:translate-y-0">Locked Content</span>
+                                                <span className="text-[8px] font-black uppercase tracking-widest text-primary mt-3 opacity-0 group-hover:opacity-100 transition-all transform translate-y-2 group-hover:translate-y-0">{t('videoLibrary.lockedContent')}</span>
                                             </div>
                                         )}
 
@@ -459,7 +461,7 @@ export default function VideoLibrary() {
                 <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[100] animate-in slide-in-from-bottom-10 duration-500">
                     <div className="bg-[#111] backdrop-blur-2xl border border-white/10 rounded-[2.5rem] p-4 pl-10 flex items-center gap-10 shadow-2xl shadow-black">
                         <div>
-                            <span className="text-xs font-black text-white/40 uppercase tracking-widest block mb-1">Selections</span>
+                            <span className="text-xs font-black text-white/40 uppercase tracking-widest block mb-1">{t('videoLibrary.selections')}</span>
                             <span className="text-primary text-2xl font-black">{selectedVideoIds.size}</span>
                         </div>
                         <div className="h-10 w-px bg-white/5" />
@@ -470,7 +472,7 @@ export default function VideoLibrary() {
                                 className="px-8 py-4 bg-red-500 hover:bg-red-600 text-white rounded-2xl font-black uppercase tracking-widest text-[10px] transition-all flex items-center gap-3 disabled:opacity-50 shadow-xl shadow-red-500/20"
                             >
                                 {isBatchDeleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 size={16} />}
-                                Delete Selection
+                                {t('videoLibrary.deleteSelection')}
                             </button>
                             <button 
                                 onClick={() => {
@@ -479,7 +481,7 @@ export default function VideoLibrary() {
                                 }}
                                 className="px-8 py-4 bg-white/5 hover:bg-white/10 text-white rounded-2xl font-black uppercase tracking-widest text-[10px] transition-all border border-white/5"
                             >
-                                Cancel
+                                {t('videoLibrary.cancel')}
                             </button>
                         </div>
                     </div>
@@ -522,7 +524,7 @@ export default function VideoLibrary() {
                         }
                     }}
                     title={videoToDelete?.title || ''}
-                    description="This action cannot be undone. The video will be permanently removed from the library."
+                    description={t('videoLibrary.deleteConfirmDesc')}
                     isLoading={isDeleting}
                 />
             )}
@@ -538,7 +540,7 @@ export default function VideoLibrary() {
                     onSuccess={() => {
                         setIsPurchaseModalOpen(false);
                         refetchAccess();
-                        toast.success('Access Unlocked! Refreshing...');
+                        toast.success(t('videoLibrary.accessUnlocked'));
                         setTimeout(() => window.location.reload(), 1500);
                     }}
                 />

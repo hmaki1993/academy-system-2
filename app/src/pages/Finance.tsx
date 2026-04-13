@@ -59,7 +59,7 @@ export default function Finance() {
 
     const confirmDeleteTransaction = async () => {
         if (deleteIds.length === 0 || !deleteTable) return;
-        const toastId = toast.loading(deleteIds.length > 1 ? `Deleting ${deleteIds.length} transactions...` : 'Deleting transaction...');
+        const toastId = toast.loading(deleteIds.length > 1 ? t('finance.deletingTransactions', { count: deleteIds.length }) : t('common.loading'));
         try {
             // 1. Fetch the data before deleting (to save in history)
             const { data: records, error: fetchError } = await supabase
@@ -88,7 +88,7 @@ export default function Finance() {
                 // but for now we just log the error and proceed or show a warning.
                 if (historyError) {
                     console.error('History logging failed:', historyError);
-                    toast.error('Save to Recycle Bin failed. Please run the SQL command provided.', { id: toastId });
+                    toast.error(t('finance.recycleBinFailed'), { id: toastId });
                     return; // Stop here if we can't backup the data
                 }
             }
@@ -97,13 +97,13 @@ export default function Finance() {
             const { error: deleteError } = await supabase.from(deleteTable).delete().in('id', deleteIds);
             if (deleteError) throw deleteError;
 
-            toast.success(deleteIds.length > 1 ? `Deleted ${deleteIds.length} items to Trash` : 'Deleted and moved to Trash', { id: toastId });
+            toast.success(deleteIds.length > 1 ? t('finance.bulkDeleteSuccess', { count: deleteIds.length }) : t('finance.movedToTrash'), { id: toastId });
             setSelectedItems([]);
             refetch();
             queryClient.invalidateQueries({ queryKey: ['refunds'] });
             queryClient.invalidateQueries({ queryKey: ['expenses'] });
         } catch (error: any) {
-            toast.error(error.message || 'Delete failed', { id: toastId });
+            toast.error(error.message || t('finance.deleteFailed'), { id: toastId });
         } finally {
             setConfirmDelete(false);
             setDeleteIds([]);

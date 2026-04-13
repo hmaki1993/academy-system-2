@@ -1,13 +1,9 @@
-
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import {
-    Users, Trophy, Activity, Sparkles, Search,
-    LayoutDashboard, PlayCircle, User, Calendar,
-    ChevronRight, Info, History, ArrowRight,
-    Weight, Ruler, UserCircle2, Loader2, Lock, Zap,
     Clock, Flame, CheckCircle2, X, Calculator, Send,
-    Pause, RefreshCcw, RotateCcw, Settings2
+    Pause, RefreshCcw, RotateCcw, Settings2, Zap, PlayCircle, Activity, UserCircle2, Trophy, History, Sparkles, Loader2,
+    Users, Search
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useJumpRopeAdminStats, useJumpRopeAccess, useTrainingPlanHistory, useAthleteActivityHistory } from '../hooks/useData';
@@ -16,10 +12,12 @@ import toast from 'react-hot-toast';
 import { formatDistanceToNow, format } from 'date-fns';
 import { useSmartPlan, TrainingMetric, GeneratedPlan } from '../hooks/useSmartPlan';
 import { supabase } from '../lib/supabase';
+import { useTranslation } from 'react-i18next';
 
 
 // --- Sub-Component: Floating Remote Control Hub ---
 const FloatingRemoteHub = ({ athlete, onClose }: { athlete: any, onClose: () => void }) => {
+    const { t } = useTranslation();
     const { sendDirectTargets, updateSessionStatus, isSending } = useSmartPlan();
     const [liveJumps, setLiveJumps] = useState<number | ''>('');
     const [liveTime, setLiveTime] = useState<number | ''>('');
@@ -119,7 +117,7 @@ const FloatingRemoteHub = ({ athlete, onClose }: { athlete: any, onClose: () => 
                 >
                     <div className="flex items-center gap-1.5">
                         <Zap size={10} className="text-cyan-400 fill-cyan-400" />
-                        <span className="text-[7px] font-black text-white/60 uppercase tracking-widest">Control</span>
+                        <span className="text-[7px] font-black text-white/60 uppercase tracking-widest">{t('strategy.control')}</span>
                     </div>
                     {/* X — red, no background */}
                     <button
@@ -133,7 +131,7 @@ const FloatingRemoteHub = ({ athlete, onClose }: { athlete: any, onClose: () => 
                 {/* Inputs */}
                 <div className="grid grid-cols-2 gap-2">
                     <div className="px-3 py-2.5">
-                        <span className="text-[9px] font-black text-white/40 uppercase tracking-[0.2em] block mb-2">Jumps</span>
+                        <span className="text-[9px] font-black text-white/40 uppercase tracking-[0.2em] block mb-2">{t('strategy.jumps')}</span>
                         <input
                             type="number"
                             value={liveJumps}
@@ -143,7 +141,7 @@ const FloatingRemoteHub = ({ athlete, onClose }: { athlete: any, onClose: () => 
                         />
                     </div>
                     <div className="px-3 py-2.5">
-                        <span className="text-[9px] font-black text-white/40 uppercase tracking-[0.2em] block mb-2">Time</span>
+                        <span className="text-[9px] font-black text-white/40 uppercase tracking-[0.2em] block mb-2">{t('strategy.time')}</span>
                         <input
                             type="number"
                             value={liveTime}
@@ -160,13 +158,13 @@ const FloatingRemoteHub = ({ athlete, onClose }: { athlete: any, onClose: () => 
                     <div className="flex items-center justify-between mb-2 px-1">
                         <div className="flex items-center gap-1.5">
                             <Clock size={12} className="text-emerald-500/80" />
-                            <span className="text-[9px] font-black text-white/30 uppercase tracking-[0.2em]">Launch Schedule</span>
+                            <span className="text-[9px] font-black text-white/30 uppercase tracking-[0.2em]">{t('strategy.launchSchedule')}</span>
                         </div>
                         <button 
                             onClick={(e) => { e.stopPropagation(); setScheduledStartTime(''); }}
                             className="text-[8px] font-black text-red-500/40 hover:text-red-500 uppercase tracking-widest transition-colors"
                         >
-                            Reset
+                            {t('strategy.reset')}
                         </button>
                     </div>
 
@@ -296,8 +294,8 @@ const FloatingRemoteHub = ({ athlete, onClose }: { athlete: any, onClose: () => 
                                         sendDirectTargets(athlete.userId, Number(liveTime), Number(liveJumps), null); 
                                     }}
                                     className="flex-[2] h-10 rounded-lg bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 hover:bg-cyan-500 hover:text-black flex flex-col items-center justify-center transition-all active:scale-95 shadow-lg shadow-cyan-500/10">
-                                    <span className="text-[7px] font-black uppercase tracking-widest opacity-60">Override</span>
-                                    <span className="text-[9px] font-black uppercase tracking-[0.2em] -mt-1">START NOW</span>
+                                    <span className="text-[7px] font-black uppercase tracking-widest opacity-60">{t('strategy.override')}</span>
+                                    <span className="text-[9px] font-black uppercase tracking-[0.2em] -mt-1">{t('strategy.startNow')}</span>
                                 </button>
                             );
                         }
@@ -326,7 +324,7 @@ const FloatingRemoteHub = ({ athlete, onClose }: { athlete: any, onClose: () => 
                                             : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500 hover:text-black shadow-emerald-500/10'
                                     }`}>
                                     {isPickingFuture ? <Clock size={14} /> : <PlayCircle size={14} fill="currentColor" />}
-                                    <span>{isPickingFuture ? 'SCHEDULE' : 'START'}</span>
+                                    <span>{isPickingFuture ? t('strategy.schedule') : t('strategy.start')}</span>
                                 </button>
                             );
                         }
@@ -369,6 +367,7 @@ const FloatingRemoteHub = ({ athlete, onClose }: { athlete: any, onClose: () => 
 
 // --- Sub-Component: Inline Plan Builder ---
 const InlinePlanBuilder = ({ studentId, studentName, onClose, onSendReady, existingPlan }: { studentId: string, studentName: string, onClose: () => void, onSendReady?: (fn: () => void) => void, existingPlan?: any }) => {
+    const { t, i18n } = useTranslation();
     const { sendPlan, isSending } = useSmartPlan();
     const [metrics, setMetrics] = useState<TrainingMetric>({
         age: 25,
@@ -397,12 +396,12 @@ const InlinePlanBuilder = ({ studentId, studentName, onClose, onSendReady, exist
         } else {
             // Default empty day
             setEditablePlan([{
-                day: isAr ? 'اليوم 1' : 'Day 1',
-                focus: isAr ? 'هيكل التدريب' : 'Training Structure',
+                day: i18n.language === 'ar' ? 'اليوم 1' : 'Day 1',
+                focus: i18n.language === 'ar' ? 'هيكل التدريب' : 'Training Structure',
                 details: []
             }]);
         }
-    }, [existingPlan, isAr]);
+    }, [existingPlan, i18n.language]);
 
     // 2. Auto-calculate metrics if side-panel inputs change
     useEffect(() => {
@@ -506,7 +505,7 @@ const InlinePlanBuilder = ({ studentId, studentName, onClose, onSendReady, exist
                     </div>
                     <div>
                         <h1 className="text-xl sm:text-3xl font-black text-white tracking-[0.1em] sm:tracking-[0.2em] uppercase leading-none drop-shadow-2xl text-center sm:text-left">
-                            {isAr ? 'مصمم الاستراتيجية' : 'Strategy Builder'}
+                            {t('strategy.strategyBuilder')}
                         </h1>
                         <div className="h-1 w-8 sm:w-12 bg-orange-500 rounded-full mt-2 mx-auto sm:mx-0" />
                     </div>
@@ -514,13 +513,13 @@ const InlinePlanBuilder = ({ studentId, studentName, onClose, onSendReady, exist
 
                 <div className="flex flex-col items-center gap-2">
                     <p className="text-[8px] sm:text-[10px] font-black text-white/20 uppercase tracking-[0.4em] sm:tracking-[0.6em] text-center px-4">
-                        {isAr ? `تصميم استراتيجية مخصصة لـ ${studentName}` : `Custom Manual Strategy for ${studentName}`}
+                        {t('strategy.customManualStrategy', { name: studentName })}
                     </p>
                     {/* Centered Premium Timestamp */}
                     <div className="px-3 sm:px-4 py-1 sm:py-1.5 rounded-full bg-white/[0.02] border border-white/5 backdrop-blur-3xl flex items-center gap-2 sm:gap-3">
                         <Clock size={8} className="text-orange-500/40 sm:w-[10px] sm:h-[10px]" />
                         <span className="text-[7px] sm:text-[9px] font-black text-white/40 uppercase tracking-[0.3em] sm:tracking-[0.4em] tabular-nums">
-                            {new Date().toLocaleDateString(isAr ? 'ar-EG' : 'en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                            {new Date().toLocaleDateString(i18n.language === 'ar' ? 'ar-EG' : 'en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                         </span>
                     </div>
                 </div>
@@ -546,13 +545,13 @@ const InlinePlanBuilder = ({ studentId, studentName, onClose, onSendReady, exist
                     <div className="p-5 rounded-[2rem] bg-white/[0.01] border border-white/5 flex flex-col gap-5 relative group/bio">
                         <div className="absolute top-0 right-0 w-32 h-32 bg-orange-500/5 blur-[40px] rounded-full group-hover/bio:bg-orange-500/10 transition-all duration-700" />
                         <h3 className="text-[8px] font-black uppercase tracking-[0.5em] text-white/10 mb-1">
-                            {isAr ? 'القياسات العصبية' : 'Bio-Metrics'}
+                            {t('strategy.bioMetrics')}
                         </h3>
                         
                         {[
-                            { label: isAr ? 'Weight' : 'Weight', value: metrics.weight, key: 'weight', unit: 'kg' },
-                            { label: isAr ? 'Height' : 'Height', value: metrics.height, key: 'height', unit: 'cm' },
-                            { label: isAr ? 'Age' : 'Age', value: metrics.age, key: 'age', unit: 'yrs' }
+                            { label: t('strategy.weight'), value: metrics.weight, key: 'weight', unit: 'kg' },
+                            { label: t('strategy.height'), value: metrics.height, key: 'height', unit: 'cm' },
+                            { label: t('strategy.age'), value: metrics.age, key: 'age', unit: 'yrs' }
                         ].map(m => (
                             <div key={m.key} className="group/input space-y-1 relative">
                                 <div className="flex justify-between items-center px-1">
@@ -579,7 +578,7 @@ const InlinePlanBuilder = ({ studentId, studentName, onClose, onSendReady, exist
                             </div>
                             
                             <div className="flex flex-col items-center pt-2 gap-1 group">
-                                <span className="text-[6px] font-black uppercase tracking-[0.5em] text-orange-500/30 group-hover:text-orange-500 transition-colors">{isAr ? 'الهدف اليومي' : 'Daily Target'}</span>
+                                <span className="text-[6px] font-black uppercase tracking-[0.5em] text-orange-500/30 group-hover:text-orange-500 transition-colors">{t('strategy.dailyTarget')}</span>
                                 <div className="flex items-baseline gap-1.5">
                                     <span className="text-2xl font-black text-orange-500 drop-shadow-[0_0_10px_rgba(249,115,22,0.3)]">{targetCalories || 0}</span>
                                     <span className="text-[8px] font-bold text-orange-500/20 uppercase italic">Kcal</span>
@@ -607,7 +606,7 @@ const InlinePlanBuilder = ({ studentId, studentName, onClose, onSendReady, exist
                                                 value={d.day} 
                                                 onChange={e => handleUpdateDay(i, 'day', e.target.value)} 
                                                 className="bg-transparent text-sm font-black text-white uppercase tracking-[0.2em] outline-none w-24" 
-                                                placeholder={isAr ? 'اليوم...' : 'Day...'}
+                                                placeholder={t('strategy.jumps')}
                                             />
                                         </div>
                                         <button 
@@ -621,7 +620,7 @@ const InlinePlanBuilder = ({ studentId, studentName, onClose, onSendReady, exist
                                         value={d.focus} 
                                         onChange={e => handleUpdateDay(i, 'focus', e.target.value)} 
                                         className="bg-transparent text-[10px] font-black text-orange-500/40 group-hover/item:text-orange-500 uppercase tracking-[0.3em] outline-none w-full transition-colors ml-4" 
-                                        placeholder={isAr ? 'التركيز...' : 'Focus Area...'}
+                                        placeholder={t('strategy.focusArea')}
                                     />
                                 </div>
 
@@ -632,7 +631,7 @@ const InlinePlanBuilder = ({ studentId, studentName, onClose, onSendReady, exist
                                         value={d.details.join('\n')} 
                                         onChange={e => handleUpdateDetailsArea(i, e.target.value)}
                                         className="w-full h-full bg-transparent text-[12px] font-bold text-white/50 focus:text-white outline-none resize-none custom-scrollbar leading-[1.8] tracking-wide placeholder:text-white/5"
-                                        placeholder={isAr ? 'اكتب تفاصيل التدريب هنا...' : 'Define tactical details...'}
+                                        placeholder={t('strategy.writeTrainingDetails')}
                                     />
                                 </div>
                             </div>
@@ -648,7 +647,7 @@ const InlinePlanBuilder = ({ studentId, studentName, onClose, onSendReady, exist
                                     <span className="text-2xl font-light">+</span>
                                 </div>
                                 <span className="text-[9px] font-black uppercase tracking-[0.4em] text-white/10 group-hover/add:text-orange-500 transition-colors">
-                                    {isAr ? 'إضافة يوم' : 'Add Day'}
+                                    {t('strategy.addDay')}
                                 </span>
                             </button>
                         </div>
@@ -661,6 +660,7 @@ const InlinePlanBuilder = ({ studentId, studentName, onClose, onSendReady, exist
 
 // --- Sub-Component: Athlete Detail Modal ---
 const AthleteDetailModal = ({ athlete, onClose, autoOpenGenerator = false }: { athlete: any, onClose: () => void, autoOpenGenerator?: boolean }) => {
+    const { t, i18n } = useTranslation();
     const [showGenerator, setShowGenerator] = useState(autoOpenGenerator);
     const [activeTab, setActiveTab] = useState<'strategy' | 'activity'>('strategy');
     const sendPlanRef = React.useRef<(() => void) | null>(null);
@@ -720,7 +720,7 @@ const AthleteDetailModal = ({ athlete, onClose, autoOpenGenerator = false }: { a
                         {/* Quick Metrics Bar - Enlarged for and mobile */}
                         <div className="flex items-center justify-around py-8 sm:py-10 border-b border-white/5 relative z-10 gap-4">
                             <div className="flex flex-col items-center">
-                                <span className="text-[8px] sm:text-[10px] font-black text-white/20 uppercase tracking-[0.3em] mb-2 text-center">Collective Jumps</span>
+                                <span className="text-[8px] sm:text-[10px] font-black text-white/20 uppercase tracking-[0.3em] mb-2 text-center">{t('strategy.collectiveJumps')}</span>
                                 <div className="flex items-center gap-1.5">
                                     <span className="text-lg sm:text-2xl font-black text-blue-400 tabular-nums">{athlete.totalJumps.toLocaleString()}</span>
                                     <Trophy size={14} className="text-blue-400/20" />
@@ -728,18 +728,18 @@ const AthleteDetailModal = ({ athlete, onClose, autoOpenGenerator = false }: { a
                             </div>
                             <div className="w-px h-10 bg-white/5" />
                             <div className="flex flex-col items-center">
-                                <span className="text-[8px] sm:text-[10px] font-black text-white/20 uppercase tracking-[0.3em] mb-2 text-center">Last Active</span>
+                                <span className="text-[8px] sm:text-[10px] font-black text-white/20 uppercase tracking-[0.3em] mb-2 text-center">{t('strategy.lastActive')}</span>
                                 <div className="flex items-center gap-1.5">
-                                    <span className="text-lg sm:text-2xl font-black text-white tabular-nums">{athlete.lastActiveAt ? format(new Date(athlete.lastActiveAt), 'HH:mm') : 'Offline'}</span>
+                                    <span className="text-lg sm:text-2xl font-black text-white tabular-nums">{athlete.lastActiveAt ? format(new Date(athlete.lastActiveAt), 'HH:mm') : t('strategy.offline')}</span>
                                     <History size={14} className="text-white/10" />
                                 </div>
                             </div>
                             <div className="w-px h-10 bg-white/5" />
                             <div className="flex flex-col items-center">
-                                <span className="text-[8px] sm:text-[10px] font-black text-white/20 uppercase tracking-[0.3em] mb-2 text-center">Energy Load</span>
+                                <span className="text-[8px] sm:text-[10px] font-black text-white/20 uppercase tracking-[0.3em] mb-2 text-center">{t('strategy.energyLoad')}</span>
                                 <div className="flex items-center gap-1.5">
                                     <span className="text-lg sm:text-2xl font-black text-red-500 tabular-nums">{athlete.sessionsCount}</span>
-                                    <span className="text-xs font-black text-red-500/40 -ml-1">SES</span>
+                                    <span className="text-xs font-black text-red-500/40 -ml-1">{t('strategy.sessions')}</span>
                                 </div>
                             </div>
                         </div>
@@ -750,7 +750,7 @@ const AthleteDetailModal = ({ athlete, onClose, autoOpenGenerator = false }: { a
                                     onClick={() => setActiveTab('strategy')}
                                     className={`relative px-6 sm:px-8 py-3 rounded-2xl text-[10px] sm:text-[11px] font-black uppercase tracking-[.3em] transition-all ${activeTab === 'strategy' ? 'text-orange-400' : 'text-white/20 hover:text-white/50'}`}
                                 >
-                                    Strategy
+                                    {t('strategy.strategy')}
                                     {activeTab === 'strategy' && <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-4 h-[2px] bg-orange-500 rounded-full shadow-[0_0_8px_rgba(249,115,22,0.6)]" />}
                                 </button>
                                 
@@ -760,7 +760,7 @@ const AthleteDetailModal = ({ athlete, onClose, autoOpenGenerator = false }: { a
                                     onClick={() => setActiveTab('activity')}
                                     className={`relative px-6 sm:px-8 py-3 rounded-2xl text-[10px] sm:text-[11px] font-black uppercase tracking-[.3em] transition-all ${activeTab === 'activity' ? 'text-blue-400' : 'text-white/20 hover:text-white/50'}`}
                                 >
-                                    Activity
+                                    {t('strategy.activity')}
                                     {activeTab === 'activity' && <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-4 h-[2px] bg-blue-500 rounded-full shadow-[0_0_8px_rgba(59,130,246,0.6)]" />}
                                 </button>
                             </div>
@@ -788,18 +788,18 @@ const AthleteDetailModal = ({ athlete, onClose, autoOpenGenerator = false }: { a
                                 ) : (
                                     <>
                                         <h4 className="text-[10px] font-black text-white/40 uppercase tracking-[.4em] flex items-center gap-3 mb-6">
-                                            <History size={14} /> Training Plan Archives
+                                            <History size={14} /> {t('strategy.trainingPlanArchives')}
                                         </h4>
 
                                         {isHistoryLoading ? (
                                             <div className="flex flex-col items-center justify-center py-10 gap-4">
                                                 <Loader2 className="animate-spin text-orange-500" />
-                                                <p className="text-[9px] font-black text-white/20 uppercase tracking-widest">Retrieving archives...</p>
+                                                <p className="text-[9px] font-black text-white/20 uppercase tracking-widest">{t('strategy.retrievingArchives')}</p>
                                             </div>
                                         ) : history?.length === 0 ? (
                                             <div className="py-20 text-center bg-white/[0.02] border border-dashed border-white/10 rounded-[2.5rem] flex flex-col items-center gap-4">
                                                 <Sparkles size={32} className="text-white/10" />
-                                                <p className="text-[10px] font-black text-white/20 uppercase tracking-widest px-10">No historical strategies found for this athlete.</p>
+                                                <p className="text-[10px] font-black text-white/20 uppercase tracking-widest px-10">{t('strategy.noArchives')}</p>
                                             </div>
                                         ) : (
                                             <div className="space-y-12">
@@ -815,30 +815,30 @@ const AthleteDetailModal = ({ athlete, onClose, autoOpenGenerator = false }: { a
                                                                         <Flame size={12} strokeWidth={3} />
                                                                     </div>
                                                                     <span className={`text-[10px] font-black uppercase tracking-[0.4em] ${idx === 0 ? 'text-orange-500' : 'text-white/20'}`}>
-                                                                        {idx === 0 ? 'Current Active Strategy' : `Tactical Schema V${history.length - idx}`}
+                                                                        {idx === 0 ? t('strategy.currentActiveStrategy') : `${t('strategy.tacticalSchema')} V${history.length - idx}`}
                                                                     </span>
                                                                 </div>
                                                                 <h4 className="text-2xl font-black text-white tracking-tighter uppercase italic leading-none ml-0.5">
-                                                                    {format(new Date(plan.created_at), 'MMMM do, yyyy')}
+                                                                    {new Date(plan.created_at).toLocaleDateString(i18n.language === 'ar' ? 'ar-EG' : 'en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
                                                                 </h4>
                                                             </div>
 
                                                             <div className="flex items-center gap-x-16 sm:gap-x-24">
                                                                 <div className="flex flex-col items-center sm:items-start group/stat">
-                                                                    <span className="text-[8px] font-black text-white/10 uppercase tracking-[0.5em] mb-2.5 group-hover/stat:text-primary transition-colors">Daily Goal</span>
+                                                                    <span className="text-[8px] font-black text-white/10 uppercase tracking-[0.5em] mb-2.5 group-hover/stat:text-primary transition-colors">{t('strategy.dailyTarget')}</span>
                                                                     <div className="flex items-baseline gap-2">
                                                                         <span className="text-3xl font-black text-white tracking-tighter tabular-nums drop-shadow-2xl">{plan.target_calories}</span>
-                                                                        <span className="text-[10px] font-black text-white/20 uppercase tracking-widest italic font-serif">KCAL</span>
+                                                                        <span className="text-[10px] font-black text-white/20 uppercase tracking-widest italic font-serif">{t('strategy.kcal')}</span>
                                                                     </div>
                                                                 </div>
 
                                                                 <div className="w-px h-10 bg-white/5 rotate-[15deg] hidden sm:block" />
 
                                                                 <div className="flex flex-col items-center sm:items-start group/stat">
-                                                                    <span className="text-[8px] font-black text-white/10 uppercase tracking-[0.5em] mb-2.5 group-hover/stat:text-primary transition-colors">Load Intensity</span>
+                                                                    <span className="text-[8px] font-black text-white/10 uppercase tracking-[0.5em] mb-2.5 group-hover/stat:text-primary transition-colors">{t('strategy.loadIntensity')}</span>
                                                                     <div className="flex items-baseline gap-2">
                                                                         <span className="text-3xl font-black text-white tracking-tighter tabular-nums drop-shadow-2xl">{plan.plan_content?.length || 0}</span>
-                                                                        <span className="text-[10px] font-black text-white/20 uppercase tracking-widest italic font-serif">Days / Week</span>
+                                                                        <span className="text-[10px] font-black text-white/20 uppercase tracking-widest italic font-serif">{t('strategy.daysWeek')}</span>
                                                                     </div>
                                                                 </div>
                                                             </div>
@@ -858,17 +858,17 @@ const AthleteDetailModal = ({ athlete, onClose, autoOpenGenerator = false }: { a
                         ) : (
                             <div className="animate-in fade-in duration-500">
                                 <h4 className="text-[10px] font-black text-white/40 uppercase tracking-[.4em] flex items-center gap-3 mb-6">
-                                    <Activity size={14} /> Performance Session Stream
+                                    <Activity size={14} /> {t('strategy.performanceSessionStream')}
                                 </h4>
                                 {isActivityLoading ? (
                                     <div className="flex flex-col items-center justify-center py-10 gap-4">
                                         <Loader2 className="animate-spin text-blue-400" />
-                                        <p className="text-[9px] font-black text-white/20 uppercase tracking-widest">Compiling metrics...</p>
+                                        <p className="text-[9px] font-black text-white/20 uppercase tracking-widest">{t('strategy.compilingMetrics')}</p>
                                     </div>
                                 ) : activityHistory?.length === 0 ? (
                                     <div className="py-20 text-center bg-blue-400/5 border border-dashed border-blue-400/10 rounded-[2.5rem] flex flex-col items-center gap-4">
                                         <Activity size={32} className="text-blue-400/20" />
-                                        <p className="text-[10px] font-black text-white/20 uppercase tracking-widest px-10 text-center">No tracked activity logged for this athlete.</p>
+                                        <p className="text-[10px] font-black text-white/20 uppercase tracking-widest px-10 text-center">{t('strategy.noTrackedActivity')}</p>
                                     </div>
                                 ) : (
                                     <div className="space-y-4">
@@ -877,34 +877,34 @@ const AthleteDetailModal = ({ athlete, onClose, autoOpenGenerator = false }: { a
                                                 <div className="flex items-center justify-between mb-4 relative z-10">
                                                     <div className="flex flex-col gap-1">
                                                         <span className="text-[8px] sm:text-[9px] font-black text-blue-400/60 uppercase tracking-widest">
-                                                            TRACKED SESSION
+                                                            {t('strategy.trackedSession')}
                                                         </span>
                                                         <span className="text-[10px] sm:text-xs font-black text-white tracking-[0.2em] uppercase">
-                                                            {format(new Date(session.created_at), 'MMMM do, yyyy @ HH:mm')}
+                                                            {new Date(session.created_at).toLocaleDateString(i18n.language === 'ar' ? 'ar-EG' : 'en-US', { month: 'long', day: 'numeric', year: 'numeric' })} @ {format(new Date(session.created_at), 'HH:mm')}
                                                         </span>
                                                     </div>
                                                     <div className="flex items-center gap-2">
                                                         <div className="px-3 py-1 rounded-full bg-blue-400/10 border border-blue-400/20 text-[8px] sm:text-[9px] font-black text-blue-400 uppercase">
-                                                            {session.jumps} JUMPS
+                                                            {session.jumps} {t('strategy.jumpsLabel')}
                                                         </div>
                                                     </div>
                                                 </div>
 
                                                 <div className="grid grid-cols-3 gap-8 relative z-10">
                                                     <div className="flex flex-col">
-                                                        <span className="text-[7px] sm:text-[8px] font-black text-white/20 uppercase tracking-widest mb-1.5">Total Time</span>
+                                                        <span className="text-[7px] sm:text-[8px] font-black text-white/20 uppercase tracking-widest mb-1.5">{t('strategy.totalTime')}</span>
                                                         <span className="text-xs sm:text-sm font-black text-white">
                                                             {Math.floor(session.duration / 60)}m {session.duration % 60}s
                                                         </span>
                                                     </div>
                                                     <div className="flex flex-col">
-                                                        <span className="text-[7px] sm:text-[8px] font-black text-white/20 uppercase tracking-widest mb-1.5">Active Time</span>
+                                                        <span className="text-[7px] sm:text-[8px] font-black text-white/20 uppercase tracking-widest mb-1.5">{t('strategy.activeTime')}</span>
                                                         <span className="text-xs sm:text-sm font-black text-orange-500/80">
                                                             {session.work_duration ? `${Math.floor(session.work_duration / 60)}m ${session.work_duration % 60}s` : 'N/A'}
                                                         </span>
                                                     </div>
                                                     <div className="flex flex-col">
-                                                        <span className="text-[7px] sm:text-[8px] font-black text-white/20 uppercase tracking-widest mb-1.5">Rest Time</span>
+                                                        <span className="text-[7px] sm:text-[8px] font-black text-white/20 uppercase tracking-widest mb-1.5">{t('strategy.restTime')}</span>
                                                         <span className="text-xs sm:text-sm font-black text-red-500/40">
                                                             {session.rest_duration ? `${Math.floor(session.rest_duration / 60)}m ${session.rest_duration % 60}s` : 'N/A'}
                                                         </span>
@@ -944,7 +944,7 @@ const AthleteDetailModal = ({ athlete, onClose, autoOpenGenerator = false }: { a
                     >
                         <Send size={16} className="text-orange-500 animate-pulse drop-shadow-[0_0_8px_rgba(249,115,22,0.4)]" />
                         <span className="text-[10px] font-black text-orange-500 uppercase tracking-[0.5em] animate-pulse drop-shadow-[0_0_8px_rgba(249,115,22,0.6)]">
-                            Commit Strategy
+                            {t('strategy.commitStrategy')}
                         </span>
                     </button>
                 </div>
@@ -956,6 +956,7 @@ const AthleteDetailModal = ({ athlete, onClose, autoOpenGenerator = false }: { a
 
 // --- Strategy Hub Entry Point ---
 export default function StrategyHub() {
+    const { t, i18n } = useTranslation();
     const navigate = useNavigate();
     const { userProfile } = useTheme();
     const isAdmin = userProfile?.role === 'admin' || userProfile?.role === 'coach' || userProfile?.role === 'head_coach';
@@ -1020,22 +1021,18 @@ export default function StrategyHub() {
                     <div className="flex items-center gap-3 flex-wrap">
                         <h1 className="text-2xl font-black text-white uppercase tracking-tighter leading-none">
                             <span className="premium-gradient-text">
-                                Strategy Hub
+                                {t('allNavItems.strategyHub')}
                             </span>
                         </h1>
                     </div>
-                    <p className="text-muted text-[7px] font-black tracking-[0.2em] uppercase flex items-center gap-2 mt-1.5 opacity-60">
-                        <span className="w-3 h-[1px] bg-primary/50 inline-block"></span>
-                        Neural Training Engine and Athlete Strategic Planning
-                    </p>
                 </div>
 
                 <div className="flex flex-col flex-1 space-y-10">
                     {/* Stats Row */}
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-8 sm:gap-16 px-2">
                         {([
-                            { label: 'Active Athletes', value: athletes?.length || 0, icon: Users, color: 'text-orange-500' },
-                            { label: 'Collective Jumps', value: athletes?.reduce((sum, a) => sum + a.totalJumps, 0).toLocaleString() || 0, icon: Trophy, color: 'text-blue-400' },
+                            { label: t('strategy.activeAthletes'), value: athletes?.length || 0, icon: Users, color: 'text-orange-500' },
+                            { label: t('strategy.collectiveJumps'), value: athletes?.reduce((sum, a) => sum + a.totalJumps, 0).toLocaleString() || 0, icon: Trophy, color: 'text-blue-400' },
                             { label: 'Neural Status', value: 'OPTIMAL', icon: Activity, color: 'text-green-500' }
                         ] as const).map((stat, i) => (
                             <div key={i} className="flex items-center gap-8 sm:gap-16 relative">
@@ -1087,7 +1084,7 @@ export default function StrategyHub() {
                                                     <h3 className="text-[12px] font-black tracking-widest text-white uppercase truncate max-w-[100px] font-[var(--font-orbitron)]">{athlete.name}</h3>
                                                     <div className="flex items-center gap-1.5 mt-1">
                                                         <div className="w-1.5 h-1.5 rounded-full bg-white/10" />
-                                                        <span className="text-[7px] font-black uppercase tracking-[0.2em] text-white/20">Offline</span>
+                                                        <span className="text-[7px] font-black uppercase tracking-[0.2em] text-white/20">{t('strategy.offline')}</span>
                                                     </div>
                                                 </div>
                                             );
@@ -1106,7 +1103,7 @@ export default function StrategyHub() {
                                                             {isLive && <div className="absolute inset-0 w-1.5 h-1.5 rounded-full bg-emerald-400 blur-[3px] animate-pulse" />}
                                                         </div>
                                                         <span className={`text-[7px] font-black uppercase tracking-[0.3em] ${isLive ? 'text-emerald-400/90 animate-pulse' : 'text-white/20'}`}>
-                                                            {isLive ? 'ACTIVE' : 'Offline'}
+                                                            {isLive ? t('strategy.ready') : t('strategy.offline')}
                                                         </span>
                                                     </div>
                                                 </div>
@@ -1120,11 +1117,11 @@ export default function StrategyHub() {
 
                                 <div className="grid grid-cols-2 gap-3 mt-4">
                                     <div className="p-4 bg-black/40 border border-white/20 rounded-2xl flex flex-col items-center justify-center group-hover:bg-black/60 transition-colors shadow-inner shadow-blue-500/5">
-                                        <span className="text-[6px] font-black text-white/30 uppercase tracking-[0.2em] mb-1.5">Total Jumps</span>
+                                        <span className="text-[6px] font-black text-white/30 uppercase tracking-[0.2em] mb-1.5">{t('strategy.collectiveJumps')}</span>
                                         <span className="text-lg font-black text-blue-400 tabular-nums drop-shadow-[0_0_8px_rgba(96,165,250,0.3)]">{athlete.totalJumps.toLocaleString()}</span>
                                     </div>
                                     <div className="p-4 bg-black/40 border border-white/20 rounded-2xl flex flex-col items-center justify-center group-hover:bg-black/60 transition-colors shadow-inner shadow-white/5">
-                                        <span className="text-[6px] font-black text-white/30 uppercase tracking-[0.2em] mb-1.5">Sessions</span>
+                                        <span className="text-[6px] font-black text-white/30 uppercase tracking-[0.2em] mb-1.5">{t('strategy.sessions')}</span>
                                         <span className="text-lg font-black text-white tabular-nums tracking-widest drop-shadow-[0_0_8px_rgba(255,255,255,0.2)]">{athlete.sessionsCount}</span>
                                     </div>
                                 </div>

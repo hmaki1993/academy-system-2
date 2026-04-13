@@ -18,6 +18,7 @@ import toast from 'react-hot-toast';
 import imageCompression from 'browser-image-compression';
 import Picker from '@emoji-mart/react';
 import data from '@emoji-mart/data';
+import { useTranslation } from 'react-i18next';
 import { playRecordStartSound, playMessageSentSound, playTypingTick } from '../utils/sounds';
 
 // AGORA_APP_ID removed as it is now managed in CallContext
@@ -285,6 +286,7 @@ const MessageBubble = ({
     onSelect?: (id: string) => void;
     onImageClick?: (url: string) => void;
 }) => {
+    const { t } = useTranslation();
     const [dragX, setDragX] = useState(0);
     const [isDragging, setIsDragging] = useState(false);
     const startX = useRef(0);
@@ -342,11 +344,11 @@ const MessageBubble = ({
 
         let label = '';
         if (isMissed) {
-            label = isCaller ? (callType === 'video' ? 'Outgoing Video' : 'Outgoing Voice') : 'Missed Call';
+            label = isCaller ? (callType === 'video' ? t('communications.outgoingVideo') : t('communications.outgoingVoice')) : t('communications.missedCall');
         } else {
             label = isCaller
-                ? (callType === 'video' ? 'Outgoing Video' : 'Outgoing Voice')
-                : (callType === 'video' ? 'Incoming Video' : 'Incoming Voice');
+                ? (callType === 'video' ? t('communications.outgoingVideo') : t('communications.outgoingVoice'))
+                : (callType === 'video' ? t('communications.incomingVideo') : t('communications.incomingVoice'));
         }
 
         const StatusIcon = isMissed
@@ -453,7 +455,7 @@ const MessageBubble = ({
                 {/* Reply Preview */}
                 {msg.reply_to && (
                     <div className={`mb-1 p-2 rounded-xl text-[11px] border-l-4 bg-white/5 border-primary/50 max-w-[200px] truncate ${isOwn ? 'mr-1' : 'ml-1'}`}>
-                        <p className="font-black text-primary uppercase text-[8px] mb-0.5 tracking-widest">Replying to</p>
+                        <p className="font-black text-primary uppercase text-[8px] mb-0.5 tracking-widest">{t('communications.replyingTo')}</p>
                         <p className="text-white/60 italic truncate">
                             {msg.reply_to.type === 'text' ? msg.reply_to.content : `[${msg.reply_to.type}] icon`}
                         </p>
@@ -480,7 +482,7 @@ const MessageBubble = ({
                         <button
                             onClick={() => onReply?.(msg)}
                             className="w-7 h-7 rounded-full bg-white/10 text-white/40 hover:bg-primary/20 hover:text-primary flex items-center justify-center transition-all"
-                            title="Reply"
+                            title={t('communications.reply')}
                         >
                             <Reply className="w-3.5 h-3.5" />
                         </button>
@@ -584,6 +586,7 @@ const DeleteConfirmationModal = ({
     onDeleteForEveryone: () => void;
     canDeleteForEveryone: boolean;
 }) => {
+    const { t } = useTranslation();
     return (
         <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-black/40">
             <div className="absolute inset-0" onClick={onCancel} />
@@ -592,29 +595,29 @@ const DeleteConfirmationModal = ({
                     <div className="w-12 h-12 rounded-full bg-red-500/10 flex items-center justify-center mb-4">
                         <Trash2 className="w-6 h-6 text-red-500" />
                     </div>
-                    <h3 className="text-lg font-semibold text-white mb-1">Delete {count} {count === 1 ? 'Message' : 'Messages'}?</h3>
-                    <p className="text-white/40 text-sm mb-6">Choose how you want to remove these messages.</p>
+                    <h3 className="text-lg font-semibold text-white mb-1">{t('communications.deleteMessage')}?</h3>
+                    <p className="text-white/40 text-sm mb-6">{t('communications.deletePrompt', 'Choose how you want to remove these messages.')}</p>
 
                     <div className="flex flex-col gap-2 w-full">
                         <button
                             onClick={onDeleteForMe}
                             className="w-full py-3 rounded-xl bg-white/5 hover:bg-white/10 text-white font-medium transition-all active:scale-95"
                         >
-                            Delete for Me
+                            {t('communications.deleteForMe')}
                         </button>
                         {canDeleteForEveryone && (
                             <button
                                 onClick={onDeleteForEveryone}
                                 className="w-full py-3 rounded-xl bg-red-500 hover:bg-red-600 text-white font-medium transition-all active:scale-95"
                             >
-                                Delete for Everyone
+                                {t('communications.deleteForEveryone')}
                             </button>
                         )}
                         <button
                             onClick={onCancel}
                             className="w-full py-3 mt-1 text-white/40 hover:text-white font-medium transition-all"
                         >
-                            Cancel
+                            {t('communications.cancel')}
                         </button>
                     </div>
                 </div>
@@ -628,6 +631,7 @@ const DeleteConfirmationModal = ({
 // ─── Voice Recorder Component ──────────────────────────────────────────────────
 // ─── Voice Recorder Component ──────────────────────────────────────────────────
 const VoiceRecorder = ({ onRecordingComplete, onRecordingStateChange, portalTarget }: { onRecordingComplete: (blob: Blob, duration: number) => void; onRecordingStateChange?: (isRecording: boolean) => void; portalTarget?: HTMLElement | null }) => {
+    const { t } = useTranslation();
     const [isRecording, setIsRecording] = useState(false);
     const [recordingTime, setRecordingTime] = useState(0);
     const [dragOffset, setDragOffset] = useState(0);
@@ -932,9 +936,9 @@ const VoiceRecorder = ({ onRecordingComplete, onRecordingStateChange, portalTarg
             animationFrameRef.current = requestAnimationFrame(draw);
 
             if ('vibrate' in navigator) navigator.vibrate(50);
-        } catch (err) {
-            console.error('Mic error:', err);
-            toast.error('Microphone access denied');
+        } catch (error) {
+            console.error('Recording initialization failed:', error);
+            toast.error(t('communications.micAccessDenied', 'Microphone access denied'));
             setIsRecording(false);
             onRecordingStateChange?.(false);
         }
@@ -990,7 +994,7 @@ const VoiceRecorder = ({ onRecordingComplete, onRecordingStateChange, portalTarg
                                     }}
                                 >
                                     <ChevronLeft className="w-3.5 h-3.5 sm:w-4 sm:h-4 animate-pulse opacity-70 flex-shrink-0" />
-                                    <span className="truncate">slide to cancel</span>
+                                    <span className="truncate">{t('communications.swipeToCancel', 'slide to cancel')}</span>
                                 </span>
                             </div>
                         )}
@@ -1047,7 +1051,7 @@ const VoiceRecorder = ({ onRecordingComplete, onRecordingStateChange, portalTarg
                     type="button"
                     onClick={stopRecording}
                     className="w-10 h-10 rounded-full flex items-center justify-center bg-primary text-white shadow-[0_0_15px_rgba(var(--primary),0.5)] transition-all hover:scale-110 active:scale-95 z-50 animate-in fade-in zoom-in-50"
-                    title="Send Voice Note"
+                    title={t('communications.sendVoiceNote', 'Send Voice Note')}
                 >
                     <Send className="w-4 h-4 ml-0.5" />
                 </button>
@@ -1066,7 +1070,7 @@ const VoiceRecorder = ({ onRecordingComplete, onRecordingStateChange, portalTarg
                             : 'duration-300 bg-white/5 border-white/10 text-white/40 hover:text-white hover:bg-white/10' // Idle
                         }`}
                     style={isRecording && !isCancelledRef.current ? { transform: `translate(${dragOffset}px, ${dragOffsetY}px) scale(${isCancellingMode ? 1.25 : 1.15})` } : (isCancelledRef.current ? { transform: `translate(${CANCEL_THRESHOLD}px, 0px) scale(0) rotate(-45deg)` } : {})}
-                    title="Hold to record, slide left to cancel, slide up to lock"
+                    title={t('communications.recorderTooltip', 'Hold to record, slide left to cancel, slide up to lock')}
                 >
                     <Mic className="w-5 h-5 flex-shrink-0" />
                 </button>
@@ -1119,11 +1123,8 @@ type DragHandle = 'move' | 'nw' | 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w' | n
 
 const MIN_CROP = 40;
 
-const ImageEditorModal = ({
-    image, onCancel, onSave, isProcessing
-}: {
-    image: string; onCancel: () => void; onSave: (blob: Blob) => void; isProcessing: boolean
-}) => {
+const ImageEditorModal = ({ isOpen, image, onSave, onCancel, isProcessing }: any) => {
+    const { t } = useTranslation();
     const containerRef = useRef<HTMLDivElement>(null);
     const imgRef = useRef<HTMLImageElement>(null);
     const drawCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -1417,13 +1418,13 @@ const ImageEditorModal = ({
                             onClick={() => setMode('crop')}
                             className={`px - 3 py - 1.5 rounded - lg text - [11px] font - black uppercase tracking - widest transition - all ${mode === 'crop' ? 'bg-primary text-white shadow-lg' : 'text-white/40 hover:text-white'} `}
                         >
-                            ✂️ Crop
+                            {t('communications.crop')}
                         </button>
                         <button
                             onClick={() => setMode('draw')}
                             className={`px - 3 py - 1.5 rounded - lg text - [11px] font - black uppercase tracking - widest transition - all ${mode === 'draw' ? 'bg-primary text-white shadow-lg' : 'text-white/40 hover:text-white'} `}
                         >
-                            ✏️ Draw
+                            {t('communications.draw')}
                         </button>
                     </div>
                 </div>
@@ -1531,7 +1532,7 @@ const ImageEditorModal = ({
                     type="text"
                     value={caption}
                     onChange={e => setCaption(e.target.value)}
-                    placeholder="Caption..."
+                    placeholder={t('communications.captionPlaceholder')}
                     maxLength={120}
                     className="w-full bg-white/[0.05] border border-white/10 rounded-2xl px-4 py-2.5 text-sm text-white placeholder:text-white/20 font-medium focus:outline-none focus:border-primary/40 transition-all"
                 />
@@ -1541,10 +1542,10 @@ const ImageEditorModal = ({
             <div className="p-4 pt-2 bg-[#0a0a0a] flex-shrink-0">
                 <div className="max-w-md mx-auto flex items-center gap-3">
                     <button onClick={onCancel} className="flex-1 h-12 rounded-2xl bg-white/5 text-white/50 font-black uppercase tracking-tight border border-white/5 text-sm hover:bg-white/10 transition-colors">
-                        Cancel
+                        {t('communications.cancel')}
                     </button>
                     <button onClick={handleSave} disabled={isProcessing} className="flex-[2] h-12 rounded-2xl bg-primary text-white font-black uppercase tracking-tight shadow-xl shadow-primary/20 disabled:opacity-50 text-sm flex items-center justify-center gap-2 hover:bg-primary/90 transition-all">
-                        {isProcessing ? <Loader2 className="w-5 h-5 animate-spin" /> : <><Send className="w-4 h-4" /><span>Send</span></>}
+                        {isProcessing ? <Loader2 className="w-5 h-5 animate-spin" /> : <><Send className="w-4 h-4" /><span>{t('communications.save')}</span></>}
                     </button>
                 </div>
             </div>
@@ -1555,6 +1556,7 @@ const ImageEditorModal = ({
 
 // ─── Image Viewer Modal (Full Screen) ──────────────────────────────────────────
 const ImageViewerModal = ({ url, onClose, onEdit }: { url: string; onClose: () => void; onEdit?: (url: string) => void }) => {
+    const { t } = useTranslation();
     const [zoom, setZoom] = useState(1);
     const [panning, setPanning] = useState({ x: 0, y: 0 });
     const [isDragging, setIsDragging] = useState(false);
@@ -1684,6 +1686,7 @@ const ImageViewerModal = ({ url, onClose, onEdit }: { url: string; onClose: () =
 
 // ─── Main Communications Page ──────────────────────────────────────────────────
 export default function Communications() {
+    const { t } = useTranslation();
     const { settings, userProfile } = useTheme();
     const navigate = useNavigate();
     const currentUserId = userProfile?.id;
@@ -3316,7 +3319,7 @@ export default function Communications() {
                             <button
                                 onClick={() => { setActiveTab('chats'); setShowNewChat(false); }}
                                 className={`flex items-center justify-center transition-all w-full h-10 rounded-xl ${activeTab === 'chats' ? 'text-primary bg-primary/10' : 'text-white/20 hover:text-white/40 hover:bg-white/5'}`}
-                                title="Chats"
+                                title={t('communications.chats')}
                             >
                                 <div className="relative">
                                     <MessageSquare className={`w-[18px] h-[18px] transition-transform ${activeTab === 'chats' ? 'scale-110 drop-shadow-[0_0_8px_rgba(var(--primary-rgb),0.5)]' : 'group-hover:scale-110'}`} />
@@ -3328,7 +3331,7 @@ export default function Communications() {
                             <button
                                 onClick={() => setActiveTab('calls')}
                                 className={`flex items-center justify-center transition-all w-full h-10 rounded-xl ${activeTab === 'calls' ? 'text-primary bg-primary/10' : 'text-white/20 hover:text-white/40 hover:bg-white/5'}`}
-                                title="Recent Calls"
+                                title={t('communications.recentCalls', 'Recent Calls')}
                             >
                                 <Phone className={`w-[18px] h-[18px] transition-transform ${activeTab === 'calls' ? 'scale-110 drop-shadow-[0_0_8px_rgba(var(--primary-rgb),0.5)]' : 'group-hover:scale-110'}`} />
                             </button>
@@ -3415,7 +3418,7 @@ export default function Communications() {
                                         </button>
                                         <div className="flex flex-col">
                                             <span className="text-white font-black text-sm leading-none">{selectedMessageIds.size}</span>
-                                            <span className="text-[9px] text-white/20 font-black uppercase tracking-widest mt-1">Selected</span>
+                                            <span className="text-[9px] text-white/20 font-black uppercase tracking-widest mt-1">{t('communications.selected', 'Selected')}</span>
                                         </div>
                                     </div>
 

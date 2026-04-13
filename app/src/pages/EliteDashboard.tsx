@@ -9,8 +9,10 @@ import { playHoverSound } from '../utils/audio';
 import MinimalCountdown from '../components/MinimalCountdown';
 import toast from 'react-hot-toast';
 import { playNotificationSound, resumeAudioContext } from '../utils/notifications';
+import { useTranslation } from 'react-i18next';
 
 export default function EliteDashboard() {
+    const { t, i18n } = useTranslation();
     const { currency } = useCurrency();
     const [loading, setLoading] = useState(true);
 
@@ -219,7 +221,7 @@ export default function EliteDashboard() {
                     <div className="flex items-center gap-8">
                     <div className="flex flex-col items-start gap-1">
                         <span className="text-[10px] md:text-[11px] font-black text-white/20 uppercase tracking-[0.8em] leading-none mb-1 select-none">
-                            Hello
+                            {t('elite.hello')}
                         </span>
                         <h1 className="text-3xl md:text-5xl font-black text-white tracking-tighter uppercase leading-none italic">
                             <span className="premium-gradient-text drop-shadow-[0_15px_40px_rgba(255,255,255,0.3)]">
@@ -247,7 +249,7 @@ export default function EliteDashboard() {
                         <Activity className="w-4 h-4" />
                     </div>
                     <div className="flex flex-col">
-                        <span className="text-[10px] font-bold text-white/30 uppercase tracking-[0.2em] mb-1">PT Sessions</span>
+                        <span className="text-[10px] font-bold text-white/30 uppercase tracking-[0.2em] mb-1">{t('elite.ptSessions')}</span>
                         <div className="flex items-baseline gap-1">
                             <h3 className="text-3xl font-black text-white tracking-tighter tabular-nums italic leading-none">
                                 {attendedSessions}
@@ -265,12 +267,12 @@ export default function EliteDashboard() {
                         <TrendingUp className="w-4 h-4" />
                     </div>
                     <div className="flex flex-col">
-                        <span className="text-[10px] font-bold text-white/30 uppercase tracking-[0.2em] mb-1">Consultations</span>
+                        <span className="text-[10px] font-bold text-white/30 uppercase tracking-[0.2em] mb-1">{t('elite.consultations')}</span>
                         <div className="flex items-baseline gap-2">
                             <h3 className="text-3xl font-black text-white tracking-tighter tabular-nums italic leading-none">
                                 {consHistory.length}
                             </h3>
-                            <span className="text-[9px] font-black text-white/20 uppercase tracking-widest italic">TASKS</span>
+                            <span className="text-[9px] font-black text-white/20 uppercase tracking-widest italic">{t('elite.tasks')}</span>
                         </div>
                     </div>
                 </button>
@@ -283,7 +285,7 @@ export default function EliteDashboard() {
                         <Wallet className="w-4 h-4" />
                     </div>
                     <div className="flex flex-col">
-                        <span className="text-[10px] font-bold text-white/30 uppercase tracking-[0.2em] mb-1">Total Invested</span>
+                        <span className="text-[10px] font-bold text-white/30 uppercase tracking-[0.2em] mb-1">{t('elite.totalInvested')}</span>
                         <div className="flex items-baseline gap-2">
                             <h3 className="text-3xl font-black text-white tracking-tighter tabular-nums italic leading-none">
                                 {(ptSpent + consSpent).toLocaleString()}
@@ -313,11 +315,11 @@ export default function EliteDashboard() {
                                 </div>
                                 <div>
                                     <h2 className="text-xl font-black text-white uppercase italic tracking-tight">
-                                        {activeModal === 'pt' ? 'PT Session History' : 
-                                         activeModal === 'cons' ? 'Consultation Logs' : 
-                                         'Investment Breakdown'}
+                                        {activeModal === 'pt' ? t('elite.ptSessionHistory') : 
+                                         activeModal === 'cons' ? t('elite.consultationLogs') : 
+                                         t('elite.investmentBreakdown')}
                                     </h2>
-                                    <p className="text-[9px] font-bold text-white/20 uppercase tracking-[.2em]">Detailed Analytics</p>
+                                    <p className="text-[9px] font-bold text-white/20 uppercase tracking-[.2em]">{t('elite.detailedAnalytics')}</p>
                                 </div>
                             </div>
                             <button onClick={() => setActiveModal(null)} className="p-2 transition-all hover:scale-110 active:scale-95 group">
@@ -335,12 +337,12 @@ export default function EliteDashboard() {
                                 ptHistory.length > 0 ? ptHistory.map((session, i) => (
                                     <div key={i} className="flex items-center justify-between py-4 border-b border-white/[0.03] last:border-none">
                                         <div className="flex flex-col gap-1">
-                                            <span className="text-xs font-black text-white uppercase italic">{new Date(session.date || session.created_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</span>
-                                            <span className="text-[9px] font-bold text-white/20 uppercase tracking-widest">Training Session Complete</span>
+                                            <span className="text-xs font-black text-white uppercase italic">{new Date(session.date || session.created_at).toLocaleDateString(i18n.language === 'ar' ? 'ar-EG' : 'en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</span>
+                                            <span className="text-[9px] font-bold text-white/20 uppercase tracking-widest">{t('elite.trainingSessionComplete')}</span>
                                         </div>
-                                        <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest bg-indigo-500/5 px-3 py-1 rounded-full border border-indigo-500/10">VERIFIED</span>
+                                        <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest bg-indigo-500/5 px-3 py-1 rounded-full border border-indigo-500/10">{t('elite.verified')}</span>
                                     </div>
-                                )) : <p className="text-center py-10 text-[10px] font-black text-white/10 uppercase tracking-[.3em]">No session logs found</p>
+                                )) : <p className="text-center py-10 text-[10px] font-black text-white/10 uppercase tracking-[.3em]">{t('elite.noSessionLogsFound')}</p>
                             )}
 
                             {activeModal === 'cons' && (
@@ -350,12 +352,12 @@ export default function EliteDashboard() {
                                             <div className="flex items-center gap-3">
                                                 <div className="w-1.5 h-1.5 rounded-full bg-amber-500 shadow-[0_0_10px_rgba(245,158,11,0.5)]" />
                                                 <span className="text-sm font-black text-white uppercase italic">
-                                                    {new Date(req.booked_date || req.created_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+                                                    {new Date(req.booked_date || req.created_at).toLocaleDateString(i18n.language === 'ar' ? 'ar-EG' : 'en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
                                                 </span>
                                             </div>
                                             <div className="flex items-center gap-2 pl-4.5 ml-[3px]">
-                                                <span className="text-[10px] font-black text-amber-500 uppercase tracking-[0.2em]">{req.booked_time || 'TIME UNKNOWN'}</span>
-                                                <span className="text-[8px] font-bold text-white/10 uppercase tracking-widest">• Consultation Session</span>
+                                                <span className="text-[10px] font-black text-amber-500 uppercase tracking-[0.2em]">{req.booked_time || t('elite.timeUnknown')}</span>
+                                                <span className="text-[8px] font-bold text-white/10 uppercase tracking-widest">• {t('elite.consultationSession')}</span>
                                             </div>
                                         </div>
                                         <div className="flex flex-col items-end gap-2">
@@ -369,22 +371,22 @@ export default function EliteDashboard() {
                                             <span className="text-[8px] font-black text-white/10 uppercase tracking-tighter italic">ID: {req.id.slice(0, 8)}</span>
                                         </div>
                                     </div>
-                                )) : <p className="text-center py-10 text-[10px] font-black text-white/10 uppercase tracking-[.3em]">No consultation logs found</p>
+                                )) : <p className="text-center py-10 text-[10px] font-black text-white/10 uppercase tracking-[.3em]">{t('elite.noConsultationLogsFound')}</p>
                             )}
 
                             {activeModal === 'money' && (
                                 paymentsHistory.length > 0 ? paymentsHistory.map((pay, i) => (
                                     <div key={i} className="flex items-center justify-between py-4 border-b border-white/[0.03] last:border-none">
                                         <div className="flex flex-col gap-1">
-                                            <span className="text-xs font-black text-white uppercase italic">{new Date(pay.payment_date || pay.created_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</span>
-                                            <span className="text-[9px] font-bold text-white/20 uppercase tracking-widest">{pay.description || pay.type || 'Standard Transaction'}</span>
+                                            <span className="text-xs font-black text-white uppercase italic">{new Date(pay.payment_date || pay.created_at).toLocaleDateString(i18n.language === 'ar' ? 'ar-EG' : 'en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</span>
+                                            <span className="text-[9px] font-bold text-white/20 uppercase tracking-widest">{pay.description || pay.type || t('elite.standardTransaction')}</span>
                                         </div>
                                         <div className="flex flex-col items-end">
                                             <span className="text-sm font-black text-emerald-400 tabular-nums italic">-{pay.amount.toLocaleString()} {currency.code}</span>
-                                            <span className="text-[8px] font-bold text-white/10 uppercase tracking-tighter italic">CONFIRMED</span>
+                                            <span className="text-[8px] font-bold text-white/10 uppercase tracking-tighter italic">{t('elite.confirmed')}</span>
                                         </div>
                                     </div>
-                                )) : <p className="text-center py-10 text-[10px] font-black text-white/10 uppercase tracking-[.3em]">No transaction logs found</p>
+                                )) : <p className="text-center py-10 text-[10px] font-black text-white/10 uppercase tracking-[.3em]">{t('elite.noTransactionLogsFound')}</p>
                             )}
                         </div>
                         
@@ -402,8 +404,8 @@ export default function EliteDashboard() {
                 <div className="flex items-center gap-4">
                     <div className="w-12 h-12 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center animate-pulse"><Target className="w-6 h-6 text-primary" /></div>
                     <div>
-                        <h2 className="text-xl font-black text-white tracking-tighter uppercase italic">Strategic Blueprint</h2>
-                        <p className="text-[9px] font-bold text-white/30 uppercase tracking-[0.2em]">Protocol v2.4 Active</p>
+                        <h2 className="text-xl font-black text-white tracking-tighter uppercase italic">{t('elite.strategicBlueprint')}</h2>
+                        <p className="text-[9px] font-bold text-white/30 uppercase tracking-[0.2em]">{t('elite.protocolActive')}</p>
                     </div>
                 </div>
 
@@ -456,7 +458,7 @@ export default function EliteDashboard() {
                 ) : (
                     <div className="flex flex-col items-center justify-center py-32 border border-dashed border-white/10 rounded-[3rem] bg-white/[0.01]">
                         <ListChecks className="w-16 h-16 text-white/10 mb-6" />
-                        <p className="text-white/40 font-black uppercase tracking-[0.4em] text-[10px]">Awaiting Strategic Instruction</p>
+                        <p className="text-white/40 font-black uppercase tracking-[0.4em] text-[10px]">{t('elite.awaitingStrategicInstruction')}</p>
                     </div>
                 )}
             </div>

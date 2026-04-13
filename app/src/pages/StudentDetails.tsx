@@ -39,7 +39,7 @@ export default function StudentDetails() {
             setStudent({ ...student, current_training_level: nextLevel });
             toast.success(t('common.promoteStudent') + ' - ' + t('common.level') + ' ' + nextLevel);
         } catch (e: any) {
-            toast.error('Error: ' + e.message);
+            toast.error(t('common.error') + ': ' + e.message);
         } finally {
             setIsPromoting(false);
         }
@@ -92,8 +92,8 @@ export default function StudentDetails() {
 
     const attendanceRate = stats.total > 0 ? Math.round((stats.present / stats.total) * 100) : 0;
 
-    if (loading) return <div className="p-8 text-center text-white/50">Loading Profile...</div>;
-    if (!student) return <div className="p-8 text-center text-white/50">Student not found</div>;
+    if (loading) return <div className="p-8 text-center text-white/50">{t('common.loadingProfile')}</div>;
+    if (!student) return <div className="p-8 text-center text-white/50">{t('common.studentNotFound')}</div>;
 
     return (
         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
@@ -111,7 +111,7 @@ export default function StudentDetails() {
                     </h1>
                     <p className="text-white/50 font-bold uppercase tracking-wide flex items-center gap-2">
                         <User className="w-4 h-4" />
-                        {student.subscription_plans?.name || 'No Plan'} • {student.coaches?.full_name || 'No Coach'}
+                        {student.subscription_plans?.name || t('common.noPlan')} • {student.coaches?.full_name || t('common.noCoach')}
                     </p>
                 </div>
             </div>
@@ -124,7 +124,7 @@ export default function StudentDetails() {
                             <Calendar className="w-6 h-6" />
                         </div>
                         <div>
-                            <p className="text-white/50 text-xs font-bold uppercase tracking-wider">Attendance Rate</p>
+                            <p className="text-white/50 text-xs font-bold uppercase tracking-wider">{t('common.attendanceRate')}</p>
                             <h3 className="text-2xl font-black text-white">{attendanceRate}%</h3>
                         </div>
                     </div>
@@ -139,7 +139,7 @@ export default function StudentDetails() {
                             <CheckCircle className="w-6 h-6" />
                         </div>
                         <div>
-                            <p className="text-white/50 text-xs font-bold uppercase tracking-wider">Present Days</p>
+                            <p className="text-white/50 text-xs font-bold uppercase tracking-wider">{t('common.presentDays')}</p>
                             <h3 className="text-2xl font-black text-white">{stats.present}</h3>
                         </div>
                     </div>
@@ -151,7 +151,7 @@ export default function StudentDetails() {
                             <XCircle className="w-6 h-6" />
                         </div>
                         <div>
-                            <p className="text-white/50 text-xs font-bold uppercase tracking-wider">Absent Days</p>
+                            <p className="text-white/50 text-xs font-bold uppercase tracking-wider">{t('common.absentDays')}</p>
                             <h3 className="text-2xl font-black text-white">{stats.absent}</h3>
                         </div>
                     </div>
@@ -203,17 +203,17 @@ export default function StudentDetails() {
                             </div>
                             <div>
                                 <h2 className="text-xl font-black text-white uppercase tracking-tight flex items-center gap-2">
-                                    Portal Access
+                                    {t('common.portalAccess')}
                                     {student.user_id ? (
-                                        <span className="text-[10px] bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-full border border-emerald-500/20">Active</span>
+                                        <span className="text-[10px] bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-full border border-emerald-500/20">{t('common.active')}</span>
                                     ) : (
-                                        <span className="text-[10px] bg-white/5 text-white/40 px-2 py-0.5 rounded-full border border-white/10">Disabled</span>
+                                        <span className="text-[10px] bg-white/5 text-white/40 px-2 py-0.5 rounded-full border border-white/10">{t('common.disabled')}</span>
                                     )}
                                 </h2>
                                 <p className="text-white/40 text-sm font-medium mt-1">
                                     {student.user_id
-                                        ? 'Account linked for portal.'
-                                        : 'Grant portal access.'}
+                                        ? t('common.accountLinked')
+                                        : t('common.grantPortalAccess')}
                                 </p>
                             </div>
                         </div>
@@ -222,7 +222,7 @@ export default function StudentDetails() {
                             {student.user_id ? (
                                 <div className="flex items-center justify-center gap-3 px-6 py-4 h-[60px] w-full bg-white/5 rounded-[1.5rem] border border-white/10">
                                     <Key className="w-4 h-4 text-emerald-400 shrink-0" />
-                                    <span className="text-xs font-black text-white/60 tracking-widest uppercase whitespace-nowrap">Account Linked</span>
+                                    <span className="text-xs font-black text-white/60 tracking-widest uppercase whitespace-nowrap">{t('common.accountLinked')}</span>
                                 </div>
                             ) : (
                                 <button
@@ -230,7 +230,7 @@ export default function StudentDetails() {
                                     className="flex items-center justify-center gap-3 px-8 py-4 h-[60px] bg-primary text-white rounded-[1.5rem] font-black text-xs uppercase tracking-[0.2em] shadow-2xl shadow-primary/20 hover:scale-105 transition-all w-full"
                                 >
                                     <UserPlus className="w-5 h-5 shrink-0" />
-                                    <span className="whitespace-nowrap">Create Access</span>
+                                    <span className="whitespace-nowrap">{t('common.createAccess')}</span>
                                 </button>
                             )}
                         </div>
@@ -243,7 +243,7 @@ export default function StudentDetails() {
                 <div className="flex items-center justify-between mb-8">
                     <h2 className="text-2xl font-black text-white uppercase tracking-tight flex items-center gap-3">
                         <Clock className="w-6 h-6 text-primary" />
-                        Attendance History ({format(selectedMonth, 'MMMM yyyy')})
+                        {t('common.attendanceHistory')} ({format(selectedMonth, 'MMMM yyyy')})
                     </h2>
                     {/* Suggestion: Month picker could go here */}
                 </div>
@@ -252,7 +252,7 @@ export default function StudentDetails() {
                     {attendance.length === 0 ? (
                         <div className="text-center py-20 opacity-30">
                             <Calendar className="w-12 h-12 mx-auto mb-4" />
-                            <p className="uppercase tracking-widest font-bold">No Records Found</p>
+                            <p className="uppercase tracking-widest font-bold">{t('common.noRecordsFound')}</p>
                         </div>
                     ) : (
                         attendance.map(record => (
@@ -263,9 +263,9 @@ export default function StudentDetails() {
                                         <span className="text-xs opacity-50">{format(new Date(record.date), 'MMM')}</span>
                                     </div>
                                     <div>
-                                        <p className="font-bold text-white text-lg flex items-center gap-2">
+                                        <p className={`text-lg font-black tracking-tight ${record.status === 'absent' ? 'text-rose-400' : 'text-emerald-400'} flex items-center gap-3`}>
                                             {format(new Date(record.date), 'EEEE')}
-                                            {record.status === 'absent' && <span className="text-xs bg-rose-500 text-white px-2 py-0.5 rounded-md">ABSENT</span>}
+                                            {record.status === 'absent' && <span className="text-xs bg-rose-500 text-white px-2 py-0.5 rounded-md">{t('common.absent').toUpperCase()}</span>}
                                         </p>
                                         <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-white/40">
                                             {record.check_in_time && (

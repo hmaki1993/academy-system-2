@@ -62,8 +62,6 @@ export function PushNotificationPrompt({ userId }: PushNotificationPromptProps) 
 
     return (
         <div 
-            onClick={() => window.alert('CLICK DETECTED ON ROOT CONTAINER!')}
-            onPointerDown={() => window.alert('POINTER DOWN ON ROOT!')}
             style={{ 
                 position: 'fixed', 
                 bottom: '100px', 
@@ -77,47 +75,36 @@ export function PushNotificationPrompt({ userId }: PushNotificationPromptProps) 
             }}
             className="animate-premium-up"
         >
-            <div className="bg-[#050510]/95 backdrop-blur-3xl border-2 border-primary/20 rounded-2xl p-4 shadow-[0_20px_60px_rgba(0,0,0,0.8)] flex items-center gap-4 relative overflow-hidden">
-                <div className="absolute inset-0 bg-gradient-to-r from-primary/10 via-transparent to-transparent opacity-50 pointer-events-none" />
-                
-                <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0 relative z-10">
-                    <Bell className="w-6 h-6 text-primary animate-pulse" />
+            <div className="bg-[#050510] border-2 border-primary rounded-3xl p-6 shadow-[0_0_60px_rgba(0,0,0,0.9)] flex flex-col items-center gap-6 relative">
+                <div className="flex items-center gap-4 w-full">
+                    <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center">
+                        <Bell className="w-7 h-7 text-primary animate-bounce" />
+                    </div>
+                    <div>
+                        <h3 className="text-white font-black text-lg uppercase tracking-widest">STEP 2: ENABLE NOW</h3>
+                        <p className="text-white/60 text-xs font-bold">Please click the big button below.</p>
+                    </div>
                 </div>
 
-                <div className="flex-1 relative z-10">
-                    <h3 className="text-white font-black text-sm uppercase tracking-widest text-primary">DIAGNOSTIC: ELITE ALERTS</h3>
-                    <p className="text-white/60 text-xs leading-relaxed font-bold">
-                        TAP ANYWHERE ON THIS CARD TO TEST.
-                    </p>
-                </div>
+                <button
+                    onPointerDown={() => window.alert('TOUCH DETECTED ON BUTTON!')}
+                    onClick={() => {
+                        window.alert('CLICK CONFIRMED! Starting Process...');
+                        handleSubscribe();
+                    }}
+                    disabled={isSubscribing}
+                    className="w-full bg-primary text-white py-8 rounded-2xl text-xl font-black uppercase tracking-[0.2em] shadow-glow-primary active:bg-white active:text-primary transition-all"
+                    style={{ pointerEvents: 'auto', touchAction: 'manipulation' }}
+                >
+                    {isSubscribing ? 'PROCESS STARTING...' : 'ENABLE ALERTS'}
+                </button>
 
-                <div className="flex items-center gap-2 relative z-20">
-                    <button
-                        onPointerDown={(e) => {
-                            e.stopPropagation();
-                            window.alert('POINTER DOWN ON ENABLE!');
-                        }}
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            window.alert('CLICK ON ENABLE!');
-                            handleSubscribe();
-                        }}
-                        disabled={isSubscribing}
-                        className="bg-primary text-white px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-[0_0_30px_rgba(var(--primary-rgb),0.5)] active:bg-white active:text-primary disabled:opacity-50"
-                        style={{ pointerEvents: 'auto' }}
-                    >
-                        {isSubscribing ? 'WAIT...' : 'ENABLE NOW'}
-                    </button>
-                    <button
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            handleDismiss();
-                        }}
-                        className="p-2 text-white/40"
-                    >
-                        <X className="w-5 h-5" />
-                    </button>
-                </div>
+                <button
+                    onClick={handleDismiss}
+                    className="text-white/20 text-[10px] font-bold uppercase tracking-widest hover:text-white/40"
+                >
+                    Dismiss for now
+                </button>
             </div>
         </div>
     );

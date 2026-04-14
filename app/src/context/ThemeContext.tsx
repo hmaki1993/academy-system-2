@@ -489,8 +489,11 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
         };
     }, [userProfile?.id]);
 
-    const fetchSettings = async () => {
+    const fetchSettings = async (retryCount = 0) => {
+        if (isLoading && retryCount === 0 && hasLoaded) return; // Prevent redundant initial fetches if already in progress
+        
         try {
+            setIsLoading(true);
             // 1. Get Global Defaults (ALWAYS DO THIS FIRST - Works for unauthenticated users)
             console.log('📥 Fetching global gym settings...');
             const { data: globalData, error: globalError } = await supabase
@@ -566,30 +569,25 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
                 }
 
                 // Fetch user settings, profile, and coach record in parallel
-                const [userSettingsRes, profileRes, coachRes] = await Promise.all([
-                    supabase
-                        .from('user_settings')
-                        .select('*')
-                        .eq('user_id', user.id)
-                        .maybeSingle(),
-                    supabase
-                        .from('profiles')
-                        .select('full_name, role, avatar_url, last_seen, is_in_chat')
-                        .eq('id', user.id)
-                        .maybeSingle(),
-                    supabase
-                        .from('coaches')
-                        .select('id')
-                        .eq('profile_id', user.id)
-                        .maybeSingle()
+                let [userSettingsRes, profileRes, coachRes] = await Promise.all([
+                    supabase.from('user_settings').select('*').eq('user_id', user.id).maybeSingle(),
+                    supabase.from('profiles').select('full_name, role, avatar_url, last_seen, is_in_chat').eq('id', user.id).maybeSingle(),
+                    supabase.from('coaches').select('id').eq('profile_id', user.id).maybeSingle()
                 ]);
+
+                // 🛡️ MOBILE STABILITY RETRY: If profile is missing, wait and try again (Handles DB lag)
+                if (!profileRes.data && retryCount < 2 && !isAdminEmail) {
+                    const delay = retryCount === 0 ? 800 : 1500;
+                    console.warn(`🛡️ ThemeContext: Profile not found, retrying in ${delay}ms... (Attempt ${retryCount + 1})`);
+                    setTimeout(() => fetchSettings(retryCount + 1), delay);
+                    return;
+                }
 
                 if (userSettingsRes.error) console.warn('📥 User settings fetch error:', userSettingsRes.error);
                 if (profileRes.error) console.warn('📥 User profile fetch error:', profileRes.error);
 
                 if (userSettingsRes.data) {
                     console.log('📥 Found user personal settings:', userSettingsRes.data);
-                    // Filter out nulls AND only include user-specific keys to prevent overwriting gym-wide settings
                     const filteredUser = Object.fromEntries(
                         Object.entries(userSettingsRes.data).filter(([key, v]) =>
                             v !== null && USER_SPECIFIC_KEYS.includes(key as keyof GymSettings)
@@ -598,19 +596,12 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
                     finalSettings = { ...finalSettings, ...filteredUser };
                 }
 
-                // 🛡️ DEEP SANITY CHECK: 
-                // A coach must have a record in both 'profiles' AND 'coaches' tables.
                 const isCoach = profileRes.data?.role?.toLowerCase() === 'coach';
                 const hasCoachRecord = !!coachRes.data;
                 const isUnauthorizedGhost = isCoach && !hasCoachRecord;
 
                 if (profileRes.data && !isUnauthorizedGhost) {
                     console.log('🛡️ ThemeContext: Found valid user profile:', profileRes.data);
-                    
-                    // 🛡️ MASTER NAME DERIVATION: 
-                    // 1. Database Full Name (High priority - it's where 'Personal Settings' saves to)
-                    // 2. Auth Metadata (Fallback)
-                    // 3. Email prefix (Safety fallback)
                     const dbName = profileRes.data.full_name?.trim();
                     const metadataName = user.user_metadata?.full_name || user.user_metadata?.name;
                     const finalName = dbName || metadataName || user.email?.split('@')[0] || 'User';
@@ -622,8 +613,6 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
                         full_name: finalName
                     });
                 } else if (isAdminEmail) {
-                    // 🛡️ ADMIN FALLBACK: If they have an admin email but no profile record, 
-                    // allow them to stay logged in as an admin to fix the issue.
                     console.warn('🛡️ ThemeContext: Admin profile missing in DB, using fallback.');
                     const metadataName = user.user_metadata?.full_name || user.user_metadata?.name || user.user_metadata?.display_name;
                     setUserProfile({
@@ -634,19 +623,18 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
                         avatar_url: null
                     });
                 } else {
-                    // 🛡️ SECURITY LOCK: Either profile is missing, or it's a "Ghost" coach profile without a record.
                     const reason = isUnauthorizedGhost ? 'Ghost Profile detected' : 'Profile missing';
                     console.error(`🛡️ ThemeContext: SECURITY LOCK (${reason}) - User logged in but unauthorized. Signing out...`);
 
-                    // Delay sign out slightly to prevent infinite loops during transition
                     setTimeout(async () => {
                         const { data: { session } } = await supabase.auth.getSession();
                         if (session) {
                             await supabase.auth.signOut();
                             toast.error(isUnauthorizedGhost ? 'Account inactive or deleted.' : 'Session expired or deleted.');
+                            // Use navigate if possible, but window.location is safer for a clean state reset
                             window.location.href = '/login';
                         }
-                    }, 1500);
+                    }, 2000); // 2 second grace period
 
                     setUserProfile(null);
                 }

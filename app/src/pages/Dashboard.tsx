@@ -238,25 +238,29 @@ export default function Dashboard() {
                         onClick={() => setSelectedMetric(null)}
                     />
                     
-                    <div className="relative w-full max-w-2xl max-h-[85vh] bg-[#0c0e14]/90 border border-white/5 rounded-[3rem] overflow-hidden flex flex-col shadow-[0_50px_150px_rgba(0,0,0,0.8)]">
+                    <div className="relative w-full max-w-2xl max-h-[90vh] sm:max-h-[85vh] bg-[#0c0e14]/90 border border-white/5 rounded-[2rem] sm:rounded-[3rem] overflow-hidden flex flex-col shadow-[0_50px_150px_rgba(0,0,0,0.8)]">
                         {/* High-End Header */}
-                        <div className="p-8 sm:p-10 border-b border-white/[0.03] flex items-center justify-between relative z-10">
+                        <div className="p-5 sm:p-10 border-b border-white/[0.03] flex items-center justify-between relative z-10">
                             <div className="space-y-1">
-                                <h3 className="text-xl sm:text-2xl font-black text-white uppercase tracking-tighter leading-tight drop-shadow-[0_0_15px_rgba(255,255,255,0.2)]">
-                                    {selectedMetric} <span className="text-primary italic">{t('dashboard.intelligence')}</span>
+                                <h3 className="text-lg sm:text-2xl font-black text-white uppercase tracking-tighter leading-tight drop-shadow-[0_0_15px_rgba(255,255,255,0.2)]">
+                                    {selectedMetric === 'Total Revenue' ? t('dashboard.cycleRevenue') : 
+                                     selectedMetric === 'Consultations' ? t('dashboard.consultations') :
+                                     selectedMetric === 'PT Sessions' ? t('dashboard.ptSessions') :
+                                     selectedMetric === 'Athletes' ? t('dashboard.eliteAthletes') : 
+                                     selectedMetric} <span className="text-primary italic underline underline-offset-4 decoration-primary/30">{t('dashboard.intelligence')}</span>
                                 </h3>
-                                <p className="text-[8px] sm:text-[10px] font-black text-white/30 uppercase tracking-[0.4em]">{t('dashboard.tacticalAudit')}</p>
+                                <p className="text-[7px] sm:text-[10px] font-black text-white/30 uppercase tracking-[0.4em]">{t('dashboard.tacticalAudit')}</p>
                             </div>
                             <button 
                                 onClick={() => setSelectedMetric(null)}
-                                className="w-10 h-10 sm:w-12 sm:h-12 bg-white/5 hover:bg-red-500/20 text-white/40 hover:text-red-500 rounded-2xl border border-white/5 hover:border-red-500/20 transition-all active:scale-90 flex items-center justify-center"
+                                className="w-10 h-10 bg-white/5 hover:bg-red-500/20 text-white/40 hover:text-red-500 rounded-xl border border-white/5 transition-all active:scale-90 flex items-center justify-center flex-shrink-0"
                             >
                                 <X className="w-5 h-5" />
                             </button>
                         </div>
 
                         {/* Tactical Detail Feed */}
-                        <div className="flex-1 overflow-y-auto p-8 sm:p-10 custom-scrollbar relative z-10">
+                        <div className="flex-1 overflow-y-auto p-5 sm:p-10 custom-scrollbar relative z-10">
                             {filteredDetails.length === 0 ? (
                                 <div className="py-24 text-center">
                                     <p className="opacity-20 italic font-black uppercase tracking-[0.5em] text-[10px]">{t('dashboard.noData')}</p>
@@ -272,14 +276,14 @@ export default function Dashboard() {
                                                         <span className="text-[9px] font-bold text-white/10 uppercase tracking-widest px-2 py-0.5 rounded bg-white/5">{item.extra}</span>
                                                     )}
                                                 </div>
-                                                <p className="text-base sm:text-xl font-black text-white uppercase tracking-tight group-hover:text-primary transition-colors">
+                                                <p className="text-sm sm:text-xl font-black text-white uppercase tracking-tight group-hover:text-primary transition-colors">
                                                     {item.student_name || item.name}
                                                 </p>
-                                                <p className="text-[8px] sm:text-[10px] font-bold text-white/20 uppercase tracking-widest">{item.notes || `${t('dashboard.status')}: ${item.status || t('dashboard.active')}`}</p>
+                                                <p className="text-[7px] sm:text-[10px] font-bold text-white/20 uppercase tracking-widest">{item.notes || `${t('dashboard.status')}: ${item.status === 'ACTIVE' ? t('dashboard.active') : item.status}`}</p>
                                             </div>
                                             <div className="text-right">
                                                 {item.amount !== undefined ? (
-                                                    <p className="text-xl sm:text-3xl font-black text-white tracking-tighter tabular-nums drop-shadow-[0_0_12px_rgba(255,255,255,0.1)]">
+                                                    <p className="text-lg sm:text-3xl font-black text-white tracking-tighter tabular-nums drop-shadow-[0_0_12px_rgba(255,255,255,0.1)]">
                                                         {currency.code} {item.amount}
                                                     </p>
                                                 ) : (

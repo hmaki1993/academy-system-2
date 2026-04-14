@@ -215,7 +215,12 @@ i18n
                         feesPaid: 'Money Paid',
                         ptSessions: 'PT Sessions',
                         consultations: 'Consultations',
-                        eliteRank: 'Elite Rank'
+                        eliteRank: 'Elite Rank',
+                        intelligence: 'Intelligence',
+                        tacticalAudit: 'Tactical Audit',
+                        status: 'Status',
+                        active: 'Active',
+                        noData: 'No Data Available'
                     },
                     settings: {
                         title: 'Settings',

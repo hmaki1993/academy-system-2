@@ -29,9 +29,15 @@ export function PushNotificationPrompt({ userId }: PushNotificationPromptProps) 
     }, [userId]);
 
     const handleSubscribe = async () => {
-        if (!userId) return;
+        console.log('Push Prompt: Subscription requested for user:', userId);
+        if (!userId) {
+            console.warn('Push Prompt: Cannot subscribe - No userId found.');
+            return;
+        }
         setIsSubscribing(true);
+        console.log('Push Prompt: Calling subscribeUserToPush...');
         const success = await subscribeUserToPush(userId);
+        console.log('Push Prompt: Subscription result:', success);
         if (success) {
             setIsVisible(false);
         }

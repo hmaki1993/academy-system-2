@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase';
+import { toast } from 'react-hot-toast';
 
 // --- CONFIGURATION ---
 // In a production environment, you would generate these using 'web-push' library.
@@ -86,8 +87,9 @@ export const subscribeUserToPush = async (userId: string) => {
         if (error) throw error;
 
         return true;
-    } catch (error) {
-        console.error('Failed to subscribe to push notifications:', error);
+    } catch (error: any) {
+        console.error('Push Subscription Error:', error);
+        toast.error(`Notification Error: ${error.message || 'Unknown error'}`);
         return false;
     }
 };

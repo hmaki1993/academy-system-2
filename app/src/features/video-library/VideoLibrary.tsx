@@ -8,6 +8,7 @@ import LevelPurchaseModal from './components/LevelPurchaseModal';
 import { toast } from 'react-hot-toast';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../context/ThemeContext';
+import { useOutletContext } from 'react-router-dom';
 import PageHeader from '../../components/PageHeader';
 
 function Thumbnail({ url }: { url?: string }) {
@@ -29,7 +30,8 @@ export default function VideoLibrary() {
     const [selectedLevel, setSelectedLevel] = useState<string | number>('1');
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [videoToEdit, setVideoToEdit] = useState<any>(null);
-    const [userRole, setUserRole] = useState<string | null>(null);
+    const { role: contextRole } = useOutletContext<{ role: string }>() || { role: null };
+    const [userRole, setUserRole] = useState<string | null>(contextRole);
     const [studentId, setStudentId] = useState<string | null>(null);
     const [studentData, setStudentData] = useState<any>(null);
     const [userLevel, setUserLevel] = useState<number>(1);
@@ -56,49 +58,44 @@ export default function VideoLibrary() {
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) return;
 
-            // 1. Get Profile Role
-            const { data: profile } = await supabase
-                .from('profiles')
-                .select('role')
-                .eq('id', user.id)
+            // Use context role if available, otherwise fallback to fetching (safety)
+            const currentRole = contextRole || userRole;
+            const isAdmin = currentRole === 'admin' || currentRole === 'coach' || currentRole === 'head_coach';
+            
+            if (isAdmin) {
+                // Admins don't need student metadata
+                return;
+            }
+
+            // Get Student details if NOT admin
+            // Try by profile_id first
+            let { data: student } = await supabase
+                .from('students')
+                .select('id, full_name, email, current_training_level')
+                .eq('profile_id', user.id)
                 .maybeSingle();
             
-            if (profile) {
-                setUserRole(profile.role);
-                const isAdmin = profile.role === 'admin' || profile.role === 'coach' || profile.role === 'head_coach';
-                
-                // 2. Get Student details if NOT admin
-                if (!isAdmin) {
-                    // Try by profile_id first
-                    let { data: student } = await supabase
-                        .from('students')
-                        .select('id, full_name, email, current_training_level')
-                        .eq('profile_id', user.id)
-                        .maybeSingle();
-                    
-                    // Fallback to email if not found (for old/manual records)
-                    if (!student) {
-                        const { data: byEmail } = await supabase
-                            .from('students')
-                            .select('id, full_name, email, current_training_level')
-                            .eq('email', user.email)
-                            .maybeSingle();
-                        student = byEmail;
-                    }
+            // Fallback to email if not found (for old/manual records)
+            if (!student) {
+                const { data: byEmail } = await supabase
+                    .from('students')
+                    .select('id, full_name, email, current_training_level')
+                    .eq('email', user.email)
+                    .maybeSingle();
+                student = byEmail;
+            }
 
-                    if (student) {
-                        setStudentId(student.id);
-                        setStudentData(student);
-                        setUserLevel(student.current_training_level);
-                        // Default to their current level, which triggers the blur if not purchased
-                        setSelectedLevel(student.current_training_level || 1);
-                    }
-                }
+            if (student) {
+                setStudentId(student.id);
+                setStudentData(student);
+                setUserLevel(student.current_training_level);
+                // Default to their current level, which triggers the blur if not purchased
+                setSelectedLevel(student.current_training_level || 1);
             }
         };
 
         initUser();
-    }, []);
+    }, [contextRole]);
 
     // Debugging
     useEffect(() => {

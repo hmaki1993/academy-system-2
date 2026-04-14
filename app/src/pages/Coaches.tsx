@@ -4,7 +4,6 @@ import toast from 'react-hot-toast';
 import PageHeader from '../components/PageHeader';
 import AddCoachForm from '../components/AddCoachForm';
 import ConfirmModal from '../components/ConfirmModal';
-import ManualAttendanceModal from '../components/ManualAttendanceModal';
 import Payroll from '../components/Payroll';
 import { useTranslation } from 'react-i18next';
 import ImageLightbox from '../components/ImageLightbox';
@@ -446,7 +445,7 @@ export default function Coaches() {
                                                 onEdit={() => { setEditingCoach(coach); setShowAddModal(true); }}
                                                 onDelete={() => confirmDelete(coach.id)}
                                                 onAttendance={() => { setSelectedCoachForAttendance(coach); setShowAttendanceModal(true); fetchAttendance(coach.id); }}
-                                                onManualAttendance={() => { setSelectedCoachForManual(coach); setShowManualAttendance(true); }}
+                                                // onManualAttendance={() => { setSelectedCoachForManual(coach); setShowManualAttendance(true); }}
                                                 onCopyInvite={() => handleCopyInvite(coach)}
                                                 onEnlargeImage={(url) => setEnlargedImage(url)}
                                             />

@@ -61,40 +61,61 @@ export function PushNotificationPrompt({ userId }: PushNotificationPromptProps) 
     if (!isVisible) return null;
 
     return (
-        <div className="fixed top-24 left-1/2 -translate-x-1/2 z-[99999] w-[95%] max-w-lg animate-premium-down">
-            <div className="bg-white/[0.03] backdrop-blur-2xl border border-white/10 rounded-2xl p-4 shadow-2xl flex items-center gap-4 relative overflow-hidden group">
-                <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-transparent to-transparent opacity-50" />
+        <div 
+            onClick={() => window.alert('CLICK DETECTED ON ROOT CONTAINER!')}
+            onPointerDown={() => window.alert('POINTER DOWN ON ROOT!')}
+            style={{ 
+                position: 'fixed', 
+                bottom: '100px', 
+                left: '50%', 
+                transform: 'translateX(-50%)', 
+                zIndex: 999999, 
+                width: '95%', 
+                maxWidth: '500px',
+                pointerEvents: 'auto',
+                display: 'block'
+            }}
+            className="animate-premium-up"
+        >
+            <div className="bg-[#050510]/95 backdrop-blur-3xl border-2 border-primary/20 rounded-2xl p-4 shadow-[0_20px_60px_rgba(0,0,0,0.8)] flex items-center gap-4 relative overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-r from-primary/10 via-transparent to-transparent opacity-50 pointer-events-none" />
                 
-                <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0 relative z-10">
                     <Bell className="w-6 h-6 text-primary animate-pulse" />
                 </div>
 
-                <div className="flex-1">
-                    <h3 className="text-white font-bold text-sm">Enable Elite Alerts</h3>
-                    <p className="text-white/40 text-xs leading-relaxed">
-                        Get instant missions & goal updates delivered to your home screen.
+                <div className="flex-1 relative z-10">
+                    <h3 className="text-white font-black text-sm uppercase tracking-widest text-primary">DIAGNOSTIC: ELITE ALERTS</h3>
+                    <p className="text-white/60 text-xs leading-relaxed font-bold">
+                        TAP ANYWHERE ON THIS CARD TO TEST.
                     </p>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 relative z-20">
                     <button
-                        onClick={handleDismiss}
-                        className="p-2 text-white/20 hover:text-white/40 transition-colors"
+                        onPointerDown={(e) => {
+                            e.stopPropagation();
+                            window.alert('POINTER DOWN ON ENABLE!');
+                        }}
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            window.alert('CLICK ON ENABLE!');
+                            handleSubscribe();
+                        }}
+                        disabled={isSubscribing}
+                        className="bg-primary text-white px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-[0_0_30px_rgba(var(--primary-rgb),0.5)] active:bg-white active:text-primary disabled:opacity-50"
+                        style={{ pointerEvents: 'auto' }}
                     >
-                        <X className="w-4 h-4" />
+                        {isSubscribing ? 'WAIT...' : 'ENABLE NOW'}
                     </button>
                     <button
-                        onClick={handleSubscribe}
-                        disabled={isSubscribing}
-                        className="bg-primary hover:bg-primary/80 text-white px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-glow-primary flex items-center gap-2 group-hover:scale-105 active:scale-95 disabled:opacity-50"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            handleDismiss();
+                        }}
+                        className="p-2 text-white/40"
                     >
-                        {isSubscribing ? (
-                            'Enabling...'
-                        ) : (
-                            <>
-                                Enable <ArrowRight className="w-3 h-3 text-white/40 group-hover:translate-x-1 transition-transform" />
-                            </>
-                        )}
+                        <X className="w-5 h-5" />
                     </button>
                 </div>
             </div>

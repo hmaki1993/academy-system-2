@@ -747,9 +747,9 @@ export default function DashboardLayout() {
                                                             </div>
                                                         </div>
                                                     </div>
-                                                ))
                                             )}
                                         </div>
+                                        </motion.div>
                                     )}
                                 </AnimatePresence>
                             </div>

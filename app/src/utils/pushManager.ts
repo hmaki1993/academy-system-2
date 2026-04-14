@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabase';
 // --- CONFIGURATION ---
 // In a production environment, you would generate these using 'web-push' library.
 // VAPID Public Key for Web Push authentication
-const VAPID_PUBLIC_KEY = 'BD6Zl9X-kO0-V6X0A_X6Q_2YyEw-9Z4X0I_X6Q_2YyEw_9Z4X0I_X6Q_2YyEw';
+const VAPID_PUBLIC_KEY = 'BEt_X6fXUJfiznmaf2fbo7NwQTyQNT8b9C3W7-kcxXl2O8d-CRXzTgPXs1hKmI6AHNC2MOdudQF9UAJy8A5wxk4';
 
 export interface PushSubscriptionData {
     endpoint: string;

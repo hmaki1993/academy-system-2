@@ -3,8 +3,8 @@ self.addEventListener('push', (event) => {
     const title = data.title || 'Elite Academy';
     const options = {
         body: data.message || 'New mission target received!',
-        icon: '/logo.png',
-        badge: '/logo.png', // Small icon for the status bar
+        icon: '/logo-premium.png',
+        badge: '/logo-premium.png', // Small icon for the status bar
         data: data.url || '/',
         vibrate: [200, 100, 200]
     };

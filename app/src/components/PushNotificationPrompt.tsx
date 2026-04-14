@@ -64,47 +64,51 @@ export function PushNotificationPrompt({ userId }: PushNotificationPromptProps) 
         <div 
             style={{ 
                 position: 'fixed', 
-                bottom: '100px', 
+                top: '50%', 
                 left: '50%', 
-                transform: 'translateX(-50%)', 
+                transform: 'translate(-50%, -50%)', 
                 zIndex: 999999, 
-                width: '95%', 
-                maxWidth: '500px',
+                width: '90%', 
+                maxWidth: '400px',
                 pointerEvents: 'auto',
                 display: 'block'
             }}
-            className="animate-premium-up"
+            className="animate-premium-in"
         >
-            <div className="bg-[#050510] border-2 border-primary rounded-3xl p-6 shadow-[0_0_60px_rgba(0,0,0,0.9)] flex flex-col items-center gap-6 relative">
-                <div className="flex items-center gap-4 w-full">
-                    <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center">
-                        <Bell className="w-7 h-7 text-primary animate-bounce" />
-                    </div>
-                    <div>
-                        <h3 className="text-white font-black text-lg uppercase tracking-widest">STEP 2: ENABLE NOW</h3>
-                        <p className="text-white/60 text-xs font-bold">Please click the big button below.</p>
-                    </div>
+            <div className="bg-[#050510] border-2 border-primary rounded-[2.5rem] p-8 shadow-[0_0_100px_rgba(0,0,0,1)] flex flex-col items-center text-center gap-6 relative">
+                <div className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center mb-2">
+                    <Bell className="w-8 h-8 text-primary animate-bounce" />
+                </div>
+                
+                <div>
+                    <h3 className="text-white font-black text-xl uppercase tracking-widest mb-2">FINAL STEP</h3>
+                    <p className="text-white/60 text-sm font-bold leading-relaxed px-4">
+                        Please click the button below to enable your <span className="text-primary">Elite Alerts</span>.
+                    </p>
                 </div>
 
                 <button
-                    onPointerDown={() => window.alert('TOUCH DETECTED ON BUTTON!')}
                     onClick={() => {
-                        window.alert('CLICK CONFIRMED! Starting Process...');
+                        window.alert('CLICK CONFIRMED! Launching system dialog...');
                         handleSubscribe();
                     }}
                     disabled={isSubscribing}
-                    className="w-full bg-primary text-white py-8 rounded-2xl text-xl font-black uppercase tracking-[0.2em] shadow-glow-primary active:bg-white active:text-primary transition-all"
-                    style={{ pointerEvents: 'auto', touchAction: 'manipulation' }}
+                    className="w-full bg-primary text-white py-6 rounded-2xl text-lg font-black uppercase tracking-[0.2em] shadow-glow-primary active:scale-95 transition-all"
+                    style={{ pointerEvents: 'auto' }}
                 >
-                    {isSubscribing ? 'PROCESS STARTING...' : 'ENABLE ALERTS'}
+                    {isSubscribing ? 'PROCESSING...' : 'ENABLE NOW'}
                 </button>
 
                 <button
                     onClick={handleDismiss}
-                    className="text-white/20 text-[10px] font-bold uppercase tracking-widest hover:text-white/40"
+                    className="text-white/20 text-xs font-bold uppercase tracking-widest hover:text-white/40 border-b border-transparent hover:border-white/20"
                 >
-                    Dismiss for now
+                    No, maybe later
                 </button>
+
+                {/* Decorative Elements */}
+                <div className="absolute -top-10 -right-10 w-32 h-32 bg-primary/10 rounded-full blur-3xl pointer-events-none" />
+                <div className="absolute -bottom-10 -left-10 w-32 h-32 bg-primary/10 rounded-full blur-3xl pointer-events-none" />
             </div>
         </div>
     );

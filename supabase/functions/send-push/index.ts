@@ -50,7 +50,10 @@ serve(async (req) => {
       };
 
       try {
-        await webpush.sendNotification(pushSubscription, payload);
+        await webpush.sendNotification(pushSubscription, payload, {
+          TTL: 0, // Deliver immediately
+          urgency: "high" // Force heads-up / drop-down notification
+        });
       } catch (err) {
         if (err.statusCode === 404 || err.statusCode === 410) {
           // Subscription expired or gone, delete it

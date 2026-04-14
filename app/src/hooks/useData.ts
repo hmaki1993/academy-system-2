@@ -819,14 +819,33 @@ export function useJumpRopeStats() {
     return useQuery({
         queryKey: ['jump_rope_stats'],
         queryFn: async () => {
-            const sessionsStr = localStorage.getItem(LOCAL_STORAGE_KEY) || '[]';
-            const sessions = JSON.parse(sessionsStr);
+            const { data: { user } } = await supabase.auth.getUser();
+            let sessions = [];
+
+            // 1. Fetch from Supabase (Source of Truth)
+            if (user) {
+                const { data, error } = await supabase
+                    .from('jump_rope_sessions')
+                    .select('*')
+                    .eq('user_id', user.id);
+                
+                if (!error && data) {
+                    sessions = data;
+                }
+            }
+
+            // 2. If empty or offline, check localStorage
+            if (sessions.length === 0) {
+                const sessionsStr = localStorage.getItem(LOCAL_STORAGE_KEY) || '[]';
+                sessions = JSON.parse(sessionsStr);
+            }
 
             const today = new Date().toISOString().split('T')[0];
             const totalJumps = sessions.reduce((sum: number, s: any) => sum + (s.jumps || 0), 0);
             const todayJumps = sessions
-                .filter((s: any) => s.created_at?.startsWith(today))
+                .filter((s: any) => s.created_at?.startsWith(today) || s.date?.startsWith(today))
                 .reduce((sum: number, s: any) => sum + (s.jumps || 0), 0);
+            
             const maxRpm = sessions.reduce((max: number, s: any) => Math.max(max, s.rpm || 0), 0);
             const recentSessions = sessions.slice(0, 5);
 
@@ -841,15 +860,33 @@ export function useJumpRopeStats() {
     });
 }
 
+
 export function useJumpRopeHistory() {
     return useQuery({
         queryKey: ['jump_rope_history'],
         queryFn: async () => {
+            const { data: { user } } = await supabase.auth.getUser();
+            
+            // 1. Fetch from Supabase if logged in (Source of Truth)
+            if (user) {
+                const { data, error } = await supabase
+                    .from('jump_rope_sessions')
+                    .select('*')
+                    .eq('user_id', user.id)
+                    .order('created_at', { ascending: false });
+                
+                if (!error && data && data.length > 0) {
+                    return data;
+                }
+            }
+
+            // 2. Fallback to localStorage (Legacy/Offline support)
             const sessionsStr = localStorage.getItem(LOCAL_STORAGE_KEY) || '[]';
             return JSON.parse(sessionsStr);
         },
     });
 }
+
 
 export interface JrAdminStat {
     userId: string;

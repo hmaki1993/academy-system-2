@@ -40,6 +40,7 @@ import { playHoverSound } from '../utils/audio';
 import { playNotificationSound, resumeAudioContext } from '../utils/notifications';
 import { usePresenceContext } from '../context/PresenceContext';
 import { PushNotificationPrompt } from '../components/PushNotificationPrompt';
+import { motion, AnimatePresence } from 'framer-motion';
 
 export default function DashboardLayout() {
     const { t, i18n } = useTranslation();
@@ -70,6 +71,7 @@ export default function DashboardLayout() {
     const [searchResults, setSearchResults] = useState<any[]>([]);
     const [isSearching, setIsSearching] = useState(false);
     const [showResults, setShowResults] = useState(false);
+    const notificationRef = useRef<HTMLDivElement>(null);
     const [isVerifiedStudent, setIsVerifiedStudent] = useState<boolean | null>(null);
     const searchRef = useRef<HTMLDivElement>(null);
 
@@ -164,6 +166,22 @@ export default function DashboardLayout() {
 
                     // Background re-sync (Backup)
                     setTimeout(() => fetchNotifications(), 2000);
+
+                    // 🔔 NATIVE SYSTEM NOTIFICATION (WhatsApp-style drop from top of OS)
+                    if (Notification.permission === 'granted') {
+                        navigator.serviceWorker.ready.then(registration => {
+                            registration.showNotification(payload.notification?.title || "Strategic Update", {
+                                body: payload.notification?.message || "Tactical instruction received from Bridge.",
+                                icon: '/logo-premium.png',
+                                badge: '/logo-premium.png',
+                                vibrate: [200, 100, 200],
+                                data: { url: '/app' }
+                            });
+                        });
+                    } else if (Notification.permission === 'default') {
+                        // Optional: Request if not yet asked (though Prompt usually handles this)
+                        Notification.requestPermission();
+                    }
                 })
                 .subscribe((status) => {
                     console.log(`🚀 ROCKET_V2: Connection Status for [${userId}]:`, status);
@@ -303,6 +321,9 @@ export default function DashboardLayout() {
         const handleClickOutside = (event: MouseEvent) => {
             if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
                 setShowResults(false);
+            }
+            if (notificationRef.current && !notificationRef.current.contains(event.target as Node)) {
+                setNotificationsOpen(false);
             }
         };
         document.addEventListener('mousedown', handleClickOutside);
@@ -634,13 +655,19 @@ export default function DashboardLayout() {
                                 </button>
 
                                 {/* ELITE NOTIFICATION DROPDOWN */}
-                                {notificationsOpen && (
-                                    <div 
-                                        className={`absolute top-full mt-4 w-80 sm:w-96 bg-[#050510]/95 backdrop-blur-3xl border border-white/10 rounded-[2rem] shadow-[0_40px_100px_rgba(0,0,0,0.8)] p-4 sm:p-6 z-[1000] animate-in slide-in-from-top-4 duration-500
-                                            ${isRtl ? 'left-0 sm:-left-32' : 'right-0 sm:-right-8'}
-                                        `}
-                                        onClick={e => e.stopPropagation()}
-                                    >
+                                <AnimatePresence>
+                                    {notificationsOpen && (
+                                        <motion.div 
+                                            ref={notificationRef}
+                                            initial={{ y: -20, opacity: 0, scale: 0.95 }}
+                                            animate={{ y: 0, opacity: 1, scale: 1 }}
+                                            exit={{ y: -20, opacity: 0, scale: 0.95 }}
+                                            transition={{ duration: 0.4, ease: [0.23, 1, 0.32, 1] }}
+                                            className={`absolute top-full mt-4 w-80 sm:w-96 bg-[#050510]/95 backdrop-blur-3xl border border-white/10 rounded-[2rem] shadow-[0_40px_100px_rgba(0,0,0,0.8)] p-4 sm:p-6 z-[1000]
+                                                ${isRtl ? 'left-0 sm:-left-32' : 'right-0 sm:-right-8'}
+                                            `}
+                                            onClick={e => e.stopPropagation()}
+                                        >
                                         <div className="flex justify-between items-center mb-6">
                                             <div className="flex flex-col">
                                                 <h3 className="text-sm font-black text-white uppercase tracking-[0.3em]">
@@ -723,8 +750,8 @@ export default function DashboardLayout() {
                                                 ))
                                             )}
                                         </div>
-                                    </div>
-                                )}
+                                    )}
+                                </AnimatePresence>
                             </div>
                         </div>
                     </div>

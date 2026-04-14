@@ -702,7 +702,10 @@ i18n
                         rest: 'Rest',
                         startTraining: 'START TRAINING',
                         finishSession: 'FINISH SESSION',
+                        sessionSaved: 'Session recorded in cloud.',
+                        sessionSyncError: 'Sync failed. Saved locally.',
                         restart: 'Restart',
+
                         play: 'Play',
                         pause: 'Pause',
                         waitingForCoach: 'Waiting for Coach',
@@ -756,9 +759,15 @@ i18n
                         confirmed: 'CONFIRMED',
                         noTransactionLogsFound: 'No transaction logs found',
                         strategicBlueprint: 'Strategic Blueprint',
-                        protocolActive: 'Protocol v2.4 Active',
-                        awaitingStrategicInstruction: 'Awaiting Strategic Instruction'
+                        protocolActive: 'AI Protocol v2.5 Active',
+                        awaitingStrategicInstruction: 'Awaiting Strategic Instruction',
+                        smartJumps: 'Smart Jumps',
+                        aiSessions: 'AI Sessions',
+                        noSmartTrainingLogsFound: 'No smart training logs found',
+                        jumps: 'Jumps',
+                        mins: 'Mins'
                     }
+
                 }
             },
             ar: {
@@ -1576,7 +1585,10 @@ t: 'الجلسات',
                         rest: 'راحة',
                         startTraining: 'بدء التدريب',
                         finishSession: 'إنهاء الجلسة',
+                        sessionSaved: 'تم تسجيل الجلسة بنجاح.',
+                        sessionSyncError: 'فشل المزامنة. تم الحفظ محلياً.',
                         restart: 'إعادة تشغيل',
+
                         play: 'تشغيل',
                         pause: 'إيقاف مؤقت',
                         waitingForCoach: 'في انتظار المدرب',
@@ -1630,9 +1642,15 @@ t: 'الجلسات',
                         confirmed: 'مؤكد',
                         noTransactionLogsFound: 'لم يتم العثور على سجلات معاملات',
                         strategicBlueprint: 'المخطط الاستراتيجي',
-                        protocolActive: 'البروتوكول v2.4 نشط',
-                        awaitingStrategicInstruction: 'في انتظار التعليمات الاستراتيجية'
+                        protocolActive: 'بروتوكول الذكاء الاصطناعي v2.5 نشط',
+                        awaitingStrategicInstruction: 'في انتظار التعليمات الإستراتيجية',
+                        smartJumps: 'نطات الذكاء الاصطناعي',
+                        aiSessions: 'جلسة ذكية',
+                        noSmartTrainingLogsFound: 'لم يتم العثور على سجلات تدريب ذكية',
+                        jumps: 'نطة',
+                        mins: 'دقيقة'
                     }
+
                 }
             }
         }

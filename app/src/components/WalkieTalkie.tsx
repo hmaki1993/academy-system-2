@@ -529,6 +529,7 @@ export default function WalkieTalkie({ role, userId }: { role: string; userId: s
                 </button>
             )}
 
+
             {/* Speaker Button - LISTENERS ONLY */}
             {role !== 'admin' && role !== 'head_coach' && role !== 'coach' && (
                 <button

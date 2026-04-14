@@ -98,8 +98,17 @@ export default function JumpRopeTraining() {
                 student_id: resolvedStudentId,
                 work_duration: totalWork,
                 rest_duration: totalRest
+            }, {
+                onSuccess: () => {
+                    toast.success(t('smartTraining.sessionSaved'));
+                },
+                onError: (err: any) => {
+                    console.error('Session sync error:', err);
+                    toast.error(t('smartTraining.sessionSyncError'));
+                }
             });
         }
+
 
         setFinalRestSecs(totalRest);
         setJumps(totalJumps);

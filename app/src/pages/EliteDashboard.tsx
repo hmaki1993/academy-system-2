@@ -42,7 +42,11 @@ export default function EliteDashboard() {
     const [ptHistory, setPtHistory] = useState<any[]>([]);
     const [consHistory, setConsHistory] = useState<any[]>([]);
     const [paymentsHistory, setPaymentsHistory] = useState<any[]>([]);
-    const [activeModal, setActiveModal] = useState<'pt' | 'cons' | 'money' | null>(null);
+    const [activeModal, setActiveModal] = useState<'pt' | 'cons' | 'money' | 'ai' | null>(null);
+    const [totalAiJumps, setTotalAiJumps] = useState(0);
+    const [aiSessionsCount, setAiSessionsCount] = useState(0);
+    const [aiHistory, setAiHistory] = useState<any[]>([]);
+
 
     // 📻 Real-time Broadcast Sync (UI Focus)
     useEffect(() => {
@@ -132,24 +136,33 @@ export default function EliteDashboard() {
                     { data: ptSessionsRes },
                     { data: consRequests },
                     { data: payments },
-                    { data: planData }
+                    { data: planData },
+                    { data: aiSessionsRes }
                 ] = await Promise.all([
                     activePt?.id 
                         ? supabase.from('pt_sessions').select('*').eq('subscription_id', activePt.id).order('date', { ascending: false })
                         : Promise.resolve({ data: [] }),
                     supabase.from('consultation_requests').select('*').eq('email', user.email).order('created_at', { ascending: false }),
                     supabase.from('payments').select('*').eq('student_id', student.id).order('payment_date', { ascending: false }),
-                    supabase.from('training_plans').select('plan_content, status, scheduled_start').eq('student_id', student.id).maybeSingle()
+                    supabase.from('training_plans').select('plan_content, status, scheduled_start').eq('student_id', student.id).maybeSingle(),
+                    supabase.from('jump_rope_sessions').select('*').eq('user_id', user.id).order('created_at', { ascending: false })
                 ]);
 
+
                 const ptSessions = ptSessionsRes || [];
+                const aiSessions = aiSessionsRes || [];
+
 
                 setPtHistory(ptSessions || []);
+                setAiHistory(aiSessions || []);
                 setConsHistory(consRequests || []);
                 setPaymentsHistory(payments || []);
                 setAttendedSessions(ptSessions?.length || 0);
+                setTotalAiJumps(aiSessions.reduce((acc: number, s: any) => acc + (s.jumps || 0), 0));
+                setAiSessionsCount(aiSessions.length);
                 setPtSpent(payments?.filter(p => p.type?.toLowerCase().includes('pt')).reduce((sum, p) => sum + (p.amount || 0), 0) || 0);
                 setConsSpent(payments?.filter(p => p.type?.toLowerCase().includes('consultation')).reduce((sum, p) => sum + (p.amount || 0), 0) || 0);
+
                 
                 // Robust plan extraction (handle direct array or { weeklyPlan: [...] } wrapper)
                 const rawPlan = planData?.plan_content;
@@ -279,6 +292,25 @@ export default function EliteDashboard() {
 
                 <div className="hidden md:block w-px h-8 bg-white/[0.05]" />
 
+                {/* Smart Training Stats */}
+                <button onClick={() => setActiveModal('ai')} className="flex items-center gap-6 group text-left outline-none">
+                    <div className="p-2 bg-blue-500/10 rounded-xl text-blue-400 border border-blue-500/20 group-hover:scale-110 group-hover:bg-blue-500 group-hover:text-black transition-all">
+                        <Zap className="w-4 h-4" />
+                    </div>
+                    <div className="flex flex-col">
+                        <span className="text-[10px] font-bold text-white/30 uppercase tracking-[0.2em] mb-1">{t('elite.smartJumps')}</span>
+                        <div className="flex items-baseline gap-2">
+                            <h3 className="text-3xl font-black text-white tracking-tighter tabular-nums italic leading-none">
+                                {totalAiJumps.toLocaleString()}
+                            </h3>
+                            <span className="text-[9px] font-black text-white/20 uppercase tracking-widest italic">{t('elite.aiSessions')} ({aiSessionsCount})</span>
+                        </div>
+                    </div>
+                </button>
+
+                <div className="hidden md:block w-px h-8 bg-white/[0.05]" />
+
+
                 {/* Total Invested */}
                 <button onClick={() => setActiveModal('money')} className="flex items-center gap-6 group text-left outline-none">
                     <div className="p-2 bg-emerald-500/10 rounded-xl text-emerald-400 border border-emerald-500/20 group-hover:scale-110 group-hover:bg-emerald-500 group-hover:text-black transition-all shadow-[0_0_15px_rgba(16,185,129,0.1)]">
@@ -388,7 +420,25 @@ export default function EliteDashboard() {
                                     </div>
                                 )) : <p className="text-center py-10 text-[10px] font-black text-white/10 uppercase tracking-[.3em]">{t('elite.noTransactionLogsFound')}</p>
                             )}
+
+                            {activeModal === 'ai' && (
+                                aiHistory.length > 0 ? aiHistory.map((session, i) => (
+                                    <div key={i} className="flex items-center justify-between py-4 border-b border-white/[0.03] last:border-none">
+                                        <div className="flex flex-col gap-1">
+                                            <span className="text-xs font-black text-white uppercase italic">{new Date(session.created_at).toLocaleDateString(i18n.language === 'ar' ? 'ar-EG' : 'en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</span>
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-[9px] font-bold text-white/20 uppercase tracking-widest">{session.jumps} {t('elite.jumps')}</span>
+                                                <span className="text-[9px] font-bold text-white/10 uppercase tracking-widest">• {Math.round(session.duration / 60)} {t('elite.mins')}</span>
+                                            </div>
+                                        </div>
+                                        <div className="flex flex-col items-end">
+                                            <span className="text-[10px] font-black text-blue-400 uppercase tracking-widest bg-blue-500/5 px-3 py-1 rounded-full border border-blue-500/10">{Math.round(session.rpm)} RPM</span>
+                                        </div>
+                                    </div>
+                                )) : <p className="text-center py-10 text-[10px] font-black text-white/10 uppercase tracking-[.3em]">{t('elite.noSmartTrainingLogsFound')}</p>
+                            )}
                         </div>
+
                         
                         {/* Modal Footer */}
                         <div className="p-8 bg-white/[0.01] border-t border-white/5 flex justify-center">

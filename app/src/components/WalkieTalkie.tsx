@@ -327,16 +327,23 @@ export default function WalkieTalkie({ role, userId }: { role: string; userId: s
                 .from('walkie-talkie')
                 .getPublicUrl(fileName);
 
-            const { error: dbError } = await supabase
-                .from('voice_broadcasts')
-                .insert({
-                    sender_id: userId,
-                    audio_url: publicUrl,
-                    target_users: selectedUserIds.length > 0 ? selectedUserIds : null, // Null means everyone
-                    expires_at: new Date(Date.now() + 60000).toISOString() // Expire in 1 min
-                });
-
             if (dbError) throw dbError;
+            
+            // 🚀 BACKGROUND PUSH NOTIFICATION (For Targeted Voice Alerts)
+            if (selectedUserIds.length > 0) {
+                console.log(`📡 WalkieTalkie: Sending background push to ${selectedUserIds.length} recipients...`);
+                selectedUserIds.forEach(targetId => {
+                    supabase.functions.invoke('send-push', {
+                        body: {
+                            userId: targetId,
+                            title: 'Elite Tactical: Incoming Voice Signal',
+                            message: 'Operational message received from Bridge. Tap to listen.',
+                            url: '/app'
+                        }
+                    }).catch(err => console.error('Push dispatch failed:', err));
+                });
+            }
+
             // toast.success('Broadcast sent!');
         } catch (err: any) {
             console.error('Broadcast error:', err);

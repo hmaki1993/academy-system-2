@@ -301,10 +301,23 @@ export function useSmartPlan() {
                             timestamp: new Date().toISOString()
                         }
                     });
-                    console.log(`🚀 COACH: Rocket result:`, resp);
-                    setTimeout(() => supabase.removeChannel(channel), 3000);
-                }
-            });
+            queryClient.invalidateQueries({ queryKey: ['training_plans', studentId] });
+
+            // 3. BACKGROUND PUSH NOTIFICATION (Real OS Alert via Edge Function)
+            try {
+                const { error: pushError } = await supabase.functions.invoke('send-push', {
+                    body: {
+                        userId: studentIdRaw,
+                        title: 'Elite Alpha: New Mission Detected!',
+                        message: finalMessage,
+                        url: '/app'
+                    }
+                });
+                if (pushError) console.warn('Background Push Alert Error:', pushError);
+                else console.log('🚀 BACKGROUND PUSH: Dispatched successfully to OS');
+            } catch (e) {
+                console.warn('Background Push catch error:', e);
+            }
 
             toast.success('Session targets updated!');
         } catch (error: any) {

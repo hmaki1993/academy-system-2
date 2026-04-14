@@ -176,7 +176,7 @@ export default function DashboardLayout() {
                                 badge: '/logo-premium.png',
                                 vibrate: [200, 100, 200],
                                 data: { url: '/app' }
-                            });
+                            } as any);
                         });
                     } else if (Notification.permission === 'default') {
                         // Optional: Request if not yet asked (though Prompt usually handles this)

@@ -173,7 +173,7 @@ export default function Dashboard() {
                     {metrics.map((stat, i) => (
                         <div
                             key={stat.id}
-                            onClick={() => (stat as any).id !== 'Athletes' ? setSelectedMetric((stat as any).id as any) : navigate((stat as any).path || '/')}
+                            onClick={() => setSelectedMetric(stat.id as any)}
                             onMouseEnter={playHoverSound}
                             className="relative py-2 sm:py-4 px-1 sm:px-2 transition-all duration-500 cursor-pointer group flex flex-col items-center text-center sm:border-r sm:border-white/[0.03] last:border-r-0"
                         >

@@ -414,7 +414,6 @@ export default function DashboardLayout() {
 
     return (
         <div className="fixed inset-0 w-full flex bg-background font-cairo overflow-hidden">
-            <PushNotificationPrompt userId={userId || undefined} />
             {/* Cosmic Background Orbs */}
             <div className="orb-primary fixed -top-[25%] -left-[10%] w-[55%] h-[55%] rounded-full blur-[140px] pointer-events-none z-0 opacity-20" style={{ background: 'radial-gradient(circle, var(--color-primary) 0%, transparent 70%)' }}></div>
             <div className="orb-accent fixed -bottom-[25%] -right-[10%] w-[55%] h-[55%] rounded-full blur-[140px] pointer-events-none z-0 opacity-15" style={{ background: 'radial-gradient(circle, var(--color-primary) 0%, transparent 70%)' }}></div>
@@ -763,6 +762,7 @@ export default function DashboardLayout() {
                 .no-scrollbar::-webkit-scrollbar { display: none; }
                 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
             `}</style>
+            <PushNotificationPrompt userId={userId || undefined} />
         </div>
     );
 }

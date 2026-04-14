@@ -61,7 +61,7 @@ export function PushNotificationPrompt({ userId }: PushNotificationPromptProps) 
     if (!isVisible) return null;
 
     return (
-        <div className="fixed top-20 left-1/2 -translate-x-1/2 z-[100] w-[95%] max-w-lg animate-premium-down">
+        <div className="fixed top-24 left-1/2 -translate-x-1/2 z-[99999] w-[95%] max-w-lg animate-premium-down">
             <div className="bg-white/[0.03] backdrop-blur-2xl border border-white/10 rounded-2xl p-4 shadow-2xl flex items-center gap-4 relative overflow-hidden group">
                 <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-transparent to-transparent opacity-50" />
                 

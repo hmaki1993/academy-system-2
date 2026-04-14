@@ -4,7 +4,7 @@ import { toast } from 'react-hot-toast';
 // --- CONFIGURATION ---
 // In a production environment, you would generate these using 'web-push' library.
 // VAPID Public Key for Web Push authentication
-const VAPID_PUBLIC_KEY = 'BEt_X6fXUJfiznmaf2fbo7NwQTyQNT8b9C3W7-kcxXl2O8d-CRXzTgPXs1hKmI6AHNC2MOdudQF9UAJy8A5wxk4';
+const VAPID_PUBLIC_KEY = 'BELzOEt47g5qmytP8tX8deVC-P1YQR-MB2qr6ePeOYmQEVQDlLb1yyNKwxRtMADvPMCIgyJrvp3oZZOr3zhIh7s';
 
 export interface PushSubscriptionData {
     endpoint: string;

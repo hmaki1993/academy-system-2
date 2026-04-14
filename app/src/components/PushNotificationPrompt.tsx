@@ -30,11 +30,7 @@ export function PushNotificationPrompt({ userId }: PushNotificationPromptProps) 
     }, [userId]);
 
     const handleSubscribe = async () => {
-        window.alert('DEBUG: Button Clicked! Starting Subscribe Flow...');
-        console.log('Push Prompt: Subscription requested for user:', userId);
-        
         if (!userId) {
-            window.alert('DEBUG ERROR: No UserID found in context!');
             toast.error('Identity Missing. Please refresh.');
             return;
         }
@@ -42,12 +38,11 @@ export function PushNotificationPrompt({ userId }: PushNotificationPromptProps) 
         setIsSubscribing(true);
         try {
             const success = await subscribeUserToPush(userId);
-            window.alert(`DEBUG: Subscription Finished! Success: ${success}`);
             if (success) {
                 setIsVisible(false);
             }
         } catch (err: any) {
-            window.alert(`DEBUG CRASH: ${err.message}`);
+            console.error('Subscription error:', err);
         } finally {
             setIsSubscribing(false);
         }
@@ -64,51 +59,49 @@ export function PushNotificationPrompt({ userId }: PushNotificationPromptProps) 
         <div 
             style={{ 
                 position: 'fixed', 
-                top: '50%', 
+                bottom: '1.5rem', 
                 left: '50%', 
-                transform: 'translate(-50%, -50%)', 
+                transform: 'translateX(-50%)', 
                 zIndex: 999999, 
-                width: '90%', 
+                width: '92%', 
                 maxWidth: '400px',
-                pointerEvents: 'auto',
-                display: 'block'
+                pointerEvents: 'auto'
             }}
             className="animate-premium-in"
         >
-            <div className="bg-[#050510] border-2 border-primary rounded-[2.5rem] p-8 shadow-[0_0_100px_rgba(0,0,0,1)] flex flex-col items-center text-center gap-6 relative">
-                <div className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center mb-2">
-                    <Bell className="w-8 h-8 text-primary animate-bounce" />
+            <div className="bg-[#050510]/95 backdrop-blur-2xl border border-primary/30 rounded-3xl p-5 shadow-[0_20px_80px_rgba(0,0,0,0.8)] flex items-center gap-4 relative overflow-hidden group">
+                <div className="w-12 h-12 rounded-2xl bg-primary/20 flex items-center justify-center shrink-0">
+                    <Bell className="w-6 h-6 text-primary animate-pulse" />
                 </div>
                 
-                <div>
-                    <h3 className="text-white font-black text-xl uppercase tracking-widest mb-2">FINAL STEP</h3>
-                    <p className="text-white/60 text-sm font-bold leading-relaxed px-4">
-                        Please click the button below to enable your <span className="text-primary">Elite Alerts</span>.
+                <div className="flex-1 min-w-0">
+                    <h3 className="text-white font-black text-xs uppercase tracking-widest mb-0.5">Push Alerts</h3>
+                    <p className="text-white/50 text-[10px] font-bold leading-tight">
+                        Enable notifications for instant <span className="text-primary">Elite Updates</span>.
                     </p>
                 </div>
 
-                <button
-                    onClick={() => {
-                        window.alert('CLICK CONFIRMED! Launching system dialog...');
-                        handleSubscribe();
-                    }}
-                    disabled={isSubscribing}
-                    className="w-full bg-primary text-white py-6 rounded-2xl text-lg font-black uppercase tracking-[0.2em] shadow-glow-primary active:scale-95 transition-all"
-                    style={{ pointerEvents: 'auto' }}
-                >
-                    {isSubscribing ? 'PROCESSING...' : 'ENABLE NOW'}
-                </button>
+                <div className="flex flex-col gap-2">
+                    <button
+                        onClick={handleSubscribe}
+                        disabled={isSubscribing}
+                        className="bg-primary text-white px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-glow-primary active:scale-95 transition-all whitespace-nowrap"
+                    >
+                        {isSubscribing ? '...' : 'ENABLE'}
+                    </button>
+                    <button
+                        onClick={handleDismiss}
+                        className="text-white/20 text-[8px] font-black uppercase tracking-tighter hover:text-white/40 text-center"
+                    >
+                        Later
+                    </button>
+                </div>
 
-                <button
-                    onClick={handleDismiss}
-                    className="text-white/20 text-xs font-bold uppercase tracking-widest hover:text-white/40 border-b border-transparent hover:border-white/20"
-                >
-                    No, maybe later
-                </button>
-
-                {/* Decorative Elements */}
-                <div className="absolute -top-10 -right-10 w-32 h-32 bg-primary/10 rounded-full blur-3xl pointer-events-none" />
-                <div className="absolute -bottom-10 -left-10 w-32 h-32 bg-primary/10 rounded-full blur-3xl pointer-events-none" />
+                {/* Subtle Ambient Glow */}
+                <div className="absolute -top-6 -right-6 w-20 h-20 bg-primary/10 rounded-full blur-2xl pointer-events-none" />
+                
+                {/* Visual Glass Sheen */}
+                <div className="absolute inset-0 bg-gradient-to-tr from-white/5 to-transparent pointer-events-none" />
             </div>
         </div>
     );

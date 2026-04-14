@@ -10,8 +10,13 @@ const VAPID_PUBLIC_KEY = 'BELzOEt47g5qmytP8tX8deVC-P1YQR-MB2qr6ePeOYmQEVQDlLb1yy
  */
 export const NotificationExpert = {
     /**
-     * Checks for browser support
+     * Checks for browser support and permission status
      */
+    status: async () => {
+        if (!NotificationExpert.isSupported()) return 'unsupported';
+        return Notification.permission;
+    },
+
     isSupported: () => {
         return 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
     },
@@ -59,11 +64,39 @@ export const NotificationExpert = {
 
             if (error) throw error;
             console.log('🛡️ NotificationExpert: Tactical subscription active.');
+            
+            // Store locally for quick self-healing checks
+            localStorage.setItem('elite_push_active', 'true');
+            
             return true;
         } catch (error: any) {
             console.error('🛡️ NotificationExpert Error:', error);
             toast.error(error.message || 'Notification Error');
             return false;
+        }
+    },
+
+    /**
+     * EXPERT: Self-Healing Check
+     * Ensures subscription is active in DB and browser.
+     */
+    ensureSubscription: async (userId: string) => {
+        try {
+            if (!NotificationExpert.isSupported()) return;
+            const permission = Notification.permission;
+            
+            if (permission === 'granted') {
+                const registration = await navigator.serviceWorker.ready;
+                const existing = await registration.pushManager.getSubscription();
+                
+                // If browser lost it or UI flag is missing, re-subscribe
+                if (!existing || !localStorage.getItem('elite_push_active')) {
+                    console.log('🛡️ NotificationExpert: Repairing broken subscription...');
+                    await NotificationExpert.subscribe(userId);
+                }
+            }
+        } catch (e) {
+            console.warn('🛡️ NotificationExpert: Self-healing failed.', e);
         }
     },
 

@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
+import { supabase } from '../lib/supabase';
+import { NotificationExpert } from '../utils/NotificationExpert';
 import { useTranslation } from 'react-i18next';
 
 import {
@@ -30,7 +32,6 @@ import {
     Film,
     Medal
 } from 'lucide-react';
-import { supabase } from '../lib/supabase';
 import toast from 'react-hot-toast';
 import { useTheme } from '../context/ThemeContext';
 import PremiumClock from '../components/PremiumClock';
@@ -128,6 +129,11 @@ export default function DashboardLayout() {
         let athleteMonitor: any = null;
 
         const setupGlobalSync = async () => {
+            // 🛡️ EXPERT PWA: Self-healing check (Ensure notifications are always linked)
+            if (userId) {
+                NotificationExpert.ensureSubscription(userId);
+            }
+
             // Ensure auth session is synced with realtime
             const { data: { session } } = await supabase.auth.getSession();
             if (session) supabase.realtime.setAuth(session.access_token);

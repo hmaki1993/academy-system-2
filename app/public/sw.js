@@ -1,32 +1,44 @@
+// 🛡️ EXPERT PWA PERSISTENCE: Immediate Activation
+self.addEventListener('install', (event) => {
+    self.skipWaiting();
+});
+
+self.addEventListener('activate', (event) => {
+    event.waitUntil(self.clients.claim());
+});
+
 self.addEventListener('push', (event) => {
     const data = event.data ? event.data.json() : {};
-    const title = data.title || 'Elite Academy: Special Mission';
+    const title = data.title || 'Elite Academy: Official Command';
     
-    // 🛡️ ELITE HEADS-UP OPTIONS (Enforce Visibility)
+    // 🛡️ EXPERT HEADS-UP (Max Urgency Implementation)
     const options = {
-        body: data.message || 'Mission objectives updated. Immediate attention required.',
+        body: data.message || 'New mission signal received. Tap to execute.',
         icon: '/logo-premium.png',
         badge: '/logo-premium.png',
         data: data.url || '/',
         
-        // ⚡ TACTICAL HEAVY VIBRATION: (Long-Short-Long-Pulse) - Highly disruptive
+        // ⚡ TACTICAL HEAVY VIBRATION (Rhythmic & Intense)
         vibrate: [400, 100, 400, 100, 100, 50, 400],
         
-        // 🚀 DROP-DOWN ENFORCEMENT: 
-        tag: 'elite-mission-critical',
+        // 🚀 OS INTERRUPT ENFORCEMENT
+        tag: data.tag || 'elite-critical-alert', // Allow specific tagging (Voice vs Mission)
         renotify: true,
-        requireInteraction: true, // MUST for drop-down persistence
-        silent: false, // Ensure OS plays sound/vibrate
+        requireInteraction: true, 
+        silent: false, 
         timestamp: Date.now(),
+        priority: 2, // Hint for max OS priority
         
-        // 🛠️ ACTIONS: (Forces larger, more interactive notification area)
+        // 🛠️ INTERACTIVE ACTIONS
         actions: [
             { action: 'open', title: 'Open Mission' },
             { action: 'close', title: 'Dismiss' }
         ]
     };
 
-    event.waitUntil(self.registration.showNotification(title, options));
+    event.waitUntil(
+        self.registration.showNotification(title, options)
+    );
 });
 
 self.addEventListener('notificationclick', (event) => {

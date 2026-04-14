@@ -51,9 +51,9 @@ serve(async (req) => {
 
       try {
         await webpush.sendNotification(pushSubscription, payload, {
-          TTL: 60, // Keep active for 60 seconds if device is temporarily offline
-          urgency: "high", // Force heads-up / drop-down notification
-          topic: "mission-alerts" // Helps OS group and prioritize
+          TTL: 0, // Real-time drop: expire immediately to force immediate OS attempt
+          urgency: "high", // Critical urgency for heads-up alert
+          topic: "academy-mission" // Grouping for the tactical UI
         });
       } catch (err) {
         if (err.statusCode === 404 || err.statusCode === 410) {

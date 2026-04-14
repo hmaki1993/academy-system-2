@@ -99,7 +99,7 @@ export const NotificationExpert = {
                 tag: 'elite-local-alert',
                 renotify: true,
                 requireInteraction: true // Forces heads-up behavior
-            });
+            } as any);
         }
     },
 

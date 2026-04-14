@@ -1,24 +1,27 @@
 self.addEventListener('push', (event) => {
     const data = event.data ? event.data.json() : {};
-    const title = data.title || 'Elite Alpha: Mission Alert';
+    const title = data.title || 'Elite Academy: Special Mission';
     
-    // 🛡️ PRO NOTIFICATION OPTIONS (Tactical Level)
+    // 🛡️ ELITE HEADS-UP OPTIONS (Enforce Visibility)
     const options = {
-        body: data.message || 'New mission target received from Bridge.',
+        body: data.message || 'Mission objectives updated. Immediate attention required.',
         icon: '/logo-premium.png',
         badge: '/logo-premium.png',
         data: data.url || '/',
         
-        // ⚡ TACTICAL VIBRATION: (Pulse, Pulse, Long) - Rhythmic and noticeable
-        vibrate: [100, 50, 100, 50, 400],
+        // ⚡ TACTICAL HEAVY VIBRATION: (Long-Short-Long-Pulse) - Highly disruptive
+        vibrate: [400, 100, 400, 100, 100, 50, 400],
         
-        // 🚀 FORCE HEADS-UP: Unique tag and renotify forces drop-down behavior
-        tag: 'elite-tactical-signal',
+        // 🚀 DROP-DOWN ENFORCEMENT: 
+        tag: 'elite-mission-critical',
         renotify: true,
+        requireInteraction: true, // MUST for drop-down persistence
+        silent: false, // Ensure OS plays sound/vibrate
+        timestamp: Date.now(),
         
-        // 🛠️ ACTIONS: Makes the alert interactive/priority
+        // 🛠️ ACTIONS: (Forces larger, more interactive notification area)
         actions: [
-            { action: 'open', title: 'Launch Mission' },
+            { action: 'open', title: 'Open Mission' },
             { action: 'close', title: 'Dismiss' }
         ]
     };

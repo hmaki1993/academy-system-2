@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Bell, X, ShieldCheck, ArrowRight } from 'lucide-react';
-import { getNotificationPermission, subscribeUserToPush, isPushSupported } from '../utils/pushManager';
+import { getNotificationPermission, isPushSupported } from '../utils/pushManager';
+import { NotificationExpert } from '../utils/NotificationExpert';
 import { toast } from 'react-hot-toast';
 
 interface PushNotificationPromptProps {
@@ -37,7 +38,7 @@ export function PushNotificationPrompt({ userId }: PushNotificationPromptProps) 
 
         setIsSubscribing(true);
         try {
-            const success = await subscribeUserToPush(userId);
+            const success = await NotificationExpert.subscribe(userId);
             if (success) {
                 setIsVisible(false);
             }

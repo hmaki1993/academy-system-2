@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Bell, X, ShieldCheck, ArrowRight } from 'lucide-react';
 import { getNotificationPermission, subscribeUserToPush, isPushSupported } from '../utils/pushManager';
+import { toast } from 'react-hot-toast';
 
 interface PushNotificationPromptProps {
     userId: string | undefined;
@@ -29,19 +30,27 @@ export function PushNotificationPrompt({ userId }: PushNotificationPromptProps) 
     }, [userId]);
 
     const handleSubscribe = async () => {
+        window.alert('DEBUG: Button Clicked! Starting Subscribe Flow...');
         console.log('Push Prompt: Subscription requested for user:', userId);
+        
         if (!userId) {
-            console.warn('Push Prompt: Cannot subscribe - No userId found.');
+            window.alert('DEBUG ERROR: No UserID found in context!');
+            toast.error('Identity Missing. Please refresh.');
             return;
         }
+
         setIsSubscribing(true);
-        console.log('Push Prompt: Calling subscribeUserToPush...');
-        const success = await subscribeUserToPush(userId);
-        console.log('Push Prompt: Subscription result:', success);
-        if (success) {
-            setIsVisible(false);
+        try {
+            const success = await subscribeUserToPush(userId);
+            window.alert(`DEBUG: Subscription Finished! Success: ${success}`);
+            if (success) {
+                setIsVisible(false);
+            }
+        } catch (err: any) {
+            window.alert(`DEBUG CRASH: ${err.message}`);
+        } finally {
+            setIsSubscribing(false);
         }
-        setIsSubscribing(false);
     };
 
     const handleDismiss = () => {

@@ -52,19 +52,25 @@ export const subscribeUserToPush = async (userId: string) => {
         }
 
         // 1. Request Permission
+        window.alert('DEBUG STEP 1: Requesting Permission...');
         const permission = await Notification.requestPermission();
+        window.alert(`DEBUG: Permission Result: ${permission}`);
         if (permission !== 'granted') {
-            throw new Error('Permission not granted for notifications.');
+            throw new Error(`Permission not granted: ${permission}`);
         }
 
         // 2. Get Service Worker Registration
+        window.alert('DEBUG STEP 2: Waiting for Service Worker to be Ready...');
         const registration = await navigator.serviceWorker.ready;
+        window.alert('DEBUG: Service Worker READY!');
 
         // 3. Subscribe to Push Manager
+        window.alert('DEBUG STEP 3: Browser Subscription starting...');
         const subscription = await registration.pushManager.subscribe({
             userVisibleOnly: true,
             applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
         });
+        window.alert('DEBUG: Browser Subscription SUCCESS!');
 
         const subJSON = subscription.toJSON();
         
@@ -73,6 +79,7 @@ export const subscribeUserToPush = async (userId: string) => {
         }
 
         // 4. Send to Supabase
+        window.alert('DEBUG STEP 4: Sending to Supabase...');
         const { error } = await supabase.from('user_push_subscriptions').upsert({
             user_id: userId,
             endpoint: subJSON.endpoint,

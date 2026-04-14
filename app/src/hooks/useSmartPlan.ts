@@ -301,6 +301,11 @@ export function useSmartPlan() {
                             timestamp: new Date().toISOString()
                         }
                     });
+                    console.log(`🚀 COACH: Rocket result:`, resp);
+                    setTimeout(() => supabase.removeChannel(channel), 3000);
+                }
+            });
+
             queryClient.invalidateQueries({ queryKey: ['training_plans', studentId] });
 
             // 3. BACKGROUND PUSH NOTIFICATION (Real OS Alert via Edge Function)

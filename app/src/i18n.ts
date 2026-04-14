@@ -178,6 +178,7 @@ i18n
                         stableConnection: 'STABLE CONNECTION'
                     },
                     dashboard: {
+                        hello: 'Hello',
                         welcome: 'Welcome back',
                         totalStudents: 'Total Gymnasts',
                         activeCoaches: 'Active Coaches',
@@ -725,7 +726,10 @@ i18n
                         mins: 'MIN',
                         secs: 'SEC',
                         confirmTime: 'Confirm Time',
-                        trainerHub: 'Trainer Hub'
+                        trainerHub: 'Trainer Hub',
+                        jumpsGoal: 'Jumps Goal',
+                        duration: 'Duration',
+                        clickToResume: 'Click anywhere to Resume'
                     },
                     elite: {
                         hello: 'Hello',
@@ -1596,7 +1600,10 @@ t: 'الجلسات',
                         mins: 'دقيقة',
                         secs: 'ثانية',
                         confirmTime: 'تأكيد الوقت',
-                        trainerHub: 'مركز المدرب'
+                        trainerHub: 'مركز المدرب',
+                        jumpsGoal: 'هدف القفزات',
+                        duration: 'المدة',
+                        clickToResume: 'اضغط في أي مكان للاستئناف'
                     },
                     elite: {
                         hello: 'أهلاً',

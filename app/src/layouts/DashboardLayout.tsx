@@ -39,6 +39,7 @@ import WalkieTalkie from '../components/WalkieTalkie';
 import { playHoverSound } from '../utils/audio';
 import { playNotificationSound, resumeAudioContext } from '../utils/notifications';
 import { usePresenceContext } from '../context/PresenceContext';
+import { PushNotificationPrompt } from '../components/PushNotificationPrompt';
 
 export default function DashboardLayout() {
     const { t, i18n } = useTranslation();
@@ -146,13 +147,20 @@ export default function DashboardLayout() {
                         });
                     }
 
-                    // Instant Toast with branding
+                    // Instant Toast with branding (Deduplicated)
                     const toastMsg = payload.notification?.message || "Tactical Update Received!";
-                    toast.success(toastMsg, {
-                        icon: '🚀',
-                        style: { background: '#050510', color: '#fff', border: '1px solid #10b981' },
-                        duration: 6000
-                    });
+                    const toastKey = payload.notification?.id || toastMsg;
+                    
+                    if (!processedToasts.current.has(toastKey)) {
+                        processedToasts.current.add(toastKey);
+                        setTimeout(() => processedToasts.current.delete(toastKey), 10000); // Clear after 10s
+                        
+                        toast.success(toastMsg, {
+                            icon: '🚀',
+                            style: { background: '#050510', color: '#fff', border: '1px solid #10b981' },
+                            duration: 6000
+                        });
+                    }
 
                     // Background re-sync (Backup)
                     setTimeout(() => fetchNotifications(), 2000);
@@ -406,6 +414,7 @@ export default function DashboardLayout() {
 
     return (
         <div className="fixed inset-0 w-full flex bg-background font-cairo overflow-hidden">
+            <PushNotificationPrompt userId={userId || undefined} />
             {/* Cosmic Background Orbs */}
             <div className="orb-primary fixed -top-[25%] -left-[10%] w-[55%] h-[55%] rounded-full blur-[140px] pointer-events-none z-0 opacity-20" style={{ background: 'radial-gradient(circle, var(--color-primary) 0%, transparent 70%)' }}></div>
             <div className="orb-accent fixed -bottom-[25%] -right-[10%] w-[55%] h-[55%] rounded-full blur-[140px] pointer-events-none z-0 opacity-15" style={{ background: 'radial-gradient(circle, var(--color-primary) 0%, transparent 70%)' }}></div>

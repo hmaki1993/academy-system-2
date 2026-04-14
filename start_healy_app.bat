@@ -3,7 +3,7 @@ echo Starting Gymnastic System 2...
 cd /d "%~dp0app"
 
 :: Start the dev server in the background
-start /bl npm run dev
+start /b npm run dev
 
 :: Wait for 30 seconds to let the server start
 echo Waiting for server to initialize (this takes ~30s)...

@@ -7,10 +7,18 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link
-    href="https://fonts.googleapis.com/css2?family=Alexandria:wght@100..900&family=Cairo:wght@200..1000&family=Inter:wght@100..900&family=Kanit:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&family=Montserrat:ital,wght@0,100..900;1,100..900&family=Outfit:wght@100..900&family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&family=Roboto:ital,wght@0,100;0,300;0,400;0,500;0,700;0,900;1,100;1,300;1,400;1,500;1,700;1,900&family=Lexend:wght@100..900&family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&family=Orbitron:wght@400..900&display=swap"
+    href="https://fonts.googleapis.com/css2?family=Alexandria:wght@100..900&family=Cairo:wght@200..1000&family=Inter:wght@100..900&family=Kanit:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&family=Montserrat:ital,wght@0,100..900;1,100..900&family=Outfit:wght@100..900&family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&family=Roboto:ital,wght@0,100;0,300;0,400;0,500;0,700;0,900;1,100;1,300;1,400;1,500;1,700;1,900&family=Lexend:wght@100..900&family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&family=Orbitron:wght@400..900&family=IBM+Plex+Sans+Arabic:wght@100..700&display=swap"
     rel="stylesheet" crossorigin="anonymous">
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
-  <meta name="theme-color" content="#050505">
+  <meta name="theme-color" content="#FF6B6B">
+  <link rel="manifest" href="/manifest.json">
+  
+  <!-- iOS support -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Elite Academy">
+  <link rel="apple-touch-icon" href="/logo.png">
+
   <title>ELITE SYSTEM ACTIVE</title>
   <script>
       // Global Image Error Handler to catch legacy 404 logos
@@ -77,27 +85,8 @@
             }
             favicon.href = finalLogoUrl;
 
-            // 2. Dynamic PWA Manifest
-            let manifestLink = document.querySelector('link[rel="manifest"]');
-            if (!manifestLink) {
-              manifestLink = document.createElement('link');
-              manifestLink.rel = 'manifest';
-              manifestLink.crossOrigin = 'use-credentials';
-              document.head.appendChild(manifestLink);
-            }
-            const dynamicManifest = {
-                "short_name": s.academy_name || "Academy",
-                "name": s.academy_name || "Fame Academy System",
-                "icons": [
-                    { "src": finalLogoUrl, "sizes": "192x192 256x256 512x512", "type": "image/png", "purpose": "any maskable" }
-                ],
-                "start_url": ".",
-                "display": "standalone",
-                "theme_color": s.primary_color || "#A30000",
-                "background_color": s.secondary_color || "#050505"
-            };
-            const blob = new Blob([JSON.stringify(dynamicManifest)], {type: 'application/json'});
-            manifestLink.href = URL.createObjectURL(blob);
+            // Final Logo Update
+            favicon.href = finalLogoUrl;
           }
 
           if (s.primary_color) root.style.setProperty('--color-primary', s.primary_color);

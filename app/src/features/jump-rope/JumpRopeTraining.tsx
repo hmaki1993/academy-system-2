@@ -140,15 +140,31 @@ export default function JumpRopeTraining() {
         // Return to "Start Training" state
         setIsSessionActive(false);
         setIsTracking(false);
+        setIsRemotePaused(false);
+        isRemotePausedRef.current = false;
 
         speak(t('smartTraining.sessionReset'));
     }, [speak, countdownMins, countdownSecs, t]);
 
     // Admins are never locked; students start locked until coach sends 'live'
-    const [isRemoteLocked, setIsRemoteLocked] = useState(true);
+    // 🛡️ INITIAL STATE FIX: Default to false (unlocked) to prevent flickering while loading
+    const [isRemoteLocked, setIsRemoteLocked] = useState(false);
+    const isRemotePausedRef = useRef(false);
+    
     useEffect(() => {
-        if (isAdmin) setIsRemoteLocked(false);
-    }, [isAdmin]);
+        isRemotePausedRef.current = isRemotePaused;
+    }, [isRemotePaused]);
+    
+    useEffect(() => {
+        // Only lock if we are SURE it's not an admin and isLocked is true
+        if (access) {
+            if (access.isAdmin) {
+                setIsRemoteLocked(false);
+            } else if (access.isLocked) {
+                setIsRemoteLocked(true);
+            }
+        }
+    }, [access]);
 
     // 1. Fetch Personal Training Plan and Poll for Status Changes
     const applyPlanTargets = useCallback((plan: any) => {
@@ -159,7 +175,13 @@ export default function JumpRopeTraining() {
 
         if (plan.status === 'live') {
             setIsRemoteLocked(false);
-            setIsRemotePaused(false);
+            
+            // 🛡️ SYNC PROTECTION: Only force-unpause if it's a BRAND NEW plan being launched.
+            // This prevents the 3-second polling interval from overwriting an Admin's local "Pause" click.
+            if (isNewPlan) {
+                setIsRemotePaused(false);
+                isRemotePausedRef.current = false;
+            }
 
             // Auto-set session as active if live, but don't start timer yet
             if (plan.target_time && !isSessionActiveRef.current) {
@@ -314,6 +336,9 @@ export default function JumpRopeTraining() {
             // Initial fetch
             await fetchLatestPlan();
 
+            // 🚀 ADMINISTRATIVE BYPASS: If we already know the user is a staff member, unlock immediately
+            if (isAdmin) setIsRemoteLocked(false);
+
             // Poll every 3 seconds for status changes from coach
             pollInterval = setInterval(() => {
                 fetchLatestPlan();
@@ -362,17 +387,7 @@ export default function JumpRopeTraining() {
                 }
 
                 // 2. Direct Target Updates
-                if (payload?.type === 'target_update') {
-                    const tJumps = payload.target_jumps || '??';
-                    const tTime = payload.target_time || '??';
-                    toast.success(`${t('smartTraining.newMission')}: ${tJumps} ${t('smartTraining.jumps')} / ${tTime} ${t('smartTraining.mins')}`, {
-                        duration: 5000,
-                        position: 'top-center',
-                        icon: '🎯',
-                        style: { background: '#0b0e18', color: '#3b82f6', border: '1px solid #3b82f6' }
-                    });
-                    fetchLatestPlan();
-                } else if (payload?.refresh_plan) {
+                if (payload?.type === 'target_update' || payload?.refresh_plan) {
                     fetchLatestPlan();
                 }
             })
@@ -483,7 +498,7 @@ export default function JumpRopeTraining() {
     };
 
     const onResults = useCallback((results: any) => {
-        if (!canvasRef.current || !results.poseLandmarks || !webcamRef.current?.video) return;
+        if (!canvasRef.current || !results.poseLandmarks || !webcamRef.current?.video || isRemotePausedRef.current) return;
         const video = webcamRef.current.video;
         const canvas = canvasRef.current;
         const canvasCtx = canvas.getContext('2d');
@@ -662,7 +677,7 @@ export default function JumpRopeTraining() {
                 setTimeout(() => { cooldownRef.current = false; }, 60);
             }
         }
-    }, [isTracking, speak]);
+    }, [isTracking, speak, t]); // 🛡️ 'isRemotePaused' removed from deps to prevent engine reset
 
     useEffect(() => {
         let active = true;
@@ -689,7 +704,7 @@ export default function JumpRopeTraining() {
         if (!isSessionActive) return;
         const interval = setInterval(() => {
             const now = Date.now();
-            if (!isTimerActiveRef.current || isRemotePaused) return;
+            if (!isTimerActiveRef.current || isRemotePausedRef.current) return;
             setTotalSeconds(s => s + 1);
             const isWorking = lastActivityTimeRef.current > 0 && (now - lastActivityTimeRef.current) < 4000;
             if (isWorking) {
@@ -723,7 +738,7 @@ export default function JumpRopeTraining() {
             }
         }, 1000);
         return () => clearInterval(interval);
-    }, [isSessionActive, isTracking]);
+    }, [isSessionActive, isTracking]); // 🛡️ 'isRemotePaused' removed from deps to prevent stale/incorrect closures
 
 
 
@@ -763,37 +778,12 @@ export default function JumpRopeTraining() {
             {/* 2. Professional HUD Logic Header */}
             <div className="relative z-[60] px-4 sm:px-8 pt-2 sm:pt-4 flex flex-col gap-2 sm:gap-4">
                 <PageHeader title={t('common.performanceTracker')} subtitle="AI PERFORMANCE MONITOR">
-                    <div className="flex items-center gap-3 sm:gap-6">
-                        {!isSessionActive && (
-                            <div className="flex items-center gap-2">
-                                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 shadow-inner group">
-                                    <Trophy size={12} className="text-yellow-400 group-hover:scale-110 transition-transform" />
-                                    {isAdmin ? (
-                                        <input
-                                            type="number"
-                                            value={targetJumps || ''}
-                                            onChange={(e) => setTargetJumps(e.target.value ? parseInt(e.target.value) : null)}
-                                            placeholder="0"
-                                            className="bg-transparent border-none text-xs font-black text-white focus:ring-0 p-0 w-12 placeholder:text-white/20"
-                                        />
-                                    ) : (
-                                        <div className="flex flex-col -space-y-1">
-                                            <span className="text-[7px] font-bold text-white/30 uppercase tracking-tighter">{t('smartTraining.goal')}</span>
-                                            <span className="text-xs font-black text-white tabular-nums">{targetJumps || 0}</span>
-                                        </div>
-                                    )}
-                                </div>
-                                <button onClick={isAdmin ? openTimerPicker : undefined} className={`flex items-center gap-1.5 px-2 py-1 rounded-lg bg-transparent border border-white/10 ${isAdmin ? 'hover:bg-white/5 active:scale-95 cursor-pointer' : 'cursor-default'}`}>
-                                    <Clock size={10} className="text-blue-400/60" />
-                                    <span className="text-[10px] font-black text-white">{String(countdownMins).padStart(2, '0')}:{String(countdownSecs).padStart(2, '0')}</span>
-                                </button>
-                            </div>
-                        )}
-                        <button onClick={() => setVoiceEnabled(!voiceEnabled)} className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${voiceEnabled ? 'bg-primary/10 text-primary' : 'bg-white/5 text-white/40'}`}>
-                            {voiceEnabled ? <Volume2 size={16} /> : <VolumeX size={16} />}
-                        </button>
-                    </div>
-                </PageHeader>
+                        <div className="flex items-center gap-4 sm:gap-6 justify-end lg:w-72">
+                            <button onClick={() => setVoiceEnabled(!voiceEnabled)} className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${voiceEnabled ? 'bg-primary/10 text-primary' : 'bg-white/5 text-white/40'}`}>
+                                {voiceEnabled ? <Volume2 size={16} /> : <VolumeX size={16} />}
+                            </button>
+                        </div>
+                    </PageHeader>
             </div>
 
             {/* 3. Primary HUD Counter Layer (Zoned for Mobile) */}
@@ -801,7 +791,41 @@ export default function JumpRopeTraining() {
                 <div className="relative flex-1 flex flex-col justify-between pointer-events-none z-[50] pt-2 pb-0 sm:pt-12 sm:pb-2 px-4">
 
                     {/* TOP ZONE */}
-                    <div className="flex justify-center min-h-[30px] pointer-events-auto">
+                    <div className="flex justify-center min-h-[40px] pointer-events-auto">
+                        {/* 🏆 ADMIN PERSONAL TARGET WIDGET (Top of page as requested) */}
+                        {isAdmin && !isSessionActive && (
+                            <div className="flex items-center gap-2 animate-in slide-in-from-top duration-700">
+                                <div className="flex items-center gap-2 px-4 py-2 rounded-2xl bg-white/[0.03] backdrop-blur-3xl border border-white/10 shadow-2xl group transition-all hover:border-blue-400/30">
+                                    <Trophy size={14} className="text-yellow-400/60 group-hover:scale-110 transition-all" />
+                                    <div className="flex flex-col">
+                                        <span className="text-[7px] font-black text-white/20 uppercase tracking-[0.2em]">{t('smartTraining.jumpsGoal')}</span>
+                                        <input
+                                            type="number"
+                                            value={targetJumps || ''}
+                                            onChange={(e) => setTargetJumps(e.target.value ? parseInt(e.target.value) : null)}
+                                            placeholder="∞"
+                                            className="bg-transparent border-none text-[13px] font-black text-white focus:ring-0 p-0 w-12 placeholder:text-white/20 tabular-nums"
+                                        />
+                                    </div>
+                                </div>
+                                
+                                <button 
+                                    onClick={openTimerPicker}
+                                    className="px-4 py-2 rounded-2xl bg-white/[0.03] backdrop-blur-3xl border border-white/10 shadow-2xl group transition-all hover:bg-white/5 hover:border-blue-400/30 flex items-center gap-3"
+                                >
+                                    <div className="w-8 h-8 rounded-full bg-blue-500/10 flex items-center justify-center text-blue-400/60 group-hover:text-blue-400 transition-all">
+                                        <Clock size={16} />
+                                    </div>
+                                    <div className="flex flex-col items-start translate-y-[1px]">
+                                        <span className="text-[7px] font-black text-white/20 uppercase tracking-[0.2em]">{t('smartTraining.duration')}</span>
+                                        <span className="text-[13px] font-black text-white tabular-nums">
+                                            {String(countdownMins).padStart(2, '0')}:{String(countdownSecs).padStart(2, '0')}
+                                        </span>
+                                    </div>
+                                </button>
+                            </div>
+                        )}
+
                         {!isAdmin && !isRemoteLocked && targetJumps && targetJumps > 0 && (
                             <div className="flex justify-center transition-all animate-in slide-in-from-top duration-500">
                                 <div className="flex items-center gap-3 px-4 py-1.5 rounded-full bg-black/60 backdrop-blur-xl border border-white/5 shadow-xl">
@@ -982,10 +1006,20 @@ export default function JumpRopeTraining() {
                     )}
 
                     {isRemotePaused && (
-                        <div className="absolute inset-0 z-[100] backdrop-blur-2xl flex flex-col items-center justify-center gap-4 text-center pointer-events-auto" style={{ background: 'rgba(10,10,20,0.45)' }}>
-                            <div className="flex flex-col items-center gap-6 px-10 py-10 rounded-[2.5rem] border border-white/10 shadow-2xl" style={{ background: 'rgba(255,255,255,0.04)', backdropFilter: 'blur(40px)' }}>
-                                <Pause size={36} className="text-yellow-400 drop-shadow-[0_0_20px_rgba(250,204,21,0.5)]" fill="currentColor" />
-                                <p className="text-white font-black text-base uppercase tracking-widest">{t('smartTraining.sessionPaused')}</p>
+                        <div 
+                            className="absolute inset-0 z-[100] backdrop-blur-2xl flex flex-col items-center justify-center gap-4 text-center pointer-events-auto cursor-pointer group" 
+                            style={{ background: 'rgba(10,10,20,0.45)' }}
+                            onClick={() => setIsRemotePaused(false)}
+                        >
+                            <div className="flex flex-col items-center gap-6 px-10 py-10 rounded-[2.5rem] border border-white/10 shadow-2xl transition-all group-hover:scale-105 group-active:scale-95" style={{ background: 'rgba(255,255,255,0.04)', backdropFilter: 'blur(40px)' }}>
+                                <div className="relative">
+                                    <Pause size={36} className="text-yellow-400 drop-shadow-[0_0_20px_rgba(250,204,21,0.5)] transition-all group-hover:text-green-400" fill="currentColor" />
+                                    <Play size={20} className="absolute inset-0 m-auto text-black opacity-0 group-hover:opacity-100 transition-opacity" fill="currentColor" />
+                                </div>
+                                <div className="flex flex-col gap-2">
+                                    <p className="text-white font-black text-base uppercase tracking-widest">{t('smartTraining.sessionPaused')}</p>
+                                    <p className="text-white/30 font-black text-[8px] uppercase tracking-[0.3em] animate-pulse">{t('smartTraining.clickToResume')}</p>
+                                </div>
                             </div>
                         </div>
                     )}

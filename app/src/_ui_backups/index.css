@@ -1,34 +1,38 @@
 @import "tailwindcss";
 
 @theme {
-  --font-outfit: "Outfit", sans-serif;
-  --font-arabic: "IBM Plex Sans Arabic", sans-serif;
-  --font-jakarta: "Plus Jakarta Sans", sans-serif;
+  --font-orbitron: "Orbitron", sans-serif;
 
   /* ─── MAIN APP PALETTE (overridden by gym_settings localStorage) ── */
-  --color-primary: #FF6B6B;         /* Signature Coral */
+  --color-primary: #FF6B6B;         /* New Signature Coral      */
   --color-primary-foreground: #ffffff;
-  --color-secondary: #000000;       /* Deep Black */
+  --color-secondary: #000000;       /* Pure Deep Black          */
   --color-secondary-foreground: #ffffff;
-  --color-accent: #FF8E53;          
+  --color-accent: #FF8E53;          /* Vibrant Orange Accent    */
   --color-accent-foreground: #ffffff;
-  --color-background: #050505;      /* Ultra Deep Black */
-  --color-surface: rgba(18, 18, 20, 0.4);   /* Sophisticated Surface */
-  --color-hover: rgba(255, 255, 255, 0.05);
-  --color-hover-border: rgba(255, 255, 255, 0.12);
+  --color-background: #050505;      /* Ultra Deep Black         */
+  --color-surface: rgba(15, 15, 15, 0.6);   /* Glass Surface   */
+  --color-hover: rgba(255, 255, 255, 0.08);
+  --color-hover-border: rgba(255, 255, 255, 0.15);
   --color-input-bg: #0a0a0a;
+
+  /* Jump Rope Pro Palette */
+  --color-jrp-coral: #FF6B6B;
+  --color-jrp-orange: #FF8E53;
+  --color-jrp-blue: #2193b0;
+  --color-jrp-dark: #050505;
 
   --shadow-premium: 0 40px 80px -20px rgba(0, 0, 0, 0.9);
   --shadow-glass: 0 8px 32px 0 rgba(0, 0, 0, 0.9), inset 0 1px 0 rgba(255,255,255,0.06);
   --shadow-glow-primary: 0 0 30px rgba(255,95,109,0.35), 0 0 60px rgba(255,95,109,0.15);
 
-  --radius: 2rem;
+  --radius: 1.5rem;
   --glass-opacity: 0.1;
 
   /* Theme Aware Variables */
   --color-text-base: #ffffff;
-  --color-text-muted: rgba(255, 255, 255, 0.45);
-  --color-surface-border: rgba(255, 255, 255, 0.08);
+  --color-text-muted: rgba(255, 255, 255, 0.4);
+  --color-surface-border: rgba(255, 255, 255, 0.1);
 
   /* Override Tailwind Standard Palette for consistency */
   --color-orange-500: #FF6B6B;
@@ -37,11 +41,11 @@
 }
 
 :root {
-  font-family: 'Outfit', 'IBM Plex Sans Arabic', 'Plus Jakarta Sans', system-ui, sans-serif;
-  line-height: 1.6;
+  font-family: 'Cairo', Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
   font-weight: 400;
 
-  color-scheme: dark;
+  color-scheme: light dark;
   color: var(--color-text-base);
   background-color: var(--color-background);
 
@@ -134,12 +138,11 @@ body {
 ────────────────────────────────────────────────────────────── */
 .glass-card {
   background: var(--color-surface) !important;
-  backdrop-filter: blur(12px) !important;
-  -webkit-backdrop-filter: blur(12px) !important;
+  backdrop-filter: blur(30px) saturate(160%) !important;
+  -webkit-backdrop-filter: blur(30px) saturate(160%) !important;
   border: 1px solid var(--color-hover-border) !important;
   border-radius: var(--radius) !important;
   box-shadow: var(--shadow-glass) !important;
-  transform: translateZ(0);
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
   position: relative;
   overflow: hidden;
@@ -156,12 +159,11 @@ body {
 
 .no-border-card {
   background: var(--color-surface) !important;
-  backdrop-filter: blur(12px) !important;
-  -webkit-backdrop-filter: blur(12px) !important;
+  backdrop-filter: blur(30px) !important;
+  -webkit-backdrop-filter: blur(30px) !important;
   border: none !important;
   border-radius: var(--radius) !important;
   box-shadow: var(--shadow-premium) !important;
-  transform: translateZ(0);
   transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1) !important;
 }
 
@@ -246,9 +248,8 @@ body {
     rgba(167,139,250,0.06) 70%,
     rgba(99,102,241,0.0) 100%
   );
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  transform: translateZ(0);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
 }
 
 /* ───────────────────────────────────────────────────────────────
@@ -615,11 +616,10 @@ aside .nav-footer-icon {
 ────────────────────────────────────────────────────────────── */
 .premium-toast-vibrant {
   background: rgba(8, 8, 30, 0.85) !important;
-  backdrop-filter: blur(10px) !important;
-  -webkit-backdrop-filter: blur(10px) !important;
+  backdrop-filter: blur(24px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(180%) !important;
   border: 1px solid rgba(139, 92, 246, 0.2) !important;
   border-radius: 9999px !important;
-  transform: translateZ(0);
   box-shadow:
     0 25px 50px -12px rgba(0, 0, 0, 0.6),
     inset 0 0 0 1px rgba(255, 255, 255, 0.04),
@@ -641,11 +641,10 @@ aside .nav-footer-icon {
 ────────────────────────────────────────────────────────────── */
 .glass-effect {
   background-color: color-mix(in srgb, var(--card-bg, #04040c), transparent calc(100% - var(--card-opacity, 0.6) * 100%)) !important;
-  backdrop-filter: blur(16px) !important;
-  -webkit-backdrop-filter: blur(16px) !important;
+  backdrop-filter: blur(40px) !important;
+  -webkit-backdrop-filter: blur(40px) !important;
   border: 1px solid var(--card-accent, rgba(139, 92, 246, 0.12)) !important;
   box-shadow: 0 0 100px -20px color-mix(in srgb, var(--card-accent, #6366f1), transparent 60%) !important;
-  transform: translateZ(0);
   transition: all 0.8s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
@@ -687,43 +686,37 @@ aside .nav-footer-icon {
 ────────────────────────────────────────────────────────────── */
 @media (max-width: 768px) {
   .glass-card {
-    backdrop-filter: blur(8px) !important;
-    -webkit-backdrop-filter: blur(8px) !important;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4) !important;
-    transition-duration: 0.1s !important;
+    backdrop-filter: blur(16px) !important;
+    -webkit-backdrop-filter: blur(16px) !important;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5) !important;
+    transition-duration: 0.2s !important;
   }
 
   .glass-card:hover {
-    transform: none !important;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4) !important;
+    transform: scale(0.99) !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3) !important;
   }
 
   .glass-card:active {
-    transform: scale(0.98) !important;
+    transform: scale(0.96) !important;
   }
 
   .sidebar-3d-item:hover { transform: none !important; filter: none !important; }
   .sidebar-3d-item-active { transform: none !important; box-shadow: none !important; }
 
   :root {
-    --shadow-premium: 0 4px 12px rgba(0, 0, 0, 0.4);
-    --shadow-glass: 0 4px 12px rgba(0, 0, 0, 0.4);
+    --shadow-premium: 0 4px 12px rgba(0, 0, 0, 0.3);
     --radius: 1rem;
   }
 
-  * { 
-    transition-duration: 0.1s !important; 
-    will-change: auto !important;
-  }
+  * { transition-duration: 0.15s !important; }
 
   .animate-pulse,
-  .animate-pulse-indigo { animation: none !important; }
+  .animate-pulse-indigo { animation-duration: 4s !important; }
 
   .orb-primary,
   .orb-accent,
-  .orb-small { 
-    display: none !important; 
-  }
+  .orb-small { animation-play-state: paused; }
 }
 
 @media (prefers-reduced-motion: reduce) {

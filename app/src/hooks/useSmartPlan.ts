@@ -230,7 +230,9 @@ export function useSmartPlan() {
             const timeDisplay = formatTime(scheduledStart);
             const jumpsDisplay = targetJumps || '0';
             const minsDisplay = targetTime || '0';
-            const finalMessage = `Coach Maryam sent you a mission starting at ${timeDisplay}. You will do ${jumpsDisplay} jumps and ${minsDisplay} mins.`;
+            
+            // 🛡️ DYNAMIC MESSAGE: Cleaner, more professional notification text
+            const finalMessage = `🚀 New Mission from Coach Maryam: ${jumpsDisplay} jumps & ${minsDisplay} mins starting at ${timeDisplay}. Good luck!`;
 
             // 🛡️ PRE-CONSTRUCT MOCK NOTIFICATION (For zero-latency broadcast)
             const mockNotif = {
@@ -250,8 +252,9 @@ export function useSmartPlan() {
                 title: 'New Mission Target!',
                 message: finalMessage,
                 is_read: false
-            }).then(({ error }) => {
+            }).select('id').maybeSingle().then(({ data, error }) => {
                 if (error) console.warn('Notification DB Insert Error:', error);
+                if (data?.id) mockNotif.id = data.id;
             });
 
             const studentId = await resolveStudentId(studentIdRaw);

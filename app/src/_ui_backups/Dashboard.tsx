@@ -146,15 +146,12 @@ export default function Dashboard() {
                 <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 lg:gap-10 py-6 mb-8 border-b border-white/[0.03]">
                     <div className="flex flex-col gap-4">
                         {/* Greeting Cluster - Vertical Elite Hierarchy */}
-                        <div className="flex flex-col items-start gap-3">
-                            <div className="flex items-center gap-3">
-                                <span className="h-px w-8 bg-primary/40" />
-                                <span className="text-[10px] font-black text-primary/60 uppercase tracking-[0.8em] select-none">
-                                    {t('dashboard.hello')}
-                                </span>
-                            </div>
-                            <h1 className="text-4xl md:text-6xl font-black text-white tracking-tighter uppercase leading-none italic">
-                                <span className="premium-gradient-text drop-shadow-[0_20px_50px_rgba(255,255,255,0.2)]">
+                        <div className="flex flex-col items-start gap-1">
+                            <span className="text-[10px] md:text-[11px] font-black text-white/20 uppercase tracking-[0.8em] leading-none mb-1 select-none">
+                                {t('dashboard.hello')}
+                            </span>
+                            <h1 className="text-3xl md:text-5xl font-black text-white tracking-tighter uppercase leading-none italic">
+                                <span className="premium-gradient-text drop-shadow-[0_15px_40px_rgba(255,255,255,0.3)]">
                                     {firstName}
                                 </span>
                             </h1>

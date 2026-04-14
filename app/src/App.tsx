@@ -101,18 +101,18 @@ const PageLoader = ({ name }: { name?: string }) => {
       </div>
 
       <div className="flex flex-col items-center animate-in fade-in zoom-in-95 duration-1000">
-        <div className="flex flex-col items-center gap-1 font-[var(--font-orbitron)] uppercase leading-none mb-4">
-            <span className="text-[32px] sm:text-[52px] font-black tracking-[0.3em] text-white drop-shadow-[0_0_40px_rgba(255,255,255,0.4)]">SKIPPY</span>
+        <div className="flex flex-col items-center gap-2 font-[var(--font-outfit)] uppercase leading-none mb-4">
+            <span className="text-[32px] sm:text-[52px] font-black tracking-[0.2em] text-white drop-shadow-[0_0_40px_rgba(255,255,255,0.4)] italic">SKIPPY</span>
             <div className="flex items-center gap-4 mt-2">
                 <div className="w-12 h-px bg-gradient-to-r from-transparent via-primary to-transparent" />
-                <span className="text-[12px] sm:text-[16px] font-black tracking-[0.8em] text-primary">TOES Q8</span>
+                <span className="text-[12px] sm:text-[14px] font-black tracking-[0.6em] text-primary">TOES Q8</span>
                 <div className="w-12 h-px bg-gradient-to-r from-transparent via-primary to-transparent" />
             </div>
         </div>
         <div className="overflow-hidden w-48 h-[1px] bg-white/5 relative mt-6">
             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-primary to-transparent animate-shimmer" />
         </div>
-        <p className="text-[10px] sm:text-[12px] font-black text-white/10 uppercase tracking-[0.8em] mt-6 animate-pulse">Intelligence Loading</p>
+        <p className="text-[9px] sm:text-[10px] font-black text-white/10 uppercase tracking-[0.8em] mt-8 animate-pulse italic">Intelligence Loading</p>
       </div>
 
       <style>{`

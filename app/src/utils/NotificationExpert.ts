@@ -169,6 +169,33 @@ export const NotificationExpert = {
     },
 
     /**
+     * NUCLEAR: Diagnostic Check
+     * Returns a full health report of the notification system.
+     */
+    checkDiagnostic: async () => {
+        const report = {
+            supported: NotificationExpert.isSupported(),
+            permission: Notification.permission,
+            swActive: false,
+            pushSubscription: false,
+            localStorage: !!localStorage.getItem('elite_push_active'),
+            ua: navigator.userAgent
+        };
+
+        if (report.supported) {
+            try {
+                const reg = await navigator.serviceWorker.ready;
+                report.swActive = !!reg;
+                const sub = await reg.pushManager.getSubscription();
+                report.pushSubscription = !!sub;
+            } catch (e) {
+                console.error('Diagnostic error:', e);
+            }
+        }
+        return report;
+    },
+
+    /**
      * Conversion Utility
      */
     urlBase64ToUint8Array: (base64String: string) => {

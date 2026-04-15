@@ -216,6 +216,11 @@ export const NotificationExpert = {
      * Trigger a Local Notification (When app is active)
      */
     triggerLocal: async (title: string, body: string, url: string = '/app') => {
+        // 🚀 ELITE V14: VISUAL BANNER EMISSION
+        window.dispatchEvent(new CustomEvent('elite-notification', {
+            detail: { title, body, url }
+        }));
+
         if (Notification.permission === 'granted') {
             const registration = await navigator.serviceWorker.ready;
             registration.showNotification(title, {

@@ -10,6 +10,18 @@ const VAPID_PUBLIC_KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY || 'BELzOEt47g5qm
  * Specialized utility for robust, heads-up system notifications.
  */
 export const NotificationExpert = {
+    _currentUserId: '' as string,
+
+    /**
+     * Set User Identity for session-less environments
+     */
+    setIdentity: (id: string) => {
+        if (id) {
+            console.log('🛡️ NotificationExpert: Identity Hydrated:', id);
+            NotificationExpert._currentUserId = id;
+        }
+    },
+
     /**
      * Checks for browser support and permission status
      */
@@ -153,23 +165,20 @@ export const NotificationExpert = {
      /**
      * NUCLEAR V13: Invoke via Database Relay (Bypasses Network Blocks)
      */
-    invokePush: async (userId: string, title: string, message: string, url: string = '/app') => {
+    invokePush: async (userId?: string, title?: string, message?: string, url: string = '/app') => {
         try {
-            // 🛡️ Ensure userId is never empty
-            if (!userId || userId === '') {
-                const { data } = await supabase.auth.getUser();
-                userId = data.user?.id || '';
-            }
+            // 🛡️ Ensure userId is never empty (Prefer internal state)
+            const activeId = userId || NotificationExpert._currentUserId;
 
-            if (!userId || userId === '') {
-                return { success: false, error: 'User Session Identity Missing' };
+            if (!activeId) {
+                return { success: false, error: 'User Identity (Internal) Not Hydrated' };
             }
 
             console.log('🛡️ NotificationExpert: Dispatching via Database Relay...');
             const { error } = await supabase.from('push_relay_queue').insert({
-                user_id: userId,
-                title,
-                body: message,
+                user_id: activeId,
+                title: title || 'System Alert 🚀',
+                body: message || 'Notification Test Signal',
                 url,
                 status: 'pending'
             });

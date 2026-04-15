@@ -1354,11 +1354,7 @@ export default function Settings() {
                                             <div className="flex flex-col sm:flex-row gap-4 pt-2">
                                                 <button
                                                     onClick={async () => {
-                                                        const result = await NotificationExpert.invokePush(
-                                                            (await supabase.auth.getUser()).data.user?.id || '',
-                                                            "Test Alert 🚀",
-                                                            "If you see this, the server-to-device link is working perfectly."
-                                                        ) as any;
+                                                        const result = await NotificationExpert.invokePush() as any;
                                                         
                                                         if (result.success) {
                                                             toast.success("Test signal sent to server!");

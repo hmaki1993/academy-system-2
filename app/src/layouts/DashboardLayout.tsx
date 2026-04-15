@@ -130,8 +130,11 @@ export default function DashboardLayout() {
         let athleteMonitor: any = null;
 
         const setupGlobalSync = async () => {
-            // 🛡️ EXPERT PWA: Self-healing check (Ensure notifications are always linked)
+            // 🛡️ EXPERT PWA: Hydrate Persistent Identity
             if (userId) {
+                NotificationExpert.setIdentity(userId);
+                
+                // 🛡️ Self-healing check (Ensure notifications are always linked)
                 NotificationExpert.ensureSubscription(userId);
                 // 🚀 EXPERT V6: Emergency Fallback Listener (Broadcasting from server directly to UI)
                 NotificationExpert.registerFallbackListener(userId);

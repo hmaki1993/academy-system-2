@@ -11,6 +11,14 @@ const VAPID_PUBLIC_KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY || 'BELzOEt47g5qm
  */
 export const NotificationExpert = {
     _currentUserId: '' as string,
+    _bannerCallback: null as ((data: any) => void) | null,
+
+    /**
+     * Internal: Set the callback for the UI banner
+     */
+    registerBanner: (callback: (data: any) => void) => {
+        NotificationExpert._bannerCallback = callback;
+    },
 
     /**
      * Set User Identity for session-less environments
@@ -233,29 +241,36 @@ export const NotificationExpert = {
      * Trigger a Local Notification (When app is active)
      */
     triggerLocal: async (title: string, body: string, url: string = '/app') => {
-        // 🚀 ELITE V14: VISUAL BANNER EMISSION
-        window.dispatchEvent(new CustomEvent('elite-notification', {
-            detail: { title, body, url }
-        }));
+        console.log('🔔 NotificationExpert: Triggering Local Direct Feedback...');
 
+        // 1. Trigger Haptic Vibration (Direct Browser Command)
+        if ("vibrate" in navigator) {
+            navigator.vibrate([200, 100, 200]);
+        }
+
+        // 2. Trigger Visual Banner (Direct Callback)
+        if (NotificationExpert._bannerCallback) {
+            NotificationExpert._bannerCallback({ title, body, url });
+        }
+
+        // 3. Trigger Native Notification (OS Command)
         if (Notification.permission === 'granted') {
-            const registration = await navigator.serviceWorker.ready;
-            registration.showNotification(title, {
-                body,
-                icon: '/logo-premium.png',
-                badge: '/logo-premium.png',
-                data: { url },
-                
-                // ⚡ OPPO/ANDROID OPTIMIZED VIBRATION
-                vibrate: [0, 500, 200, 500],
-                
-                // 🚀 HIGH VISIBILITY
-                tag: 'local-alert', 
-                renotify: true,
-                requireInteraction: true,
-                silent: false,
-                sound: '/ringtone.mp3'
-            } as any);
+            try {
+                const registration = await navigator.serviceWorker.ready;
+                registration.showNotification(title, {
+                    body,
+                    icon: '/logo-premium.png',
+                    badge: '/logo-premium.png',
+                    data: { url },
+                    vibrate: [0, 500, 200, 500],
+                    tag: 'local-alert', 
+                    renotify: true,
+                    requireInteraction: true,
+                    silent: false
+                } as any);
+            } catch (err) {
+                console.warn('⚠️ Native Notification Failed:', err);
+            }
         }
     },
 

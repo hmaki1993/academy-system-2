@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { gsap } from 'gsap';
 import { X, CheckCircle } from 'lucide-react';
+import { NotificationExpert } from '../utils/NotificationExpert';
 
 interface NotificationData {
     title: string;
@@ -14,23 +15,25 @@ export const EliteNotificationBanner: React.FC = () => {
     const timerRef = useRef<NodeJS.Timeout | null>(null);
 
     useEffect(() => {
-        const handleEvent = (e: any) => {
-            const data = e.detail;
-            console.log('🔔 ELITE BANNER: Signal Received!', data);
+        // 🚀 ELITE V17: DIRECT REGISTRATION
+        // Bypasses the event loop for 100% reliability
+        NotificationExpert.registerBanner((data: NotificationData) => {
+            console.log('🔔 ELITE BANNER: Direct Signal Received!', data);
             setNotification(data);
-        };
-
-        window.addEventListener('elite-notification', handleEvent);
-        return () => window.removeEventListener('elite-notification', handleEvent);
+        });
     }, []);
 
     // 🚀 TRIGGER ANIMATION ON STATE CHANGE
     useEffect(() => {
         if (notification && bannerRef.current) {
             console.log('🎬 ELITE BANNER: Starting Animation...');
+            
+            // Kill any concurrent animations
+            gsap.killTweensOf(bannerRef.current);
+            
             gsap.fromTo(bannerRef.current, 
-                { y: -100, opacity: 0, scale: 0.9 },
-                { y: 0, opacity: 1, scale: 1, duration: 0.8, ease: "back.out(1.7)" }
+                { y: -120, opacity: 0, scale: 0.8 },
+                { y: 0, opacity: 1, scale: 1, duration: 0.8, ease: "back.out(1.5)" }
             );
 
             // Auto-hide after 6 seconds
@@ -46,6 +49,7 @@ export const EliteNotificationBanner: React.FC = () => {
             gsap.to(bannerRef.current, {
                 y: -150,
                 opacity: 0,
+                scale: 0.9,
                 duration: 0.5,
                 ease: "power2.in",
                 onComplete: () => setNotification(null)
@@ -59,25 +63,26 @@ export const EliteNotificationBanner: React.FC = () => {
 
     return (
         <div 
-            className="fixed top-4 left-0 right-0 z-[99999] flex justify-center px-4 pointer-events-none"
+            className="fixed top-2 left-0 right-0 z-[999999] flex justify-center px-4 pointer-events-none"
+            style={{ perspective: '1000px' }}
         >
             <div 
                 ref={bannerRef}
                 onClick={() => {
                     if (notification.url) window.location.href = notification.url;
                 }}
-                className="pointer-events-auto w-full max-w-md bg-black/60 backdrop-blur-2xl border border-white/10 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] p-4 flex items-center gap-4 cursor-pointer group hover:bg-black/70 transition-colors"
-                style={{ opacity: 0, transform: 'translateY(-100px)' }}
+                className="pointer-events-auto w-full max-w-md bg-black/80 backdrop-blur-3xl border border-white/20 rounded-2xl shadow-[0_30px_60px_-12px_rgba(0,0,0,0.7)] p-5 flex items-center gap-4 cursor-pointer group hover:bg-black/90 transition-all border-b-emerald-500/50"
+                style={{ opacity: 0, transform: 'translateY(-120px)' }}
             >
-                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500/20 to-emerald-500/5 flex items-center justify-center border border-emerald-500/20">
-                    <CheckCircle className="w-6 h-6 text-emerald-500 animate-pulse" />
+                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center shadow-[0_0_20px_rgba(16,185,129,0.3)]">
+                    <CheckCircle className="w-8 h-8 text-white animate-bounce" />
                 </div>
                 
                 <div className="flex-1 min-w-0">
-                    <h4 className="text-[11px] font-black text-white/90 uppercase tracking-widest truncate">
+                    <h4 className="text-[12px] font-black text-white uppercase tracking-[0.2em] truncate">
                         {notification.title}
                     </h4>
-                    <p className="text-[10px] text-white/50 leading-relaxed line-clamp-2 mt-0.5">
+                    <p className="text-[11px] text-white/70 leading-relaxed line-clamp-2 mt-1 font-medium">
                         {notification.body}
                     </p>
                 </div>
@@ -87,13 +92,13 @@ export const EliteNotificationBanner: React.FC = () => {
                         e.stopPropagation();
                         hideNotification();
                     }}
-                    className="p-2 hover:bg-white/5 rounded-full text-white/20 hover:text-white/60 transition-colors"
+                    className="p-2.5 hover:bg-white/10 rounded-xl text-white/30 hover:text-white transition-all active:scale-95"
                 >
-                    <X className="w-4 h-4" />
+                    <X className="w-5 h-5" />
                 </button>
 
                 {/* ANIMATED SCANLINE */}
-                <div className="absolute bottom-0 left-0 h-[1px] bg-gradient-to-r from-transparent via-emerald-500/50 to-transparent w-full" />
+                <div className="absolute bottom-0 left-0 h-[2px] bg-gradient-to-r from-transparent via-emerald-400 to-transparent w-full opacity-50" />
             </div>
         </div>
     );

@@ -27,6 +27,7 @@ import { LogoEditorModal, MediaLibraryModal } from './components/Modals';
 import { SubscriptionPlansManager } from './components/SubscriptionPlansManager';
 import PaletteImportModal from '../../components/PaletteImportModal';
 import PageHeader from '../../components/PageHeader';
+import { NotificationExpert } from '../../utils/NotificationExpert';
 
 
 
@@ -99,6 +100,21 @@ export default function Settings() {
     const [loading, setLoading] = useState(false);
     const [profileLoading, setProfileLoading] = useState(false);
     const [passwordLoading, setPasswordLoading] = useState(false);
+
+    // Notification Diagnostics
+    const [notifDiagnostic, setNotifDiagnostic] = useState<any>(null);
+    const [isRepairing, setIsRepairing] = useState(false);
+
+    const runDiagnostic = async () => {
+        const report = await NotificationExpert.checkDiagnostic();
+        setNotifDiagnostic(report);
+    };
+
+    useEffect(() => {
+        if (activeTab === 'notifications') {
+            runDiagnostic();
+        }
+    }, [activeTab]);
 
     useEffect(() => {
         if (secretClicks > 0) {
@@ -1265,21 +1281,110 @@ export default function Settings() {
                                             <PremiumSwitch
                                                 label={t('settings.browserPush', 'Browser Notifications')}
                                                 checked={draftSettings.notify_browser_push || false}
-                                                onChange={(val) => {
+                                                onChange={async (val) => {
                                                     if (val) {
-                                                        Notification.requestPermission().then(permission => {
-                                                            if (permission === 'granted') {
-                                                                setDraftSettings({ ...draftSettings, notify_browser_push: true });
-                                                                new Notification("Notifications Enabled", { body: "You will now receive desktop alerts." });
-                                                            } else {
-                                                                toast.error("Permission denied. Enable in browser settings.");
-                                                            }
-                                                        });
+                                                        const success = await NotificationExpert.subscribe(userData.email || 'user');
+                                                        if (success) {
+                                                            setDraftSettings({ ...draftSettings, notify_browser_push: true });
+                                                            toast.success("Notification Link Established!");
+                                                            runDiagnostic();
+                                                        }
                                                     } else {
                                                         setDraftSettings({ ...draftSettings, notify_browser_push: false });
+                                                        localStorage.removeItem('elite_push_active');
                                                     }
                                                 }}
                                             />
+                                        </div>
+
+                                        {/* EXPERT DIAGNOSTICS SECTION */}
+                                        <div className="pt-8 border-t border-white/5 space-y-6">
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex flex-col">
+                                                    <h3 className="text-[10px] font-black text-amber-500 uppercase tracking-[0.3em]">
+                                                        Diagnostic Hub
+                                                    </h3>
+                                                    <p className="text-[8px] text-white/30 font-bold uppercase tracking-tight mt-1">
+                                                        Troubleshoot background notification failures
+                                                    </p>
+                                                </div>
+                                                <button 
+                                                    onClick={runDiagnostic}
+                                                    className="p-2 bg-white/5 hover:bg-white/10 rounded-lg transition-all"
+                                                >
+                                                    <RefreshCw className={`w-3 h-3 text-white/40 ${isRepairing ? 'animate-spin' : ''}`} />
+                                                </button>
+                                            </div>
+
+                                            {notifDiagnostic && (
+                                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                                                    <div className="p-3 bg-white/[0.02] rounded-xl border border-white/[0.05]">
+                                                        <span className="text-[7px] text-white/20 font-black uppercase block mb-1">Permission</span>
+                                                        <span className={`text-[9px] font-black uppercase ${notifDiagnostic.permission === 'granted' ? 'text-emerald-500' : 'text-rose-500'}`}>
+                                                            {notifDiagnostic.permission}
+                                                        </span>
+                                                    </div>
+                                                    <div className="p-3 bg-white/[0.02] rounded-xl border border-white/[0.05]">
+                                                        <span className="text-[7px] text-white/20 font-black uppercase block mb-1">Service Worker</span>
+                                                        <span className={`text-[9px] font-black uppercase ${notifDiagnostic.swActive ? 'text-emerald-500' : 'text-rose-500'}`}>
+                                                            {notifDiagnostic.swActive ? 'Active' : 'Offline'}
+                                                        </span>
+                                                    </div>
+                                                    <div className="p-3 bg-white/[0.02] rounded-xl border border-white/[0.05]">
+                                                        <span className="text-[7px] text-white/20 font-black uppercase block mb-1">Push Signal</span>
+                                                        <span className={`text-[9px] font-black uppercase ${notifDiagnostic.pushSubscription ? 'text-emerald-500' : 'text-rose-500'}`}>
+                                                            {notifDiagnostic.pushSubscription ? 'Connected' : 'Broken'}
+                                                        </span>
+                                                    </div>
+                                                    <div className="p-3 bg-white/[0.02] rounded-xl border border-white/[0.05]">
+                                                        <span className="text-[7px] text-white/20 font-black uppercase block mb-1">Local Flag</span>
+                                                        <span className={`text-[9px] font-black uppercase ${notifDiagnostic.localStorage ? 'text-emerald-500' : 'text-rose-500'}`}>
+                                                            {notifDiagnostic.localStorage ? 'Verified' : 'Missing'}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            <div className="flex flex-col sm:flex-row gap-4 pt-2">
+                                                <button
+                                                    onClick={async () => {
+                                                        const success = await NotificationExpert.invokePush(
+                                                            (await supabase.auth.getUser()).data.user?.id || '',
+                                                            "Test Alert 🚀",
+                                                            "If you see this, the server-to-device link is working perfectly."
+                                                        );
+                                                        if (success) toast.success("Test signal sent to server!");
+                                                    }}
+                                                    className="flex-1 py-3 px-4 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-[9px] font-black text-white/60 hover:text-white uppercase tracking-widest transition-all"
+                                                >
+                                                    Send Test Notification
+                                                </button>
+                                                <button
+                                                    onClick={async () => {
+                                                        setIsRepairing(true);
+                                                        const user = (await supabase.auth.getUser()).data.user;
+                                                        if (user) {
+                                                            await NotificationExpert.repair(user.id);
+                                                            runDiagnostic();
+                                                        }
+                                                        setIsRepairing(false);
+                                                    }}
+                                                    disabled={isRepairing}
+                                                    className="flex-1 py-3 px-4 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 text-[9px] font-black text-rose-400 hover:text-rose-300 uppercase tracking-widest transition-all flex items-center justify-center gap-2"
+                                                >
+                                                    {isRepairing ? <Loader2 className="w-3 h-3 animate-spin" /> : <ShieldCheck className="w-3 h-3" />}
+                                                    Nuclear Repair
+                                                </button>
+                                            </div>
+
+                                            {notifDiagnostic?.pushToken && (
+                                                <div className="p-3 bg-black/40 rounded-xl border border-white/5 overflow-hidden">
+                                                    <span className="text-[6px] text-white/10 font-black uppercase block mb-1">Hardware Token Fingerprint</span>
+                                                    <code className="text-[7px] text-white/20 font-mono break-all leading-tight italic">
+                                                        {notifDiagnostic.pushToken}
+                                                    </code>
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
                                 </div>

@@ -141,6 +141,28 @@ function AppContent() {
     }
   }, [i18n, i18n?.language]);
 
+  // ☢️ CACHE BREAKER: SW Update Detection
+  useEffect(() => {
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.ready.then(registration => {
+        registration.addEventListener('updatefound', () => {
+          const newWorker = registration.installing;
+          if (newWorker) {
+            newWorker.addEventListener('statechange', () => {
+              if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                // New content is available and will be used when all tabs are closed
+                // But we want to FORCE it now for the Nuclear fix.
+                console.log('☢️ CacheBreaker: New version detected. Force reloading...');
+                toast.success("Strategic Update Received! Syncing...", { icon: '🚀' });
+                setTimeout(() => window.location.reload(), 1500);
+              }
+            });
+          }
+        });
+      });
+    }
+  }, []);
+
   return (
     <CallProvider currentUserId={userProfile?.id}>
       <Router>

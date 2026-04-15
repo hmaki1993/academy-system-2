@@ -178,6 +178,7 @@ export const NotificationExpert = {
             permission: Notification.permission,
             swActive: false,
             pushSubscription: false,
+            pushToken: '',
             localStorage: !!localStorage.getItem('elite_push_active'),
             ua: navigator.userAgent
         };
@@ -188,11 +189,47 @@ export const NotificationExpert = {
                 report.swActive = !!reg;
                 const sub = await reg.pushManager.getSubscription();
                 report.pushSubscription = !!sub;
+                if (sub) {
+                    report.pushToken = sub.endpoint.split('/').pop() || 'TOKEN_ACTIVE';
+                }
             } catch (e) {
                 console.error('Diagnostic error:', e);
             }
         }
         return report;
+    },
+
+    /**
+     * NUCLEAR REPAIR: Hard Reset Notifications
+     * Unregisters SW, clears tokens, and starts over.
+     */
+    repair: async (userId: string) => {
+        try {
+            console.log('🛡️ NotificationExpert: Starting Nuclear Repair...');
+            
+            // 1. Unregister all service workers
+            const registrations = await navigator.serviceWorker.getRegistrations();
+            for (const registration of registrations) {
+                await registration.unregister();
+            }
+
+            // 2. Clear local storage flags
+            localStorage.removeItem('elite_push_active');
+            
+            // 3. Re-subscribe
+            const success = await NotificationExpert.subscribe(userId);
+            
+            if (success) {
+                toast.success('تم إصلاح نظام التنبيهات بنجاح! جرب الآن.');
+            } else {
+                toast.error('فشل الإصلاح التلقائي. يرجى مراجعة إعدادات Chrome.');
+            }
+            return success;
+        } catch (error) {
+            console.error('🛡️ NotificationExpert: Repair failed:', error);
+            toast.error('حدث خطأ أثناء محاولة الإصلاح.');
+            return false;
+        }
     },
 
     /**

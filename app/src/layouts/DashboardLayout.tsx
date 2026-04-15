@@ -394,7 +394,13 @@ export default function DashboardLayout() {
         { to: '/app/strategy-hub', icon: Sparkles, label: t('common.strategyHub', 'Strategy Hub'), roles: ['admin', 'head_coach', 'coach'] },
         { to: '/app/smart-training', icon: Activity, label: t('common.smartTraining', 'AI Camera Tracker'), roles: ['admin', 'head_coach', 'coach', 'student'] },
         { to: '/app/video-library', icon: Film, label: t('common.videoLibrary'), roles: ['admin', 'head_coach', 'coach', 'student'] },
-        { to: '/app/settings', icon: Settings, label: t('common.settings'), roles: ['admin', 'head_coach', 'coach', 'reception', 'student'] },
+        { 
+            to: '/app/settings', 
+            icon: Settings, 
+            label: t('common.settings'), 
+            roles: ['admin', 'head_coach', 'coach', 'reception', 'student'],
+            className: isExpertActive ? 'text-amber-500' : '' 
+        },
     ];
 
     const navItems = allNavItems.filter(item => normalizedRole && item.roles.includes(normalizedRole));
@@ -438,6 +444,8 @@ export default function DashboardLayout() {
             setNotificationsOpen(false);
         } catch (e) { }
     };
+
+    const isExpertActive = !!localStorage.getItem('elite_push_active');
 
     return (
         <div className="fixed inset-0 w-full flex bg-background font-cairo overflow-hidden">
@@ -497,6 +505,7 @@ export default function DashboardLayout() {
                                     to={item.to}
                                     onClick={() => setSidebarOpen(false)}
                                 className={`relative group w-full flex items-center p-4 transition-all duration-500 
+                                    ${(item as any).className || ''}
                                     ${isActive 
                                         ? 'bg-white/5 border-l-2 border-primary text-white shadow-[inset_10px_0_30px_-10px_rgba(239,68,68,0.05)]' 
                                         : 'text-white/20 hover:text-white hover:bg-white/[0.03] hover:translate-x-1'}`}
@@ -533,6 +542,17 @@ export default function DashboardLayout() {
                             <LogOut className="w-5 h-5 shrink-0" />
                             {isHoveringSidebar && <span className="font-black uppercase tracking-[0.3em] text-[10px] whitespace-nowrap">{t('common.logout')}</span>}
                         </button>
+
+                        {/* VERSION MARKER (CACHING VERIFICATION) */}
+                        <div className={`mt-auto pt-4 border-t border-white/5 transition-opacity duration-700 ${isHoveringSidebar ? 'opacity-100' : 'opacity-0'}`}>
+                            <span className="text-[7px] font-black text-white/10 uppercase tracking-[0.2em] block">System Health</span>
+                            <div className="flex items-center gap-2 mt-1">
+                                <div className={`w-1.5 h-1.5 rounded-full animate-pulse ${isExpertActive ? 'bg-emerald-500/80 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-rose-500/80 shadow-[0_0_8px_rgba(244,63,94,0.5)]'}`} />
+                                <span className={`text-[8px] font-black tracking-widest ${isExpertActive ? 'text-emerald-500/40' : 'text-rose-500/40'}`}>
+                                    V-NUCLEAR-4.2
+                                </span>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -619,6 +639,24 @@ export default function DashboardLayout() {
                             <LogOut className="w-3 h-3" />
                             {t('common.logout')}
                         </button>
+                    </div>
+
+                    {/* MOBILE VERSION MARKER */}
+                    <div className="mt-8 pt-6 border-t border-white/5">
+                        <div className="flex items-center justify-between">
+                            <div className="space-y-1">
+                                <span className="text-[8px] font-black text-white/10 uppercase tracking-[0.2em] block">PWA Core Status</span>
+                                <div className="flex items-center gap-3">
+                                    <div className={`w-2 h-2 rounded-full animate-pulse ${isExpertActive ? 'bg-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.4)]' : 'bg-rose-500 shadow-[0_0_15px_rgba(244,63,94,0.4)]'}`} />
+                                    <span className={`text-[10px] font-black tracking-[0.2em] ${isExpertActive ? 'text-emerald-500/60' : 'text-rose-500/60'}`}>
+                                        V-NUCLEAR-4.2
+                                    </span>
+                                </div>
+                            </div>
+                            <div className="px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-[7px] font-black text-white/20 uppercase tracking-widest text-center">
+                                OPPO-OPT-V1
+                            </div>
+                        </div>
                     </div>
                 </div>
             </aside>

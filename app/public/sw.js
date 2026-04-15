@@ -1,4 +1,4 @@
-// 🛡️ EXPERT PWA PERSISTENCE: Immediate Activation
+// 🛡️ EXPERT PWA PERSISTENCE: Immediate Activation (V-NUCLEAR-4.2)
 self.addEventListener('install', (event) => {
     self.skipWaiting();
 });
@@ -7,7 +7,17 @@ self.addEventListener('activate', (event) => {
     event.waitUntil(self.clients.claim());
 });
 
+/**
+ * PING SYSTEM: Verification of Life
+ */
+self.addEventListener('message', (event) => {
+    if (event.data && event.data.type === 'PING') {
+        event.source.postMessage({ type: 'PONG', version: 'V4.1-Nuclear', timestamp: Date.now() });
+    }
+});
+
 self.addEventListener('push', (event) => {
+    console.log('🛡️ SW: Incoming Push Event...');
     const data = event.data ? event.data.json() : {};
     const title = data.title || 'تنبيه من الأكاديمية';
     
@@ -30,8 +40,9 @@ self.addEventListener('push', (event) => {
         sound: '/ringtone.mp3', // Absolute path
         timestamp: Date.now(),
         
-        // 📐 ANDROID CHANNELS / IMPORTANCE
+        // 📐 ANDROID CHANNELS / IMPORTANCE / URGENCY
         priority: 2, 
+        urgency: 'high',
         
         // 🛠️ ACTIONS
         actions: [

@@ -634,6 +634,11 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
             setSettings(finalSettings);
             setHasLoaded(true);
         } catch (error: any) {
+            // 🛡️ SILENT ABORT: Ignore cancellation errors (common during clear-data or logouts)
+            if (error.name === 'AbortError' || error.message?.includes('aborted')) {
+                console.log('🛡️ ThemeContext: Sync signal aborted (expected during reset/logout)');
+                return;
+            }
             console.error('Error fetching theme settings:', error);
             toast.error(`Theme Engine Error: ${error.message || 'Unknown error'}`);
         } finally {

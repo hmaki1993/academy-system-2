@@ -498,7 +498,8 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
         if (isLoading && retryCount === 0 && hasLoaded) return; 
         
         try {
-            setIsLoading(true);
+            // Only show loader on the very first load or if explicitly forced
+            if (!hasLoaded) setIsLoading(true);
             console.log('📥 Fetching global gym settings...');
             const { data: globalData, error: globalError } = await supabase
                 .from('gym_settings')

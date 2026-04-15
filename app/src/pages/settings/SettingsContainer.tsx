@@ -1408,6 +1408,24 @@ export default function Settings() {
                                                     </code>
                                                 </div>
                                             )}
+
+                                            {/* 🚀 CACHE BREAKER BUTTON */}
+                                            <div className="flex flex-col gap-2 pt-2 border-t border-white/5 mt-2">
+                                                <div className="flex justify-between items-center px-1">
+                                                    <span className="text-[6px] text-white/10 font-black uppercase tracking-widest">Diagnostic Meta</span>
+                                                    <span className="text-[6px] text-emerald-500/30 font-mono italic">{notifDiagnostic?.version || 'v1-legacy'}</span>
+                                                </div>
+                                                <button
+                                                    onClick={() => {
+                                                        localStorage.clear();
+                                                        toast.success("Clearing storage...");
+                                                        setTimeout(() => window.location.reload(), 1000);
+                                                    }}
+                                                    className="w-full py-2 px-4 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 text-[7px] font-black text-rose-500/60 uppercase tracking-widest transition-all"
+                                                >
+                                                    Force Clean Reload
+                                                </button>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>

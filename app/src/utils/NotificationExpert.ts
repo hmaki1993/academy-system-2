@@ -155,6 +155,16 @@ export const NotificationExpert = {
      */
     invokePush: async (userId: string, title: string, message: string, url: string = '/app') => {
         try {
+            // 🛡️ Ensure userId is never empty
+            if (!userId || userId === '') {
+                const { data } = await supabase.auth.getUser();
+                userId = data.user?.id || '';
+            }
+
+            if (!userId || userId === '') {
+                return { success: false, error: 'User Session Identity Missing' };
+            }
+
             console.log('🛡️ NotificationExpert: Dispatching via Database Relay...');
             const { error } = await supabase.from('push_relay_queue').insert({
                 user_id: userId,

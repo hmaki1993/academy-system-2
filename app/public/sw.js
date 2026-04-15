@@ -11,25 +11,26 @@ self.addEventListener('push', (event) => {
     const data = event.data ? event.data.json() : {};
     const title = data.title || 'تنبيه من الأكاديمية';
     
-    // 🛡️ OPPO/ANDROID OPTIMIZED NOTIFICATION
+    // 🛡️ V4 EXPERT: MAXIMUM URGENCY (Oppo/Android Force)
     const options = {
         body: data.message || 'لديك رسالة جديدة. افتح التطبيق للمتابعة.',
         icon: '/logo-premium.png',
         badge: '/logo-premium.png',
         data: data.url || '/',
         
-        // ⚡ SIMPLIFIED VIBRATION (More compatible with Oppo/ColorOS)
-        vibrate: [0, 500, 200, 500],
+        // ⚡ INTENSE TACTICAL VIBRATION (3 long pulse pattern)
+        vibrate: [0, 500, 150, 500, 150, 500],
         
-        // 🚀 HIGH VISIBILITY SETTINGS
-        tag: 'academy-alert', // Constant tag ensures it overwrites and stays visible
+        // 🚀 HEADS-UP FORCE: Dynamic Tagging
+        // Using a unique tag for each message FORCES the OS to drop down the banner again.
+        tag: `mission-${Date.now()}`, 
         renotify: true,
         requireInteraction: true, 
         silent: false, 
-        sound: '/ringtone.mp3', // Ensure absolute path starting with /
+        sound: '/ringtone.mp3', // Absolute path
         timestamp: Date.now(),
         
-        // Android specific priority/importance
+        // 📐 ANDROID CHANNELS / IMPORTANCE
         priority: 2, 
         
         // 🛠️ ACTIONS

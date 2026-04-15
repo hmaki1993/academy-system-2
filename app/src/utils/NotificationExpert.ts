@@ -118,6 +118,32 @@ export const NotificationExpert = {
     },
 
     /**
+     * TACTICAL: Notify conversation participants (except sender)
+     */
+    notifyReceiver: async (convoId: string, senderId: string, title: string, message: string, url: string = '/app') => {
+        try {
+            // Find other participants
+            const { data: participants, error } = await supabase
+                .from('conversation_participants')
+                .select('user_id')
+                .eq('conversation_id', convoId)
+                .neq('user_id', senderId);
+
+            if (error) throw error;
+            if (!participants || participants.length === 0) return;
+
+            console.log(`🛡️ NotificationExpert: Dispatched push to ${participants.length} participants.`);
+
+            // Parallel dispatch to all participants
+            await Promise.all(participants.map(p => 
+                NotificationExpert.invokePush(p.user_id, title, message, url)
+            ));
+        } catch (err) {
+            console.warn('🛡️ NotificationExpert: Combined notify failed:', err);
+        }
+    },
+
+    /**
      * Trigger a Local Notification (When app is active)
      */
     triggerLocal: async (title: string, body: string, url: string = '/app') => {

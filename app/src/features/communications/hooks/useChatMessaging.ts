@@ -3,6 +3,7 @@ import { supabase } from '../../../lib/supabase';
 import { Message, Profile, Conversation } from '../types';
 import toast from 'react-hot-toast';
 import imageCompression from 'browser-image-compression';
+import { NotificationExpert } from '../../../utils/NotificationExpert';
 
 export const useChatMessaging = (currentUserId: string | undefined, activeConvo: Conversation | null) => {
     const [messages, setMessages] = useState<Message[]>([]);
@@ -157,6 +158,16 @@ export const useChatMessaging = (currentUserId: string | undefined, activeConvo:
                 .eq('id', activeConvo.id);
 
             playMessageSentSound();
+
+            // 🛡️ BACKGROUND PUSH: Trigger server-side alert for offline recipients
+            NotificationExpert.notifyReceiver(
+                activeConvo.id,
+                currentUserId,
+                `رسالة جديدة: ${activeConvo.name || 'الأكاديمية'}`,
+                text.length > 50 ? text.substring(0, 47) + '...' : text,
+                `/app/communications?id=${activeConvo.id}`
+            );
+
             return true;
         } catch (err) {
             toast.error('Failed to send message');
@@ -213,6 +224,15 @@ export const useChatMessaging = (currentUserId: string | undefined, activeConvo:
             await supabase.from('messages').insert(messagesToInsert);
             await supabase.from('conversations').update({ updated_at: new Date().toISOString() }).eq('id', activeConvo.id);
             playMessageSentSound();
+
+            // 🛡️ BACKGROUND PUSH: Media Alert
+            NotificationExpert.notifyReceiver(
+                activeConvo.id,
+                currentUserId,
+                `وسائط جديدة: ${activeConvo.name || 'الأكاديمية'}`,
+                `تم إرسال ${uploadedMedia.length} ملف(ات) وسائط`,
+                `/app/communications?id=${activeConvo.id}`
+            );
         } catch (err) {
             console.error('Send media error:', err);
             toast.error('Failed to send media');
@@ -244,6 +264,15 @@ export const useChatMessaging = (currentUserId: string | undefined, activeConvo:
 
             await supabase.from('conversations').update({ updated_at: new Date().toISOString() }).eq('id', activeConvo.id);
             playMessageSentSound();
+
+            // 🛡️ BACKGROUND PUSH: Voice Alert
+            NotificationExpert.notifyReceiver(
+                activeConvo.id,
+                currentUserId,
+                `رسالة صوتية: ${activeConvo.name || 'الأكاديمية'}`,
+                `مقطع صوتي جديد (${Math.round(duration)} ثانية)`,
+                `/app/communications?id=${activeConvo.id}`
+            );
         } catch (err) {
             console.error('Send voice note error:', err);
             toast.error('Failed to send voice note');

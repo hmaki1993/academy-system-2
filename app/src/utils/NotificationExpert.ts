@@ -129,15 +129,15 @@ export const NotificationExpert = {
                 badge: '/logo-premium.png',
                 data: { url },
                 
-                // ⚡ TACTICAL HEAVY VIBRATION (V2 Pattern)
-                vibrate: [500, 110, 500, 110, 450, 110, 200, 110, 170, 40, 450, 110, 200, 110],
+                // ⚡ TACTICAL HEAVY VIBRATION (Consistent with sw.js)
+                vibrate: [200, 100, 200, 100, 200, 100, 400],
                 
                 // 🚀 OS INTERRUPT ENFORCEMENT
-                tag: `local-mission-${Date.now()}`, 
+                tag: `local-alert-${Date.now()}`, 
                 renotify: true,
                 requireInteraction: true,
                 silent: false,
-                sound: 'default' // Triggers Heads-up on Android
+                sound: '/ringtone.mp3' // High-priority sound trigger
             } as any);
         }
     },

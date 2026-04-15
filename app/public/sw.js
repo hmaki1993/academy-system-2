@@ -9,31 +9,33 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('push', (event) => {
     const data = event.data ? event.data.json() : {};
-    const title = data.title || 'Elite Academy: Official Command';
+    const title = data.title || 'إشعار من الأكاديمية'; // Default Arabic title
     
     // 🛡️ EXPERT HEADS-UP (Max Urgency Implementation)
     const options = {
-        body: data.message || 'New mission signal received. Tap to execute.',
+        body: data.message || 'رسالة جديدة من المدرب. اضغط للمتابعة.',
         icon: '/logo-premium.png',
         badge: '/logo-premium.png',
         data: data.url || '/',
         
-        // ⚡ TACTICAL HEAVY VIBRATION (Deep Rhythmic Pattern)
-        vibrate: [500, 110, 500, 110, 450, 110, 200, 110, 170, 40, 450, 110, 200, 110],
+        // ⚡ TACTICAL HEAVY VIBRATION (Intense Pattern for Alerts)
+        vibrate: [200, 100, 200, 100, 200, 100, 400],
         
-        // 🚀 OS INTERRUPT ENFORCEMENT (V2 Expert Strategy)
-        tag: data.tag || `elite-mission-${Date.now()}`, // Absolute unique ID forces fresh alert
+        // 🚀 OS INTERRUPT ENFORCEMENT (V3 Expert Strategy)
+        tag: data.tag || `elite-alert-${Date.now()}`, 
         renotify: true,
         requireInteraction: true, 
-        silent: false, // ENSURE NOT SILENT
-        sound: 'default', // 🔔 THE "HEADS-UP" TRIGGER: Some OS only drop-down if sound is present
+        silent: false, 
+        sound: '/ringtone.mp3', // 🔔 High-priority sound trigger
         timestamp: Date.now(),
+        
+        // Android specific priority
         priority: 2, 
         
         // 🛠️ INTERACTIVE ACTIONS
         actions: [
-            { action: 'open', title: 'Open Mission' },
-            { action: 'close', title: 'Dismiss' }
+            { action: 'open', title: 'فتح التطبيق' },
+            { action: 'close', title: 'تجاهل' }
         ]
     };
 

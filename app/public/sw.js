@@ -9,33 +9,33 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('push', (event) => {
     const data = event.data ? event.data.json() : {};
-    const title = data.title || 'إشعار من الأكاديمية'; // Default Arabic title
+    const title = data.title || 'تنبيه من الأكاديمية';
     
-    // 🛡️ EXPERT HEADS-UP (Max Urgency Implementation)
+    // 🛡️ OPPO/ANDROID OPTIMIZED NOTIFICATION
     const options = {
-        body: data.message || 'رسالة جديدة من المدرب. اضغط للمتابعة.',
+        body: data.message || 'لديك رسالة جديدة. افتح التطبيق للمتابعة.',
         icon: '/logo-premium.png',
         badge: '/logo-premium.png',
         data: data.url || '/',
         
-        // ⚡ TACTICAL HEAVY VIBRATION (Intense Pattern for Alerts)
-        vibrate: [200, 100, 200, 100, 200, 100, 400],
+        // ⚡ SIMPLIFIED VIBRATION (More compatible with Oppo/ColorOS)
+        vibrate: [0, 500, 200, 500],
         
-        // 🚀 OS INTERRUPT ENFORCEMENT (V3 Expert Strategy)
-        tag: data.tag || `elite-alert-${Date.now()}`, 
+        // 🚀 HIGH VISIBILITY SETTINGS
+        tag: 'academy-alert', // Constant tag ensures it overwrites and stays visible
         renotify: true,
         requireInteraction: true, 
         silent: false, 
-        sound: '/ringtone.mp3', // 🔔 High-priority sound trigger
+        sound: '/ringtone.mp3', // Ensure absolute path starting with /
         timestamp: Date.now(),
         
-        // Android specific priority
+        // Android specific priority/importance
         priority: 2, 
         
-        // 🛠️ INTERACTIVE ACTIONS
+        // 🛠️ ACTIONS
         actions: [
-            { action: 'open', title: 'فتح التطبيق' },
-            { action: 'close', title: 'تجاهل' }
+            { action: 'open', title: 'فتح الآن' },
+            { action: 'close', title: 'إغلاق' }
         ]
     };
 

@@ -129,15 +129,15 @@ export const NotificationExpert = {
                 badge: '/logo-premium.png',
                 data: { url },
                 
-                // ⚡ TACTICAL HEAVY VIBRATION (Consistent with sw.js)
-                vibrate: [200, 100, 200, 100, 200, 100, 400],
+                // ⚡ OPPO/ANDROID OPTIMIZED VIBRATION
+                vibrate: [0, 500, 200, 500],
                 
-                // 🚀 OS INTERRUPT ENFORCEMENT
-                tag: `local-alert-${Date.now()}`, 
+                // 🚀 HIGH VISIBILITY
+                tag: 'local-alert', 
                 renotify: true,
                 requireInteraction: true,
                 silent: false,
-                sound: '/ringtone.mp3' // High-priority sound trigger
+                sound: '/ringtone.mp3'
             } as any);
         }
     },

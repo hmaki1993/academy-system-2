@@ -229,15 +229,25 @@ export const NotificationExpert = {
         (window as any)._elite_fallback_active = true;
 
         const channel = supabase.channel(`user-notifications:${userId}`)
-            .on('broadcast', { event: 'mission-alert' }, (payload) => {
-                console.log('🛡️ NotificationExpert: Fallback Signal Received:', payload);
-                const { title, body, url } = payload.payload;
-                NotificationExpert.triggerLocal(title, body, url);
-            })
-            .subscribe();
+            channel.on('broadcast', { event: 'mission-alert' }, (payload) => {
+            console.log('🛡️ NotificationExpert: Fallback mission received!', payload);
+            if (!(window as any)._elite_fallback_active) {
+                console.log('🛡️ NotificationExpert: Activating visual banner via fallback...');
+                onMessage(payload);
+            }
+        }).subscribe((status) => {
+            console.log(`🛡️ NotificationExpert: Fallback channel status: ${status}`);
+            if (status === 'SUBSCRIBED') {
+                (window as any)._realtime_link_active = true;
+            } else {
+                (window as any)._realtime_link_active = false;
+            }
+        });
 
         return () => {
+            console.log('🛡️ NotificationExpert: Cleaning up fallback listener...');
             (window as any)._elite_fallback_active = false;
+            (window as any)._realtime_link_active = false;
             supabase.removeChannel(channel);
         };
     },
@@ -257,7 +267,8 @@ export const NotificationExpert = {
             localStorage: !!localStorage.getItem('elite_push_active'),
             ua: navigator.userAgent,
             lastError: localStorage.getItem('elite_push_error') || null,
-            fallbackActive: !!(window as any)._elite_fallback_active
+            fallbackActive: !!(window as any)._elite_fallback_active,
+            realtimeConnected: !!(window as any)._realtime_link_active
         };
 
         // 🛡️ RESILIENT SUCCESS: If fallback is active, force UI to green status

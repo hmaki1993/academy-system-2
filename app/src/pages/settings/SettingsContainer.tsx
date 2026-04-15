@@ -1317,26 +1317,32 @@ export default function Settings() {
                                             </div>
 
                                             {notifDiagnostic && (
-                                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                                                    <div className="p-3 bg-white/[0.02] rounded-xl border border-white/[0.05]">
+                                                <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+                                                    <div className="p-2 bg-white/[0.02] rounded-xl border border-white/[0.05]">
                                                         <span className="text-[7px] text-white/20 font-black uppercase block mb-1">Permission</span>
                                                         <span className={`text-[9px] font-black uppercase ${notifDiagnostic.permission === 'granted' ? 'text-emerald-500' : 'text-rose-500'}`}>
                                                             {notifDiagnostic.permission}
                                                         </span>
                                                     </div>
-                                                    <div className="p-3 bg-white/[0.02] rounded-xl border border-white/[0.05]">
+                                                    <div className="p-2 bg-white/[0.02] rounded-xl border border-white/[0.05]">
                                                         <span className="text-[7px] text-white/20 font-black uppercase block mb-1">Service Worker</span>
                                                         <span className={`text-[9px] font-black uppercase ${notifDiagnostic.swActive ? 'text-emerald-500' : 'text-rose-500'}`}>
                                                             {notifDiagnostic.swActive ? 'Active' : 'Offline'}
                                                         </span>
                                                     </div>
-                                                    <div className="p-3 bg-white/[0.02] rounded-xl border border-white/[0.05]">
+                                                    <div className="p-2 bg-white/[0.02] rounded-xl border border-white/[0.05]">
                                                         <span className="text-[7px] text-white/20 font-black uppercase block mb-1">Push Signal</span>
                                                         <span className={`text-[9px] font-black uppercase ${notifDiagnostic.pushSubscription ? 'text-emerald-500' : notifDiagnostic.fallbackActive ? 'text-emerald-400 animate-pulse' : 'text-rose-500'}`}>
                                                             {notifDiagnostic.pushSubscription ? 'Connected' : notifDiagnostic.fallbackActive ? 'Resilient' : 'Broken'}
                                                         </span>
                                                     </div>
-                                                    <div className="p-3 bg-white/[0.02] rounded-xl border border-white/[0.05]">
+                                                    <div className="p-2 bg-white/[0.02] rounded-xl border border-white/[0.05]">
+                                                        <span className="text-[7px] text-white/20 font-black uppercase block mb-1">Real-time Link</span>
+                                                        <span className={`text-[9px] font-black uppercase ${notifDiagnostic.realtimeConnected ? 'text-emerald-500' : 'text-rose-500'}`}>
+                                                            {notifDiagnostic.realtimeConnected ? 'Fused' : 'Disconnected'}
+                                                        </span>
+                                                    </div>
+                                                    <div className="p-2 bg-white/[0.02] rounded-xl border border-white/[0.05]">
                                                         <span className="text-[7px] text-white/20 font-black uppercase block mb-1">Local Flag</span>
                                                         <span className={`text-[9px] font-black uppercase ${notifDiagnostic.localStorage ? 'text-emerald-500' : 'text-rose-500'}`}>
                                                             {notifDiagnostic.localStorage ? 'Verified' : 'Missing'}

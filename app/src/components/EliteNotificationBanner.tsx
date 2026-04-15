@@ -15,32 +15,45 @@ export const EliteNotificationBanner: React.FC = () => {
     const timerRef = useRef<NodeJS.Timeout | null>(null);
 
     useEffect(() => {
-        // 🚀 ELITE V17: DIRECT REGISTRATION
-        // Bypasses the event loop for 100% reliability
-        NotificationExpert.registerBanner((data: NotificationData) => {
-            console.log('🔔 ELITE BANNER: Direct Signal Received!', data);
-            setNotification(data);
-        });
+        // 🚀 ELITE V19: DEFENSIVE REGISTRATION
+        try {
+            if (NotificationExpert && typeof NotificationExpert.registerBanner === 'function') {
+                NotificationExpert.registerBanner((data: NotificationData) => {
+                    console.log('🔔 ELITE BANNER: Signal Received!', data);
+                    setNotification(data);
+                });
+            }
+        } catch (err) {
+            console.error('🛡️ ELITE BANNER: Registration failed:', err);
+        }
     }, []);
 
     // 🚀 TRIGGER ANIMATION ON STATE CHANGE
     useEffect(() => {
-        if (notification && bannerRef.current) {
-            console.log('🎬 ELITE BANNER: Starting Animation...');
-            
-            // Kill any concurrent animations
-            gsap.killTweensOf(bannerRef.current);
-            
-            gsap.fromTo(bannerRef.current, 
-                { y: -120, opacity: 0, scale: 0.8 },
-                { y: 0, opacity: 1, scale: 1, duration: 0.8, ease: "back.out(1.5)" }
-            );
+        if (notification && bannerRef.current && gsap) {
+            try {
+                console.log('🎬 ELITE BANNER: Starting Animation...');
+                
+                // Kill any concurrent animations safely
+                if (typeof (gsap as any).killTweensOf === 'function') {
+                    (gsap as any).killTweensOf(bannerRef.current);
+                }
+                
+                gsap.fromTo(bannerRef.current, 
+                    { y: -120, opacity: 0, scale: 0.8 },
+                    { y: 0, opacity: 1, scale: 1, duration: 0.8, ease: "back.out(1.5)" }
+                );
 
-            // Auto-hide after 6 seconds
-            if (timerRef.current) clearTimeout(timerRef.current);
-            timerRef.current = setTimeout(() => {
-                hideNotification();
-            }, 6000);
+                // Auto-hide after 6 seconds
+                if (timerRef.current) clearTimeout(timerRef.current);
+                timerRef.current = setTimeout(() => {
+                    hideNotification();
+                }, 6000);
+            } catch (err) {
+                console.error('🎬 ELITE BANNER: Animation failed:', err);
+                // Fallback to state clear if animation fails
+                setNotification(null);
+            }
         }
     }, [notification]);
 

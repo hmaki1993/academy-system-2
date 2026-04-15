@@ -6,7 +6,7 @@ import {
     Type, Maximize, Minimize, Box, RefreshCw, Building2, Loader2, CheckCircle2, Sparkles,
     Zap, ShieldCheck, AlertTriangle, Lock as LockIcon, Key as KeyIcon, Search, Edit2,
     Upload, Calendar, Clock, ArrowRight, ChevronDown, Wand2, MoveVertical, Scissors,
-    Circle, History, Move, ZoomIn, Droplets, MousePointer2, Target, Pipette, Monitor, Smartphone, Award
+    Circle, History, Move, ZoomIn, Droplets, MousePointer2, Target, Pipette, Monitor, Smartphone, Award, Wrench
 } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';

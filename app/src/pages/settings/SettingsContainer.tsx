@@ -1332,8 +1332,8 @@ export default function Settings() {
                                                     </div>
                                                     <div className="p-3 bg-white/[0.02] rounded-xl border border-white/[0.05]">
                                                         <span className="text-[7px] text-white/20 font-black uppercase block mb-1">Push Signal</span>
-                                                        <span className={`text-[9px] font-black uppercase ${notifDiagnostic.pushSubscription ? 'text-emerald-500' : 'text-rose-500'}`}>
-                                                            {notifDiagnostic.pushSubscription ? 'Connected' : 'Broken'}
+                                                        <span className={`text-[9px] font-black uppercase ${notifDiagnostic.pushSubscription ? 'text-emerald-500' : notifDiagnostic.fallbackActive ? 'text-emerald-400 animate-pulse' : 'text-rose-500'}`}>
+                                                            {notifDiagnostic.pushSubscription ? 'Connected' : notifDiagnostic.fallbackActive ? 'Resilient' : 'Broken'}
                                                         </span>
                                                     </div>
                                                     <div className="p-3 bg-white/[0.02] rounded-xl border border-white/[0.05]">

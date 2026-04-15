@@ -225,6 +225,9 @@ export const NotificationExpert = {
     registerFallbackListener: (userId: string) => {
         console.log(`🛡️ NotificationExpert: Monitoring Realtime Fallback for [${userId}]`);
         
+        // Mark as active for diagnostic hub
+        (window as any)._elite_fallback_active = true;
+
         const channel = supabase.channel(`user-notifications:${userId}`)
             .on('broadcast', { event: 'mission-alert' }, (payload) => {
                 console.log('🛡️ NotificationExpert: Fallback Signal Received:', payload);
@@ -233,7 +236,10 @@ export const NotificationExpert = {
             })
             .subscribe();
 
-        return () => supabase.removeChannel(channel);
+        return () => {
+            (window as any)._elite_fallback_active = false;
+            supabase.removeChannel(channel);
+        };
     },
 
     /**
@@ -249,7 +255,8 @@ export const NotificationExpert = {
             pushToken: '',
             localStorage: !!localStorage.getItem('elite_push_active'),
             ua: navigator.userAgent,
-            lastError: localStorage.getItem('elite_push_error') || null
+            lastError: localStorage.getItem('elite_push_error') || null,
+            fallbackActive: !!(window as any)._elite_fallback_active
         };
 
         if (report.supported) {
@@ -260,6 +267,7 @@ export const NotificationExpert = {
                 report.pushSubscription = !!sub;
                 if (sub) {
                     report.pushToken = sub.endpoint.split('/').pop() || 'TOKEN_ACTIVE';
+                    // If we have a push sub but fallback is not set, we are GOOD
                 }
             } catch (e) {
                 console.error('Diagnostic error:', e);

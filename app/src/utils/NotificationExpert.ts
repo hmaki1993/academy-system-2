@@ -2,7 +2,8 @@ import { supabase } from '../lib/supabase';
 import { toast } from 'react-hot-toast';
 
 // --- ELITE CONFIGURATION ---
-const VAPID_PUBLIC_KEY = 'BELzOEt47g5qmytP8tX8deVC-P1YQR-MB2qr6ePeOYmQEVQDlLb1yyNKwxRtMADvPMCIgyJrvp3oZZOr3zhIh7s';
+// Dynamically pull from environment for maximum sync stability
+const VAPID_PUBLIC_KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY || 'BELzOEt47g5qmytP8tX8deVC-P1YQR-MB2qr6ePeOYmQEVQDlLb1yyNKwxRtMADvPMCIgyJrvp3oZZOr3zhIh7s';
 
 /**
  * ELITE NOTIFICATION EXPERT
@@ -46,9 +47,11 @@ export const NotificationExpert = {
             const registration = await navigator.serviceWorker.ready;
 
             // 3. Subscribe to Push
+            const applicationServerKey = NotificationExpert.urlBase64ToUint8Array(VAPID_PUBLIC_KEY);
+            
             const subscription = await registration.pushManager.subscribe({
                 userVisibleOnly: true,
-                applicationServerKey: NotificationExpert.urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+                applicationServerKey: applicationServerKey
             });
 
             const subJSON = subscription.toJSON();
@@ -285,16 +288,21 @@ export const NotificationExpert = {
     },
 
     /**
-     * Conversion Utility
+     * Conversion Utility (UPGRADED for Android/Oppo Resilience)
      */
     urlBase64ToUint8Array: (base64String: string) => {
-        const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
-        const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
-        const rawData = window.atob(base64);
-        const outputArray = new Uint8Array(rawData.length);
-        for (let i = 0; i < rawData.length; ++i) {
-            outputArray[i] = rawData.charCodeAt(i);
+        try {
+            const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+            const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+            const rawData = window.atob(base64);
+            const outputArray = new Uint8Array(rawData.length);
+            for (let i = 0; i < rawData.length; ++i) {
+                outputArray[i] = rawData.charCodeAt(i);
+            }
+            return outputArray;
+        } catch (e) {
+            console.error('🛡️ NotificationExpert: Base64 Decoding Failed:', e);
+            throw new Error(`Technical: Invalid Key Encoding (${(e as Error).message})`);
         }
-        return outputArray;
     }
 };

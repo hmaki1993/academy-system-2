@@ -4,6 +4,8 @@
     "description": "Professional Academy Management & AI Training System",
     "start_url": "./",
     "display": "standalone",
+    "display_override": ["standalone", "window-controls-overlay", "minimal-ui"],
+    "orientation": "portrait-primary",
     "background_color": "#050505",
     "theme_color": "#FF6B6B",
     "icons": [

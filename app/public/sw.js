@@ -18,16 +18,17 @@ self.addEventListener('push', (event) => {
         badge: '/logo-premium.png',
         data: data.url || '/',
         
-        // ⚡ TACTICAL HEAVY VIBRATION (Rhythmic & Intense)
-        vibrate: [400, 100, 400, 100, 100, 50, 400],
+        // ⚡ TACTICAL HEAVY VIBRATION (Deep Rhythmic Pattern)
+        vibrate: [500, 110, 500, 110, 450, 110, 200, 110, 170, 40, 450, 110, 200, 110],
         
-        // 🚀 OS INTERRUPT ENFORCEMENT (Expert Dynamic Strategy)
-        tag: data.tag || `alert-${Date.now()}`, // Unique tag forces fresh OS heads-up
+        // 🚀 OS INTERRUPT ENFORCEMENT (V2 Expert Strategy)
+        tag: data.tag || `elite-mission-${Date.now()}`, // Absolute unique ID forces fresh alert
         renotify: true,
         requireInteraction: true, 
-        silent: false, 
+        silent: false, // ENSURE NOT SILENT
+        sound: 'default', // 🔔 THE "HEADS-UP" TRIGGER: Some OS only drop-down if sound is present
         timestamp: Date.now(),
-        priority: 2, // Max OS priority hint
+        priority: 2, 
         
         // 🛠️ INTERACTIVE ACTIONS
         actions: [

@@ -229,11 +229,11 @@ export const NotificationExpert = {
         (window as any)._elite_fallback_active = true;
 
         const channel = supabase.channel(`user-notifications:${userId}`)
-            channel.on('broadcast', { event: 'mission-alert' }, (payload) => {
+        channel.on('broadcast', { event: 'mission-alert' }, (payload) => {
             console.log('🛡️ NotificationExpert: Fallback mission received!', payload);
-            if (!(window as any)._elite_fallback_active) {
-                console.log('🛡️ NotificationExpert: Activating visual banner via fallback...');
-                onMessage(payload);
+            if (payload && payload.payload) {
+                const { title, body, url } = payload.payload;
+                NotificationExpert.triggerLocal(title, body, url);
             }
         }).subscribe((status) => {
             console.log(`🛡️ NotificationExpert: Fallback channel status: ${status}`);

@@ -267,11 +267,9 @@ export const NotificationExpert = {
                 report.pushSubscription = !!sub;
                 if (sub) {
                     report.pushToken = sub.endpoint.split('/').pop() || 'TOKEN_ACTIVE';
-                    // 🛡️ SELF-HEAL: If subscription is active in browser but flag is missing, restore it
-                    if (!report.localStorage) {
-                        localStorage.setItem('elite_push_active', 'true');
-                        report.localStorage = true;
-                    }
+                    // 🛡️ SELF-HEAL: Force persistence if subscription exists
+                    localStorage.setItem('elite_push_active', 'true');
+                    report.localStorage = true;
                 }
             } catch (e) {
                 console.error('Diagnostic error:', e);

@@ -21,13 +21,13 @@ self.addEventListener('push', (event) => {
         // ⚡ TACTICAL HEAVY VIBRATION (Rhythmic & Intense)
         vibrate: [400, 100, 400, 100, 100, 50, 400],
         
-        // 🚀 OS INTERRUPT ENFORCEMENT
-        tag: data.tag || 'elite-critical-alert', // Allow specific tagging (Voice vs Mission)
+        // 🚀 OS INTERRUPT ENFORCEMENT (Expert Dynamic Strategy)
+        tag: data.tag || `alert-${Date.now()}`, // Unique tag forces fresh OS heads-up
         renotify: true,
         requireInteraction: true, 
         silent: false, 
         timestamp: Date.now(),
-        priority: 2, // Hint for max OS priority
+        priority: 2, // Max OS priority hint
         
         // 🛠️ INTERACTIVE ACTIONS
         actions: [

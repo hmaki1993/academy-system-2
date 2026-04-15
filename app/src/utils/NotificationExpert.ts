@@ -128,8 +128,12 @@ export const NotificationExpert = {
                 icon: '/logo-premium.png',
                 badge: '/logo-premium.png',
                 data: { url },
-                vibrate: [100, 50, 100, 50, 400],
-                tag: 'elite-local-alert',
+                
+                // ⚡ TACTICAL HEAVY VIBRATION
+                vibrate: [400, 100, 400, 100, 100, 50, 400],
+                
+                // 🚀 OS INTERRUPT ENFORCEMENT
+                tag: `local-alert-${Date.now()}`, 
                 renotify: true,
                 requireInteraction: true // Forces heads-up behavior
             } as any);

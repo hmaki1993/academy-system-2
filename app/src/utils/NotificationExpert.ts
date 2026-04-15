@@ -155,15 +155,24 @@ export const NotificationExpert = {
      */
     invokePush: async (userId: string, title: string, message: string, url: string = '/app') => {
         try {
-            const { error } = await supabase.functions.invoke('send-push', {
+            const { error, data } = await supabase.functions.invoke('send-push', {
                 body: { userId, title, message, url }
             });
-            if (error) throw error;
-            console.log(`🚀 NotificationExpert: Push dispatched to [${userId}]`);
-            return true;
-        } catch (err) {
-            console.warn('🛡️ NotificationExpert: Push dispatch failed:', err);
-            return false;
+            
+            if (error) {
+                console.error('🛡️ NotificationExpert: Server Invocation Error:', error);
+                // Extract message from error object (might be a payload error)
+                let msg = error.message || 'Server Rejected Request';
+                if (typeof error === 'object' && (error as any).context?.statusText) {
+                    msg = (error as any).context.statusText;
+                }
+                return { success: false, error: msg };
+            }
+            
+            return { success: true, data };
+        } catch (err: any) {
+            console.error('🛡️ NotificationExpert: Critical Invocation Failure:', err);
+            return { success: false, error: err.message || 'Connection or Invocation Error' };
         }
     },
 

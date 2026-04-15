@@ -1354,12 +1354,17 @@ export default function Settings() {
                                             <div className="flex flex-col sm:flex-row gap-4 pt-2">
                                                 <button
                                                     onClick={async () => {
-                                                        const success = await NotificationExpert.invokePush(
+                                                        const result = await NotificationExpert.invokePush(
                                                             (await supabase.auth.getUser()).data.user?.id || '',
                                                             "Test Alert 🚀",
                                                             "If you see this, the server-to-device link is working perfectly."
-                                                        );
-                                                        if (success) toast.success("Test signal sent to server!");
+                                                        ) as any;
+                                                        
+                                                        if (result.success) {
+                                                            toast.success("Test signal sent to server!");
+                                                        } else {
+                                                            toast.error(`Dispatch Failed: ${result.error}`);
+                                                        }
                                                     }}
                                                     className="flex-1 py-3 px-4 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-[9px] font-black text-white/60 hover:text-white uppercase tracking-widest transition-all"
                                                 >

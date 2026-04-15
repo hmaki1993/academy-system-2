@@ -174,6 +174,14 @@ export const NotificationExpert = {
                 return { success: false, error: 'User Identity (Internal) Not Hydrated' };
             }
 
+            // 🚀 ELITE V15: IMMEDIATE LOCAL FEEDBACK (FOR TESTING)
+            // This ensures the user sees the banner and feels vibration immediately.
+            NotificationExpert.triggerLocal(
+                title || 'Test Alert 🚀', 
+                message || 'If you see this, the visual system is active!', 
+                url
+            );
+
             console.log('🛡️ NotificationExpert: Dispatching via Database Relay...');
             const { error } = await supabase.from('push_relay_queue').insert({
                 user_id: activeId,

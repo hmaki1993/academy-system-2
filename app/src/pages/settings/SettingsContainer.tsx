@@ -1364,7 +1364,19 @@ export default function Settings() {
                                                     }}
                                                     className="flex-1 py-3 px-4 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-[9px] font-black text-white/60 hover:text-white uppercase tracking-widest transition-all"
                                                 >
-                                                    Send Test Notification
+                                                    {t('settings.notifications.sendTest', 'Send Test Notification')}
+                                                </button>
+                                                <button
+                                                    onClick={() => {
+                                                        NotificationExpert.triggerLocal(
+                                                            "UI Check 🎯",
+                                                            "If you see this sliding down, your screen & app are ready!"
+                                                        );
+                                                        toast.success("Local UI trigger fired!");
+                                                    }}
+                                                    className="flex-1 py-3 px-4 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 text-[9px] font-black text-emerald-500 uppercase tracking-widest transition-all"
+                                                >
+                                                    TEST UI ONLY 🎯
                                                 </button>
                                                 <button
                                                     onClick={async () => {

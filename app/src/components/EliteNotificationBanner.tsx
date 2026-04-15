@@ -16,30 +16,30 @@ export const EliteNotificationBanner: React.FC = () => {
     useEffect(() => {
         const handleEvent = (e: any) => {
             const data = e.detail;
+            console.log('🔔 ELITE BANNER: Signal Received!', data);
             setNotification(data);
-            
-            // Clear any existing timer
-            if (timerRef.current) clearTimeout(timerRef.current);
-            
-            // Show animation
-            setTimeout(() => {
-                if (bannerRef.current) {
-                    gsap.fromTo(bannerRef.current, 
-                        { y: -100, opacity: 0, scale: 0.9 },
-                        { y: 0, opacity: 1, scale: 1, duration: 0.8, ease: "back.out(1.7)" }
-                    );
-                }
-            }, 100);
-
-            // Auto-hide after 6 seconds
-            timerRef.current = setTimeout(() => {
-                hideNotification();
-            }, 6000);
         };
 
         window.addEventListener('elite-notification', handleEvent);
         return () => window.removeEventListener('elite-notification', handleEvent);
     }, []);
+
+    // 🚀 TRIGGER ANIMATION ON STATE CHANGE
+    useEffect(() => {
+        if (notification && bannerRef.current) {
+            console.log('🎬 ELITE BANNER: Starting Animation...');
+            gsap.fromTo(bannerRef.current, 
+                { y: -100, opacity: 0, scale: 0.9 },
+                { y: 0, opacity: 1, scale: 1, duration: 0.8, ease: "back.out(1.7)" }
+            );
+
+            // Auto-hide after 6 seconds
+            if (timerRef.current) clearTimeout(timerRef.current);
+            timerRef.current = setTimeout(() => {
+                hideNotification();
+            }, 6000);
+        }
+    }, [notification]);
 
     const hideNotification = () => {
         if (bannerRef.current) {

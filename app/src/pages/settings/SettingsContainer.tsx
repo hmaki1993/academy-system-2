@@ -1377,6 +1377,19 @@ export default function Settings() {
                                                 </button>
                                             </div>
 
+                                            {/* TECHNICAL LOG (EXPERT DIAGNOSTIC) */}
+                                            {notifDiagnostic?.lastError && (
+                                                <div className="flex gap-2 p-3 rounded-xl bg-rose-500/5 border border-rose-500/10">
+                                                    <AlertTriangle className="w-3 h-3 text-rose-500/50 shrink-0 mt-0.5" />
+                                                    <div className="space-y-1">
+                                                        <p className="text-[6px] font-black text-rose-500/30 uppercase tracking-tighter">Hardware Technical Log</p>
+                                                        <p className="text-[8px] font-mono text-rose-400/80 leading-snug break-all italic">
+                                                            {notifDiagnostic.lastError}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            )}
+
                                             {/* STANDALONE HINT */}
                                             {window.matchMedia('(display-mode: standalone)').matches && (
                                                 <div className="flex gap-2 p-3 rounded-xl bg-amber-500/5 border border-amber-500/10">

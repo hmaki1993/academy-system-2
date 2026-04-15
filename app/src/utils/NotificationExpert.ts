@@ -36,6 +36,12 @@ export const NotificationExpert = {
                 throw new Error('Permission denied. Please enable notifications in your browser settings.');
             }
 
+            // 🚀 DELAYED START: Give the browser 2 seconds to stabilize hardware connections
+            if (retryCount === 0) {
+                console.log('🛡️ NotificationExpert: Initiating warm-up delay...');
+                await new Promise(r => setTimeout(r, 2000));
+            }
+
             // 2. Wait for Service Worker
             const registration = await navigator.serviceWorker.ready;
 
@@ -67,19 +73,24 @@ export const NotificationExpert = {
             
             // Store locally for quick self-healing checks
             localStorage.setItem('elite_push_active', 'true');
+            localStorage.removeItem('elite_push_error'); // Clear previous errors
             
             return true;
         } catch (error: any) {
             console.error('🛡️ NotificationExpert Error:', error);
             
+            // Log the RAW error for diagnostic hub exposure
+            const rawError = `${error.name || 'Error'}: ${error.message || 'Unknown'}`;
+            localStorage.setItem('elite_push_error', rawError);
+
             // Handle Storage Error specifically (Oppo / Standalone issue)
-            if (error.message?.includes('storage') || error.name === 'UnknownError') {
+            if (error.message?.toLowerCase().includes('storage') || error.name === 'UnknownError' || error.name === 'QuotaExceededError') {
                 if (retryCount < 1) {
-                    console.warn('🛡️ NotificationExpert: Storage locked. Attempting deep clean and retry...');
-                    await NotificationExpert.clearSiteData();
+                    console.warn('🛡️ NotificationExpert: Storage locked. Attempting retry...');
+                    await new Promise(r => setTimeout(r, 1000));
                     return NotificationExpert.subscribe(userId, retryCount + 1);
                 }
-                toast.error('خطأ في ذاكرة المتصفح. برجاء عمل Clear Data للتطبيق من إعدادات الأندرويد.');
+                toast.error('خطأ في ذاكرة المتصفح. تأكد من إغلاق التبويب المخفي وعمل Clear Data للمتصفح.');
             } else {
                 toast.error(error.message || 'Notification Error');
             }
@@ -100,8 +111,10 @@ export const NotificationExpert = {
             }
             // Clear LocalStorage (Keep only necessary, or clear all for reset)
             const backup = localStorage.getItem('supabase.auth.token'); // Try to keep login if we can
+            const errorBackup = localStorage.getItem('elite_push_error');
             localStorage.clear();
             if (backup) localStorage.setItem('supabase.auth.token', backup);
+            if (errorBackup) localStorage.setItem('elite_push_error', errorBackup);
             
             return true;
         } catch (e) {
@@ -214,7 +227,8 @@ export const NotificationExpert = {
             pushSubscription: false,
             pushToken: '',
             localStorage: !!localStorage.getItem('elite_push_active'),
-            ua: navigator.userAgent
+            ua: navigator.userAgent,
+            lastError: localStorage.getItem('elite_push_error') || null
         };
 
         if (report.supported) {

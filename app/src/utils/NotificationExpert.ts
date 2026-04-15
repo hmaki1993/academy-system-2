@@ -150,29 +150,29 @@ export const NotificationExpert = {
         }
     },
 
-    /**
-     * Invoke a Background Push (Trigger via Edge Function)
+     /**
+     * NUCLEAR V13: Invoke via Database Relay (Bypasses Network Blocks)
      */
     invokePush: async (userId: string, title: string, message: string, url: string = '/app') => {
         try {
-            const { error, data } = await supabase.functions.invoke('send-push', {
-                body: { userId, title, message, url }
+            console.log('🛡️ NotificationExpert: Dispatching via Database Relay...');
+            const { error } = await supabase.from('push_relay_queue').insert({
+                user_id: userId,
+                title,
+                body: message,
+                url,
+                status: 'pending'
             });
             
             if (error) {
-                console.error('🛡️ NotificationExpert: Server Invocation Error:', error);
-                // Extract message from error object (might be a payload error)
-                let msg = error.message || 'Server Rejected Request';
-                if (typeof error === 'object' && (error as any).context?.statusText) {
-                    msg = (error as any).context.statusText;
-                }
-                return { success: false, error: msg };
+                console.error('🛡️ NotificationExpert: Relay DB Error:', error);
+                return { success: false, error: error.message };
             }
             
-            return { success: true, data };
+            return { success: true };
         } catch (err: any) {
-            console.error('🛡️ NotificationExpert: Critical Invocation Failure:', err);
-            return { success: false, error: err.message || 'Connection or Invocation Error' };
+            console.error('🛡️ NotificationExpert: Relay Critical Failure:', err);
+            return { success: false, error: err.message || 'Relay Connection Error' };
         }
     },
 
@@ -267,7 +267,7 @@ export const NotificationExpert = {
      */
     checkDiagnostic: async () => {
         const report = {
-            version: 'expert-v10', // 🛡️ GLOBAL IDENTITY RESET
+            version: 'expert-v13', // 🛡️ DATABASE RELAY PIVOT
             supported: NotificationExpert.isSupported(),
             permission: Notification.permission,
             swActive: false,

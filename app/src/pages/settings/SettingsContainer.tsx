@@ -1435,14 +1435,41 @@ export default function Settings() {
                                                     <span className="text-[6px] text-emerald-500/30 font-mono italic">{notifDiagnostic?.version || 'v1-legacy'}</span>
                                                 </div>
                                                 <button
-                                                    onClick={() => {
+                                                    onClick={async () => {
+                                                        const confirm = window.confirm("This will perform a NUCLEAR RESET of the app cache. You will be logged out and the app will reload. Continue?");
+                                                        if (!confirm) return;
+
+                                                        toast.loading("Busting Cache & Resetting ServiceWorkers...", { id: 'nuclear-reset' });
+
+                                                        // 1. Clear LocalStorage
                                                         localStorage.clear();
-                                                        toast.success("Clearing storage...");
-                                                        setTimeout(() => window.location.reload(), 1000);
+
+                                                        // 2. Unregister ALL Service Workers
+                                                        if ('serviceWorker' in navigator) {
+                                                            const registrations = await navigator.serviceWorker.getRegistrations();
+                                                            for (let registration of registrations) {
+                                                                await registration.unregister();
+                                                            }
+                                                        }
+
+                                                        // 3. Clear ALL Caches
+                                                        if ('caches' in window) {
+                                                            const keys = await caches.keys();
+                                                            for (let key of keys) {
+                                                                await caches.delete(key);
+                                                            }
+                                                        }
+
+                                                        toast.success("Cleanup Complete. Reloading...", { id: 'nuclear-reset' });
+                                                        
+                                                        // 4. Hard Reload
+                                                        setTimeout(() => {
+                                                            window.location.href = window.location.origin + '/?cachebuster=' + Date.now();
+                                                        }, 1500);
                                                     }}
-                                                    className="w-full py-2 px-4 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 text-[7px] font-black text-rose-500/60 uppercase tracking-widest transition-all"
+                                                    className="w-full py-2 px-4 rounded-lg bg-rose-500/20 hover:bg-rose-500/40 border border-rose-500/30 text-[7px] font-black text-rose-400 uppercase tracking-widest transition-all shadow-[0_0_15px_rgba(244,63,94,0.1)]"
                                                 >
-                                                    Force Clean Reload
+                                                    ☢️ NUCLEAR CACHE BUSTER ☢️
                                                 </button>
                                             </div>
                                         </div>

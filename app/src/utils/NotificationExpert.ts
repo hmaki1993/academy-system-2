@@ -314,7 +314,7 @@ export const NotificationExpert = {
      */
     checkDiagnostic: async () => {
         const report = {
-            version: 'expert-v13', // 🛡️ DATABASE RELAY PIVOT
+            version: 'expert-v18', // 🛡️ NUCLEAR CACHE BUSTER PIVOT
             supported: NotificationExpert.isSupported(),
             permission: Notification.permission,
             swActive: false,

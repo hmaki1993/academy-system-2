@@ -1,4 +1,4 @@
-// 🛡️ EXPERT PWA PERSISTENCE: Immediate Activation (V-NUCLEAR-13.0)
+// 🛡️ EXPERT PWA PERSISTENCE: Immediate Activation (V-NUCLEAR-18.0)
 self.addEventListener('install', (event) => {
     self.skipWaiting();
 });

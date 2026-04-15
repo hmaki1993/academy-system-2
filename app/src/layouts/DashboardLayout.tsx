@@ -376,6 +376,8 @@ export default function DashboardLayout() {
     };
 
 
+    const isExpertActive = !!localStorage.getItem('elite_push_active');
+
     const allNavItems = [
         { to: '/app', icon: LayoutDashboard, label: t('common.dashboard'), roles: ['admin', 'head_coach', 'coach', 'reception', 'student'] },
         {
@@ -444,8 +446,6 @@ export default function DashboardLayout() {
             setNotificationsOpen(false);
         } catch (e) { }
     };
-
-    const isExpertActive = !!localStorage.getItem('elite_push_active');
 
     return (
         <div className="fixed inset-0 w-full flex bg-background font-cairo overflow-hidden">

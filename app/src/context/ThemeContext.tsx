@@ -556,12 +556,13 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
                     supabase.from('coaches').select('id').eq('profile_id', user.id).maybeSingle()
                 ]);
 
-                const isStandalone = window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone === true;
-                const maxRetries = isStandalone ? 6 : 4; 
+                // 🛡️ AUTH RESILIENCE (Open Gate Strategy): Disable aggressive retries for now
+                // We keep it to 1 retry (instant) to speed up entering the app.
+                const maxRetries = 1; 
                 
                 if (!profileRes.data && retryCount < maxRetries && !isAdminEmail) {
-                    const delay = [800, 1500, 3000, 5000, 8000, 10000][retryCount] || 2000;
-                    console.warn(`🛡️ ThemeContext: Profile not found [${retryCount + 1}/${maxRetries}], retrying in ${delay}ms...`);
+                    const delay = 500; 
+                    console.warn(`🛡️ ThemeContext: Profile not found, performing quick retry...`);
                     setTimeout(() => fetchSettings(retryCount + 1), delay);
                     return;
                 }
@@ -605,19 +606,24 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
                     profileRef.current = fallbackProfile;
                 } else {
                     const reason = isUnauthorizedGhost ? 'Ghost Profile detected' : 'Profile missing';
-                    console.error(`🛡️ ThemeContext: SECURITY LOCK (${reason}) - User logged in but unauthorized.`);
+                    console.error(`🛡️ ThemeContext: SECURITY WARNING (${reason}) - Allowing bypass for diagnosis.`);
 
-                    setTimeout(async () => {
-                        const { data: { session } } = await supabase.auth.getSession();
-                        if (session && !profileRef.current) {
-                            console.error(`🛡️ ThemeContext: Final Security Enforcement initiated.`);
-                            await supabase.auth.signOut();
-                            toast.error(isUnauthorizedGhost ? 'Account inactive or deleted.' : 'Unauthorized or Missing Profile.');
-                        }
-                    }, 10000); // 10s Grace period
+                    // 🛑 OPEN GATE: We NO LONGER sign the user out automatically.
+                    // Instead, we show an error toast if profile fetch failed completely.
+                    if (!isUnauthorizedGhost && !profileRes.data && retryCount >= maxRetries) {
+                        toast.error(`Identity Check failed: Using fallback profile.`, { id: 'auth-warn' });
+                    }
 
-                    setUserProfile(null);
-                    profileRef.current = null;
+                    // Provide a minimal fallback profile so the user can still use the Dashboard
+                    const finalFallback = {
+                        id: user.id,
+                        email: user.email || '',
+                        full_name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
+                        role: 'student', // Default fallback
+                        avatar_url: null
+                    };
+                    setUserProfile(finalFallback);
+                    profileRef.current = finalFallback;
                 }
             } else {
                 setUserProfile(null);
@@ -627,8 +633,9 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
             console.log('📥 FINAL SETTINGS LOADED:', finalSettings);
             setSettings(finalSettings);
             setHasLoaded(true);
-        } catch (error) {
+        } catch (error: any) {
             console.error('Error fetching theme settings:', error);
+            toast.error(`Theme Engine Error: ${error.message || 'Unknown error'}`);
         } finally {
             setIsLoading(false);
             setHasLoaded(true);

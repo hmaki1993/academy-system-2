@@ -575,10 +575,16 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
                     supabase.from('coaches').select('id').eq('profile_id', user.id).maybeSingle()
                 ]);
 
-                // 🛡️ MOBILE STABILITY RETRY: If profile is missing, wait and try again (Handles DB lag)
-                if (!profileRes.data && retryCount < 2 && !isAdminEmail) {
-                    const delay = retryCount === 0 ? 800 : 1500;
-                    console.warn(`🛡️ ThemeContext: Profile not found, retrying in ${delay}ms... (Attempt ${retryCount + 1})`);
+                // 🛡️ MOBILE STABILITY RETRY (Expert Backoff Strategy)
+                // In PWA standalone mode, we give even more leeway for network transitions.
+                const isStandalone = window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone === true;
+                const maxRetries = isStandalone ? 6 : 4; 
+                
+                if (!profileRes.data && retryCount < maxRetries && !isAdminEmail) {
+                    // Exponential backoff: 800, 1500, 3000, 5000ms...
+                    const delay = [800, 1500, 3000, 5000, 8000, 10000][retryCount] || 2000;
+                    
+                    console.warn(`🛡️ ThemeContext: Profile not found [${retryCount + 1}/${maxRetries}], retrying in ${delay}ms...`);
                     setTimeout(() => fetchSettings(retryCount + 1), delay);
                     return;
                 }
@@ -624,17 +630,21 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
                     });
                 } else {
                     const reason = isUnauthorizedGhost ? 'Ghost Profile detected' : 'Profile missing';
-                    console.error(`🛡️ ThemeContext: SECURITY LOCK (${reason}) - User logged in but unauthorized. Signing out...`);
+                    console.error(`🛡️ ThemeContext: SECURITY LOCK (${reason}) - User logged in but unauthorized.`);
 
+                    // 🛑 V2 GRACE PERIOD: In PWA/Mobile, we wait even longer (10s) before forcing a logout
+                    // This allows for slow database triggers or extreme network latency.
                     setTimeout(async () => {
                         const { data: { session } } = await supabase.auth.getSession();
-                        if (session) {
+                        
+                        // Check if profile was literally JUST loaded by a concurrent retry
+                        if (session && !userProfile) {
+                            console.error(`🛡️ ThemeContext: Final Security Enforcement initiated.`);
                             await supabase.auth.signOut();
-                            toast.error(isUnauthorizedGhost ? 'Account inactive or deleted.' : 'Session expired or deleted.');
-                            // Use navigate if possible, but window.location is safer for a clean state reset
+                            toast.error(isUnauthorizedGhost ? 'Account inactive or deleted.' : 'Unauthorized or Missing Profile.');
                             window.location.href = '/login';
                         }
-                    }, 2000); // 2 second grace period
+                    }, 10000); // 10 second grace period for high-latency PWA environments
 
                     setUserProfile(null);
                 }

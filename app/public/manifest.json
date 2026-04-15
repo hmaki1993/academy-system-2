@@ -2,7 +2,7 @@
     "name": "Elite Gymnastic Academy",
     "short_name": "EliteAcademy",
     "description": "Professional Academy Management & AI Training System",
-    "start_url": "./",
+    "start_url": "/app",
     "display": "standalone",
     "display_override": ["standalone", "window-controls-overlay", "minimal-ui"],
     "orientation": "portrait-primary",

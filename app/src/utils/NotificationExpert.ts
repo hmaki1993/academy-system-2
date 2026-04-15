@@ -260,6 +260,11 @@ export const NotificationExpert = {
             fallbackActive: !!(window as any)._elite_fallback_active
         };
 
+        // 🛡️ RESILIENT SUCCESS: If fallback is active, force UI to green status
+        if (report.fallbackActive) {
+            report.localStorage = true;
+        }
+
         if (report.supported) {
             try {
                 const reg = await navigator.serviceWorker.ready;

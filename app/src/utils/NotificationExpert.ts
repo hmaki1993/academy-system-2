@@ -264,11 +264,17 @@ export const NotificationExpert = {
                 await registration.unregister();
             }
 
+            // 🚀 MANDATORY COOLDOWN: Wait 3 seconds for browser-level cleanup
+            console.log('🛡️ NotificationExpert: Cooling down system for 3s...');
+            await new Promise(r => setTimeout(r, 3000));
+
             // 3. Re-subscribe
             const success = await NotificationExpert.subscribe(userId);
             
             if (success) {
-                toast.success('تم إصلاح نظام التنبيهات بنجاح! جرب الآن.');
+                toast.success('تم إصلاح نظام التنبيهات بنجاح! سيتم إعادة تحميل الصفحة...');
+                // 🔄 FORCE RELOAD to ensure fresh context
+                setTimeout(() => window.location.reload(), 2000);
             }
             return success;
         } catch (error) {

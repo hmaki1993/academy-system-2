@@ -22,9 +22,9 @@ createRoot(document.getElementById('root')!).render(
 // Register Service Worker for Push Notifications
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-        // 🚀 EXPERT V6: Using versioned URL to force browser back-end cleanup
-        navigator.serviceWorker.register('/sw.js?v=expert-v6').then(registration => {
-            console.log('🛡️ SW registered with V6 profile:', registration);
+        // 🚀 EXPERT V10: Forced Identity Reset (Master Key Change)
+        navigator.serviceWorker.register('/sw.js?v=expert-v10').then(registration => {
+            console.log('🛡️ SW registered with V10 profile:', registration);
         }).catch(registrationError => {
             console.log('SW registration failed: ', registrationError);
         });

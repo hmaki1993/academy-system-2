@@ -1,4 +1,4 @@
-// 🛡️ EXPERT PWA PERSISTENCE: Immediate Activation (V-NUCLEAR-4.2)
+// 🛡️ EXPERT PWA PERSISTENCE: Immediate Activation (V-NUCLEAR-10.0)
 self.addEventListener('install', (event) => {
     self.skipWaiting();
 });
@@ -12,7 +12,7 @@ self.addEventListener('activate', (event) => {
  */
 self.addEventListener('message', (event) => {
     if (event.data && event.data.type === 'PING') {
-        event.source.postMessage({ type: 'PONG', version: 'V4.1-Nuclear', timestamp: Date.now() });
+        event.source.postMessage({ type: 'PONG', version: 'V10.0-Expert', timestamp: Date.now() });
     }
 });
 

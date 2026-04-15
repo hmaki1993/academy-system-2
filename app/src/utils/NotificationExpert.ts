@@ -248,7 +248,7 @@ export const NotificationExpert = {
      */
     checkDiagnostic: async () => {
         const report = {
-            version: 'expert-v9', // 🛡️ CACHE BREAKER IDENTIFIER
+            version: 'expert-v10', // 🛡️ GLOBAL IDENTITY RESET
             supported: NotificationExpert.isSupported(),
             permission: Notification.permission,
             swActive: false,

@@ -374,6 +374,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     const [isLoading, setIsLoading] = useState(true);
     const [hasLoaded, setHasLoaded] = useState(false);
     const [userProfile, setUserProfile] = useState<ThemeContextType['userProfile']>(null);
+    const profileRef = useRef<ThemeContextType['userProfile']>(null);
     const isUpdatingRef = useRef(false);
 
     const { i18n } = useTranslation();
@@ -438,11 +439,15 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
             if (e instanceof CustomEvent && e.detail) {
                 if (e.detail.full_name) {
                     console.log('✨ ThemeContext: Applying instant name update:', e.detail.full_name);
-                    setUserProfile(prev => {
-                        const newName = e.detail.full_name;
-                        if (prev) return { ...prev, full_name: newName };
+                    const updateProfile = (prev: any) => {
+                        if (prev) {
+                            const updated = { ...prev, full_name: e.detail.full_name };
+                            profileRef.current = updated;
+                            return updated;
+                        }
                         return prev;
-                    });
+                    };
+                    setUserProfile(updateProfile);
                 }
             }
 
@@ -490,11 +495,10 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     }, [userProfile?.id]);
 
     const fetchSettings = async (retryCount = 0) => {
-        if (isLoading && retryCount === 0 && hasLoaded) return; // Prevent redundant initial fetches if already in progress
+        if (isLoading && retryCount === 0 && hasLoaded) return; 
         
         try {
             setIsLoading(true);
-            // 1. Get Global Defaults (ALWAYS DO THIS FIRST - Works for unauthenticated users)
             console.log('📥 Fetching global gym settings...');
             const { data: globalData, error: globalError } = await supabase
                 .from('gym_settings')
@@ -502,98 +506,66 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
                 .limit(1)
                 .maybeSingle();
 
-            if (globalError) {
-                console.error('📥 Global settings fetch error:', globalError);
-            }
+            if (globalError) console.error('📥 Global settings fetch error:', globalError);
 
             let finalSettings = { ...defaultSettings };
             if (globalData) {
-                console.log('📥 Loaded global data row:', globalData.id);
-                // Filter out nulls and explicitly include all login_ prefixed keys
                 const filteredGlobal = Object.fromEntries(
                     Object.entries(globalData).filter(([key, v]) =>
                         v !== null && (GYM_WIDE_KEYS.includes(key as any) || key.startsWith('login_'))
                     )
                 );
                 
-                // FORCE OVERRIDE: If database logo contains legacy paths, fall back to project default
                 const legacyWords = ['healy', 'fame', 'dark_logo', 'light_logo'];
                 const isLegacy = (url: string) => legacyWords.some(word => url.toLowerCase().includes(word));
 
-                if (filteredGlobal.logo_url && typeof filteredGlobal.logo_url === 'string' && isLegacy(filteredGlobal.logo_url)) {
-                    filteredGlobal.logo_url = '/logo.png';
-                }
-                if (filteredGlobal.login_logo_url && typeof filteredGlobal.login_logo_url === 'string' && isLegacy(filteredGlobal.login_logo_url)) {
-                    filteredGlobal.login_logo_url = '/logo.png';
-                }
-                if (filteredGlobal.login_mobile_logo_url && typeof filteredGlobal.login_mobile_logo_url === 'string' && isLegacy(filteredGlobal.login_mobile_logo_url)) {
-                    filteredGlobal.login_mobile_logo_url = '/logo.png';
-                }
+                if (filteredGlobal.logo_url && typeof filteredGlobal.logo_url === 'string' && isLegacy(filteredGlobal.logo_url)) filteredGlobal.logo_url = '/logo.png';
+                if (filteredGlobal.login_logo_url && typeof filteredGlobal.login_logo_url === 'string' && isLegacy(filteredGlobal.login_logo_url)) filteredGlobal.login_logo_url = '/logo.png';
+                if (filteredGlobal.login_mobile_logo_url && typeof filteredGlobal.login_mobile_logo_url === 'string' && isLegacy(filteredGlobal.login_mobile_logo_url)) filteredGlobal.login_mobile_logo_url = '/logo.png';
 
                 finalSettings = { ...finalSettings, ...filteredGlobal };
             }
 
-            // 2. Clear stale state (Realtime moved to event-driven sync)
-            console.log('🔔 ThemeContext: Using event-driven sync for global settings');
-
-            // 3. Get Auth User
             const { data: { user } } = await supabase.auth.getUser();
             console.log('📥 Auth Check:', user ? `Logged in as ${user.email}` : 'Unauthenticated');
 
-
-            // 2. Overlay User Personal Settings & Fetch Profile
             if (user) {
-                // PRELIMINARY PROFILE: Only set for clear Admins to prevent flickering. 
-                // Others must wait for DB confirmation to ensure they haven't been deleted.
                 const email = user.email?.toLowerCase() || '';
                 const isAdminEmail = email.startsWith('admin@') || email.startsWith('amin@');
                 const tempRole = isAdminEmail ? 'admin' : null;
 
-                console.log('🛡️ ThemeContext: Preliminary check', { email, tempRole, existingProfile: userProfile?.role });
-
-                if (tempRole) {
-                    if (!userProfile || userProfile.id !== user.id) {
-                        console.log('🛡️ ThemeContext: Setting preliminary admin profile');
-                        setUserProfile({
-                            id: user.id,
-                            email: user.email || '',
-                            full_name: user.user_metadata?.full_name || null,
-                            role: tempRole,
-                            avatar_url: null
-                        });
-                    }
+                if (tempRole && (!userProfile || userProfile.id !== user.id)) {
+                    const newProfile = {
+                        id: user.id,
+                        email: user.email || '',
+                        full_name: user.user_metadata?.full_name || null,
+                        role: tempRole,
+                        avatar_url: null
+                    };
+                    setUserProfile(newProfile);
+                    profileRef.current = newProfile;
                 } else if (userProfile && userProfile.id !== user.id) {
-                    // Reset if the user ID changed (e.g., login after logout without full reload)
-                    console.log('🛡️ ThemeContext: User ID changed, resetting profile for new fetch...');
                     setUserProfile(null);
+                    profileRef.current = null;
                 }
 
-                // Fetch user settings, profile, and coach record in parallel
                 let [userSettingsRes, profileRes, coachRes] = await Promise.all([
                     supabase.from('user_settings').select('*').eq('user_id', user.id).maybeSingle(),
                     supabase.from('profiles').select('full_name, role, avatar_url, last_seen, is_in_chat').eq('id', user.id).maybeSingle(),
                     supabase.from('coaches').select('id').eq('profile_id', user.id).maybeSingle()
                 ]);
 
-                // 🛡️ MOBILE STABILITY RETRY (Expert Backoff Strategy)
-                // In PWA standalone mode, we give even more leeway for network transitions.
                 const isStandalone = window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone === true;
                 const maxRetries = isStandalone ? 6 : 4; 
                 
                 if (!profileRes.data && retryCount < maxRetries && !isAdminEmail) {
-                    // Exponential backoff: 800, 1500, 3000, 5000ms...
                     const delay = [800, 1500, 3000, 5000, 8000, 10000][retryCount] || 2000;
-                    
                     console.warn(`🛡️ ThemeContext: Profile not found [${retryCount + 1}/${maxRetries}], retrying in ${delay}ms...`);
                     setTimeout(() => fetchSettings(retryCount + 1), delay);
                     return;
                 }
 
-                if (userSettingsRes.error) console.warn('📥 User settings fetch error:', userSettingsRes.error);
-                if (profileRes.error) console.warn('📥 User profile fetch error:', profileRes.error);
-
                 if (userSettingsRes.data) {
-                    console.log('📥 Found user personal settings:', userSettingsRes.data);
                     const filteredUser = Object.fromEntries(
                         Object.entries(userSettingsRes.data).filter(([key, v]) =>
                             v !== null && USER_SPECIFIC_KEYS.includes(key as keyof GymSettings)
@@ -607,56 +579,53 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
                 const isUnauthorizedGhost = isCoach && !hasCoachRecord;
 
                 if (profileRes.data && !isUnauthorizedGhost) {
-                    console.log('🛡️ ThemeContext: Found valid user profile:', profileRes.data);
                     const dbName = profileRes.data.full_name?.trim();
                     const metadataName = user.user_metadata?.full_name || user.user_metadata?.name;
                     const finalName = dbName || metadataName || user.email?.split('@')[0] || 'User';
 
-                    setUserProfile({
+                    const newProfile = {
                         id: user.id,
                         email: user.email || '',
                         ...profileRes.data,
                         full_name: finalName
-                    });
+                    };
+                    setUserProfile(newProfile);
+                    profileRef.current = newProfile;
                 } else if (isAdminEmail) {
-                    console.warn('🛡️ ThemeContext: Admin profile missing in DB, using fallback.');
                     const metadataName = user.user_metadata?.full_name || user.user_metadata?.name || user.user_metadata?.display_name;
-                    setUserProfile({
+                    const fallbackProfile = {
                         id: user.id,
                         email: user.email || '',
                         full_name: metadataName || 'Administrator',
                         role: 'admin',
                         avatar_url: null
-                    });
+                    };
+                    setUserProfile(fallbackProfile);
+                    profileRef.current = fallbackProfile;
                 } else {
                     const reason = isUnauthorizedGhost ? 'Ghost Profile detected' : 'Profile missing';
                     console.error(`🛡️ ThemeContext: SECURITY LOCK (${reason}) - User logged in but unauthorized.`);
 
-                    // 🛑 V2 GRACE PERIOD: In PWA/Mobile, we wait even longer (10s) before forcing a logout
-                    // This allows for slow database triggers or extreme network latency.
                     setTimeout(async () => {
                         const { data: { session } } = await supabase.auth.getSession();
-                        
-                        // Check if profile was literally JUST loaded by a concurrent retry
-                        if (session && !userProfile) {
+                        if (session && !profileRef.current) {
                             console.error(`🛡️ ThemeContext: Final Security Enforcement initiated.`);
                             await supabase.auth.signOut();
                             toast.error(isUnauthorizedGhost ? 'Account inactive or deleted.' : 'Unauthorized or Missing Profile.');
-                            window.location.href = '/login';
                         }
-                    }, 10000); // 10 second grace period for high-latency PWA environments
+                    }, 10000); // 10s Grace period
 
                     setUserProfile(null);
+                    profileRef.current = null;
                 }
             } else {
                 setUserProfile(null);
+                profileRef.current = null;
             }
 
             console.log('📥 FINAL SETTINGS LOADED:', finalSettings);
             setSettings(finalSettings);
             setHasLoaded(true);
-
-
         } catch (error) {
             console.error('Error fetching theme settings:', error);
         } finally {

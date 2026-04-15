@@ -60,13 +60,13 @@ export function PushNotificationPrompt({ userId }: PushNotificationPromptProps) 
         <div 
             style={{ 
                 position: 'fixed', 
-                bottom: '1.5rem', 
-                left: '50%', 
-                transform: 'translateX(-50%)', 
-                zIndex: 999999, 
-                width: '92%', 
-                maxWidth: '400px',
-                pointerEvents: 'auto'
+                bottom: 'calc(1.5rem + env(safe-area-inset-bottom, 0px))', 
+                left: '1rem',
+                right: '1rem',
+                zIndex: 9999999, 
+                pointerEvents: 'auto',
+                display: 'flex',
+                justifyContent: 'center'
             }}
             className="animate-premium-in"
         >

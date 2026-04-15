@@ -1377,6 +1377,16 @@ export default function Settings() {
                                                 </button>
                                             </div>
 
+                                            {/* STANDALONE HINT */}
+                                            {window.matchMedia('(display-mode: standalone)').matches && (
+                                                <div className="flex gap-2 p-3 rounded-xl bg-amber-500/5 border border-amber-500/10">
+                                                    <Wrench className="w-3 h-3 text-amber-500/50 shrink-0 mt-0.5" />
+                                                    <p className="text-[7.5px] font-bold text-amber-500/40 uppercase leading-relaxed">
+                                                        Note: If repair fails, go to Android Settings -> Apps -> App Info -> Storage -> Clear Data.
+                                                    </p>
+                                                </div>
+                                            )}
+
                                             {notifDiagnostic?.pushToken && (
                                                 <div className="p-3 bg-black/40 rounded-xl border border-white/5 overflow-hidden">
                                                     <span className="text-[6px] text-white/10 font-black uppercase block mb-1">Hardware Token Fingerprint</span>

@@ -24,7 +24,7 @@ export const NotificationExpert = {
     /**
      * Request Permission and Subscribe
      */
-    subscribe: async (userId: string) => {
+    subscribe: async (userId: string, retryCount = 0): Promise<boolean> => {
         try {
             if (!NotificationExpert.isSupported()) {
                 throw new Error('System notifications are not supported on this device.');
@@ -71,7 +71,41 @@ export const NotificationExpert = {
             return true;
         } catch (error: any) {
             console.error('🛡️ NotificationExpert Error:', error);
-            toast.error(error.message || 'Notification Error');
+            
+            // Handle Storage Error specifically (Oppo / Standalone issue)
+            if (error.message?.includes('storage') || error.name === 'UnknownError') {
+                if (retryCount < 1) {
+                    console.warn('🛡️ NotificationExpert: Storage locked. Attempting deep clean and retry...');
+                    await NotificationExpert.clearSiteData();
+                    return NotificationExpert.subscribe(userId, retryCount + 1);
+                }
+                toast.error('خطأ في ذاكرة المتصفح. برجاء عمل Clear Data للتطبيق من إعدادات الأندرويد.');
+            } else {
+                toast.error(error.message || 'Notification Error');
+            }
+            return false;
+        }
+    },
+
+    /**
+     * DEEP CLEAN: Clears all browser storage for the site
+     */
+    clearSiteData: async () => {
+        try {
+            console.log('🛡️ NotificationExpert: Deep cleaning site data...');
+            // Clear Caches
+            if ('caches' in window) {
+                const names = await caches.keys();
+                await Promise.all(names.map(name => caches.delete(name)));
+            }
+            // Clear LocalStorage (Keep only necessary, or clear all for reset)
+            const backup = localStorage.getItem('supabase.auth.token'); // Try to keep login if we can
+            localStorage.clear();
+            if (backup) localStorage.setItem('supabase.auth.token', backup);
+            
+            return true;
+        } catch (e) {
+            console.error('Deep clean failed:', e);
             return false;
         }
     },
@@ -207,22 +241,20 @@ export const NotificationExpert = {
         try {
             console.log('🛡️ NotificationExpert: Starting Nuclear Repair...');
             
-            // 1. Unregister all service workers
+            // 1. Deep Clean Storage first
+            await NotificationExpert.clearSiteData();
+
+            // 2. Unregister all service workers
             const registrations = await navigator.serviceWorker.getRegistrations();
             for (const registration of registrations) {
                 await registration.unregister();
             }
 
-            // 2. Clear local storage flags
-            localStorage.removeItem('elite_push_active');
-            
             // 3. Re-subscribe
             const success = await NotificationExpert.subscribe(userId);
             
             if (success) {
                 toast.success('تم إصلاح نظام التنبيهات بنجاح! جرب الآن.');
-            } else {
-                toast.error('فشل الإصلاح التلقائي. يرجى مراجعة إعدادات Chrome.');
             }
             return success;
         } catch (error) {

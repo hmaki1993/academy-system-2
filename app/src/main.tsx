@@ -22,8 +22,9 @@ createRoot(document.getElementById('root')!).render(
 // Register Service Worker for Push Notifications
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js').then(registration => {
-            console.log('SW registered: ', registration);
+        // 🚀 EXPERT V6: Using versioned URL to force browser back-end cleanup
+        navigator.serviceWorker.register('/sw.js?v=expert-v6').then(registration => {
+            console.log('🛡️ SW registered with V6 profile:', registration);
         }).catch(registrationError => {
             console.log('SW registration failed: ', registrationError);
         });

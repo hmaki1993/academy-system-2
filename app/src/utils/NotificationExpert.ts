@@ -219,6 +219,24 @@ export const NotificationExpert = {
     },
 
     /**
+     * EMERGENCY FALLBACK: Real-time listener
+     * Used when Push Subscription is broken or blocked.
+     */
+    registerFallbackListener: (userId: string) => {
+        console.log(`🛡️ NotificationExpert: Monitoring Realtime Fallback for [${userId}]`);
+        
+        const channel = supabase.channel(`user-notifications:${userId}`)
+            .on('broadcast', { event: 'mission-alert' }, (payload) => {
+                console.log('🛡️ NotificationExpert: Fallback Signal Received:', payload);
+                const { title, body, url } = payload.payload;
+                NotificationExpert.triggerLocal(title, body, url);
+            })
+            .subscribe();
+
+        return () => supabase.removeChannel(channel);
+    },
+
+    /**
      * NUCLEAR: Diagnostic Check
      * Returns a full health report of the notification system.
      */

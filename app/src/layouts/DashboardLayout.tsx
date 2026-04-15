@@ -132,6 +132,8 @@ export default function DashboardLayout() {
             // 🛡️ EXPERT PWA: Self-healing check (Ensure notifications are always linked)
             if (userId) {
                 NotificationExpert.ensureSubscription(userId);
+                // 🚀 EXPERT V6: Emergency Fallback Listener (Broadcasting from server directly to UI)
+                NotificationExpert.registerFallbackListener(userId);
             }
 
             // Ensure auth session is synced with realtime

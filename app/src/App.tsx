@@ -4,6 +4,16 @@ import { Toaster, toast } from 'react-hot-toast';
 import { lazy, Suspense, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import ProtectedRoute from './components/ProtectedRoute';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 1,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
 // Lazy load pages for performance
 const Dashboard = lazy(() => import('./pages/Dashboard'));
@@ -289,13 +299,15 @@ function AppContent() {
 
 function App() {
   return (
-    <CurrencyProvider>
-      <ThemeProvider>
-        <PresenceProvider>
-          <AppContent />
-        </PresenceProvider>
-      </ThemeProvider>
-    </CurrencyProvider>
+    <QueryClientProvider client={queryClient}>
+      <CurrencyProvider>
+        <ThemeProvider>
+          <PresenceProvider>
+            <AppContent />
+          </PresenceProvider>
+        </ThemeProvider>
+      </CurrencyProvider>
+    </QueryClientProvider>
   )
 }
 

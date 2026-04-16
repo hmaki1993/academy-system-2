@@ -24,26 +24,29 @@ import UpcomingAgendaWidget from '../components/UpcomingAgendaWidget';
 export default function Dashboard() {
     const { t } = useTranslation();
     const navigate = useNavigate();
-    
-    // 🛡️ ELITE V20: AGGRESSIVE SAFETY CHECK
     const context = useOutletContext<{ role: string, fullName: string, userEmail: string | null, userId: string, isVerifiedStudent: boolean | null }>();
-    if (!context) {
-        console.warn('🛡️ Dashboard: Outlet context not yet available.');
-        return <div className="min-h-screen bg-black" />; // Silent fallback to prevent crash
-    }
-
-    const { role, fullName, userEmail, userId, isVerifiedStudent } = context;
-    const cleanName = fullName?.trim() || userEmail?.split('@')[0]?.trim() || 'Admin';
     const { formatPrice, currency } = useCurrency();
     const { userProfile } = useTheme();
     const { data: analytics, isLoading: analyticsLoading } = useAdminAnalytics();
     const { onlineStudents, onlineCount } = usePresenceContext();
-    const [selectedMetric, setSelectedMetric] = useState<'Total Revenue' | 'Consultations' | 'PT Sessions' | 'Athletes' | null>(null);
-    const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
 
     // AI TRACKER REAL-TIME STATE
     const [scheduledStart, setScheduledStart] = useState<string | null>(null);
     const [planStatus, setPlanStatus] = useState<string | null>(null);
+    const [selectedMetric, setSelectedMetric] = useState<'Total Revenue' | 'Consultations' | 'PT Sessions' | 'Athletes' | null>(null);
+    const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
+
+    // 🛡️ ELITE V21: SAFE RENDER GUARD (After hooks to follow React rules)
+    if (!context) {
+        console.warn('🛡️ Dashboard: Outlet context not yet available.');
+        return (
+            <div className="min-h-screen bg-[#050505] flex items-center justify-center">
+                <div className="w-12 h-12 border-2 border-primary/20 border-t-primary rounded-full animate-spin" />
+            </div>
+        );
+    }
+
+    const { role, fullName, userEmail, userId, isVerifiedStudent } = context;
 
     const filteredDetails = useMemo(() => {
         if (!selectedMetric || !analytics) return [];

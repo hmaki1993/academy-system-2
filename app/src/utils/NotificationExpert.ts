@@ -267,16 +267,19 @@ export const NotificationExpert = {
                     icon: '/logo-premium.png',
                     badge: '/logo-premium.png',
                     data: { url },
-                    // 🚀 AGGRESSIVE SIGNALS (Required for OS Drop-Down)
-                    vibrate: [0, 500, 150, 500],
-                    tag: `alert-${Date.now()}`, // UNIQUE TAG forces OS to show a fresh bar
+                    // 🚀 MAXIMUM IMPACT SIGNALS (Required for OS Drop-Down)
+                    vibrate: [0, 500, 150, 500, 150, 500],
+                    tag: `alert-${Math.random()}-${Date.now()}`, // ROTATING TAG forces new bar
                     renotify: true,
                     requireInteraction: true,
                     silent: false,
+                    sound: '/ringtone.mp3',
                     
-                    // Vendor-specific high intensity
+                    // Vendor-specific High Intensity Flags
                     priority: 2,
-                    urgency: 'high'
+                    urgency: 'high',
+                    importance: 'high',
+                    interaction: true
                 } as any);
             } catch (err) {
                 console.warn('⚠️ Native Drop-down Failed:', err);

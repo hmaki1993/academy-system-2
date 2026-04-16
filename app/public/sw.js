@@ -31,18 +31,19 @@ self.addEventListener('push', (event) => {
         // ⚡ INTENSE TACTICAL VIBRATION (3 long pulse pattern)
         vibrate: [0, 500, 150, 500, 150, 500],
         
-        // 🚀 HEADS-UP FORCE: Dynamic Tagging
-        // Using a unique tag for each message FORCES the OS to drop down the banner again.
-        tag: `mission-${Date.now()}`, 
+        // 🚀 V25 MAXIMUM IMPACT: HEADS-UP FORCE
+        tag: `mission-${Math.random()}-${Date.now()}`, 
         renotify: true,
         requireInteraction: true, 
         silent: false, 
-        sound: '/ringtone.mp3', // Absolute path
+        sound: '/ringtone.mp3', 
         timestamp: Date.now(),
         
-        // 📐 ANDROID CHANNELS / IMPORTANCE / URGENCY
+        // 📐 CROSS-PLATFORM INTENSITY
         priority: 2, 
         urgency: 'high',
+        importance: 'high',
+        interaction: true,
         
         // 🛠️ ACTIONS
         actions: [

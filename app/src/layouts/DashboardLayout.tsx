@@ -455,7 +455,6 @@ export default function DashboardLayout() {
 
     return (
         <div className="fixed inset-0 w-full flex bg-background font-cairo overflow-hidden">
-            <EliteNotificationBanner />
             {/* Cosmic Background Orbs */}
             <div className="orb-primary fixed -top-[25%] -left-[10%] w-[55%] h-[55%] rounded-full blur-[140px] pointer-events-none z-0 opacity-20" style={{ background: 'radial-gradient(circle, var(--color-primary) 0%, transparent 70%)' }}></div>
             <div className="orb-accent fixed -bottom-[25%] -right-[10%] w-[55%] h-[55%] rounded-full blur-[140px] pointer-events-none z-0 opacity-15" style={{ background: 'radial-gradient(circle, var(--color-primary) 0%, transparent 70%)' }}></div>

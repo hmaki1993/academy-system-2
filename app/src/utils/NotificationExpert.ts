@@ -245,19 +245,20 @@ export const NotificationExpert = {
      * Trigger a Local Notification (When app is active)
      */
     triggerLocal: async (title: string, body: string, url: string = '/app') => {
-        console.log('🔔 NotificationExpert: Triggering Local Direct Feedback...');
+        console.log('🔔 NotificationExpert: Triggering Aggressive Native Drop-Down...');
 
-        // 1. Trigger Haptic Vibration (Direct Browser Command)
+        // 1. Trigger Haptic Vibration (CRITICAL for Heads-up behavior on Android)
         if ("vibrate" in navigator) {
-            navigator.vibrate([200, 100, 200]);
+            // Tactical pattern: [Short Pause, Long Buzz, Short Pause, Long Buzz]
+            navigator.vibrate([0, 500, 150, 500]);
         }
 
-        // 2. Trigger Visual Banner (Direct Callback)
+        // 2. Trigger Visual Banner (Optional internal fallback)
         if (NotificationExpert._bannerCallback) {
             NotificationExpert._bannerCallback({ title, body, url });
         }
 
-        // 3. Trigger Native Notification (OS Command)
+        // 3. FORCE NATIVE OS DROP-DOWN (Heads-up)
         if (Notification.permission === 'granted') {
             try {
                 const registration = await navigator.serviceWorker.ready;
@@ -266,14 +267,19 @@ export const NotificationExpert = {
                     icon: '/logo-premium.png',
                     badge: '/logo-premium.png',
                     data: { url },
-                    vibrate: [0, 500, 200, 500],
-                    tag: 'local-alert', 
+                    // 🚀 AGGRESSIVE SIGNALS (Required for OS Drop-Down)
+                    vibrate: [0, 500, 150, 500],
+                    tag: `alert-${Date.now()}`, // UNIQUE TAG forces OS to show a fresh bar
                     renotify: true,
                     requireInteraction: true,
-                    silent: false
+                    silent: false,
+                    
+                    // Vendor-specific high intensity
+                    priority: 2,
+                    urgency: 'high'
                 } as any);
             } catch (err) {
-                console.warn('⚠️ Native Notification Failed:', err);
+                console.warn('⚠️ Native Drop-down Failed:', err);
             }
         }
     },

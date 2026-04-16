@@ -48,6 +48,10 @@ export default function Dashboard() {
 
     const { role, fullName, userEmail, userId, isVerifiedStudent } = context;
 
+    // 🛡️ MASTER NAME DERIVATION: Restoring missing identity labels for UI
+    const displayFullName = (fullName || userProfile?.full_name || userEmail?.split('@')[0] || 'Admin').trim();
+    const firstName = displayFullName.split(/\s+/)[0] || 'Admin';
+
     const filteredDetails = useMemo(() => {
         if (!selectedMetric || !analytics) return [];
         if (selectedMetric === 'Total Revenue') return analytics.revenueDetails || [];

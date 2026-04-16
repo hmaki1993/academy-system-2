@@ -21,25 +21,27 @@ self.addEventListener('push', (event) => {
     const data = event.data ? event.data.json() : {};
     const title = data.title || 'تنبيه من الأكاديمية';
     
-    // 🛡️ V4 EXPERT: MAXIMUM URGENCY (Oppo/Android Force)
+    // 🛡️ V26 ULTIMATE FORCE: ABSOLUTE ASSETS & MAX PRIORITY
+    const baseUrl = self.location.origin;
     const options = {
         body: data.message || 'لديك رسالة جديدة. افتح التطبيق للمتابعة.',
-        icon: '/logo-premium.png',
-        badge: '/logo-premium.png',
+        icon: `${baseUrl}/logo-premium.png`,
+        badge: `${baseUrl}/logo-premium.png`,
+        image: data.image ? `${baseUrl}${data.image}` : `${baseUrl}/logo-premium.png`,
         data: data.url || '/',
         
-        // ⚡ INTENSE TACTICAL VIBRATION (3 long pulse pattern)
-        vibrate: [0, 500, 150, 500, 150, 500],
+        // ⚡ CLASSIC ANDROID VIBRATION (More compatible)
+        vibrate: [500, 200, 500, 200, 500],
         
-        // 🚀 V25 MAXIMUM IMPACT: HEADS-UP FORCE
-        tag: `mission-${Math.random()}-${Date.now()}`, 
+        // 🚀 HEADS-UP PERSISTENCE
+        tag: `alert-${Math.random()}`, 
         renotify: true,
         requireInteraction: true, 
         silent: false, 
-        sound: '/ringtone.mp3', 
+        sound: `${baseUrl}/ringtone.mp3`, 
         timestamp: Date.now(),
         
-        // 📐 CROSS-PLATFORM INTENSITY
+        // 📐 EMERGENCY METADATA
         priority: 2, 
         urgency: 'high',
         importance: 'high',

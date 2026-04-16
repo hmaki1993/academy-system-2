@@ -261,19 +261,21 @@ export const NotificationExpert = {
         // 3. FORCE NATIVE OS DROP-DOWN (Heads-up)
         if (Notification.permission === 'granted') {
             try {
+                const baseUrl = window.location.origin;
                 const registration = await navigator.serviceWorker.ready;
                 registration.showNotification(title, {
                     body,
-                    icon: '/logo-premium.png',
-                    badge: '/logo-premium.png',
+                    icon: `${baseUrl}/logo-premium.png`,
+                    badge: `${baseUrl}/logo-premium.png`,
+                    image: `${baseUrl}/logo-premium.png`,
                     data: { url },
                     // 🚀 MAXIMUM IMPACT SIGNALS (Required for OS Drop-Down)
-                    vibrate: [0, 500, 150, 500, 150, 500],
-                    tag: `alert-${Math.random()}-${Date.now()}`, // ROTATING TAG forces new bar
+                    vibrate: [500, 200, 500, 200, 500],
+                    tag: `alert-${Math.random()}-${Date.now()}`, 
                     renotify: true,
                     requireInteraction: true,
                     silent: false,
-                    sound: '/ringtone.mp3',
+                    sound: `${baseUrl}/ringtone.mp3`,
                     
                     // Vendor-specific High Intensity Flags
                     priority: 2,

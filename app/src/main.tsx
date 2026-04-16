@@ -13,9 +13,9 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
 // Register Service Worker for Push Notifications
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-        // 🚀 EXPERT V18: Nuclear Cache Buster Pivot
-        navigator.serviceWorker.register('/sw.js?v=expert-v18').then(registration => {
-            console.log('🛡️ SW registered with V18 profile:', registration);
+        // 🚀 EXPERT V22: Stable Registration
+        navigator.serviceWorker.register('/sw.js').then(registration => {
+            console.log('🛡️ SW registered (Expert V22 Stable):', registration);
         }).catch(registrationError => {
             console.log('SW registration failed: ', registrationError);
         });

@@ -57,19 +57,13 @@ export default function Dashboard() {
         return [];
     }, [selectedMetric, analytics]);
 
-
-    // 🛡️ MASTER NAME DERIVATION: Highly stabilized to avoid 'disappearing' name flash
-    // We prioritize the context name which is already synced in the Layout.
-    const displayFullName = (fullName || userProfile?.full_name || userEmail?.split('@')[0] || 'Admin').trim();
-    const firstName = displayFullName.split(/\s+/)[0] || 'Admin';
-
     // RESTORE ROLE-BASED REDIRECTION (+ Student Fail-safe)
     const normalizedRole = role?.toLowerCase().trim();
 
-    // IF ADMIN, SHOW IMMEDIATELY (Bypass student verification loader for better UX)
+    // IF ADMIN, SHOW IMMEDIATELY
     if (normalizedRole === 'admin') {
         // Render below
-    } else if (!role || isVerifiedStudent === null) {
+    } else if (isVerifiedStudent === null) {
         return (
             <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
                 <div className="w-12 h-12 border-2 border-primary/20 border-t-primary rounded-full animate-spin" />
@@ -78,16 +72,16 @@ export default function Dashboard() {
         );
     }
     
-    // PRIORITY 1: Explicit Staff Roles (Head Coach, Coach, Reception)
+    // PRIORITY 1: Explicit Staff Roles
     if (normalizedRole === 'head_coach') return <HeadCoachDashboard />;
     if (normalizedRole === 'coach') return <CoachDashboard />;
     if (normalizedRole === 'reception' || normalizedRole === 'receptionist') return <ReceptionDashboard role={role} />;
 
-    // PRIORITY 2: Admin check - If it's admin, stay here and DON'T go to Student Dashboard
+    // PRIORITY 2: Admin check
     if (normalizedRole === 'admin') {
-        // Continue to render the Admin Dashboard below
+        // Continue
     } else {
-        // PRIORITY 3: If verified as student in DB OR role is student, go to Student Dashboard
+        // PRIORITY 3: Student
         if (isVerifiedStudent || normalizedRole === 'student' || normalizedRole === 'trainee') {
             return (
                 <Suspense fallback={<div className="flex items-center justify-center min-h-[60vh]"><div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin"></div></div>}>

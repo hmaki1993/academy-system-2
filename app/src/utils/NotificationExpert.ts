@@ -24,9 +24,13 @@ export const NotificationExpert = {
      * Set User Identity for session-less environments
      */
     setIdentity: (id: string) => {
-        if (id) {
-            console.log('🛡️ NotificationExpert: Identity Hydrated:', id);
-            NotificationExpert._currentUserId = id;
+        try {
+            if (id && id !== NotificationExpert._currentUserId) {
+                console.log('🛡️ NotificationExpert: Identity Hydrated:', id);
+                NotificationExpert._currentUserId = id;
+            }
+        } catch (e) {
+            console.warn('🛡️ NotificationExpert: Identity hydration error:', e);
         }
     },
 

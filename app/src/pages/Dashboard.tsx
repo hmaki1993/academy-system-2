@@ -24,7 +24,15 @@ import UpcomingAgendaWidget from '../components/UpcomingAgendaWidget';
 export default function Dashboard() {
     const { t } = useTranslation();
     const navigate = useNavigate();
-    const { role, fullName, userEmail, userId, isVerifiedStudent } = useOutletContext<{ role: string, fullName: string, userEmail: string | null, userId: string, isVerifiedStudent: boolean | null }>() || { role: null, fullName: null, userEmail: null, userId: null, isVerifiedStudent: null };
+    
+    // 🛡️ ELITE V20: AGGRESSIVE SAFETY CHECK
+    const context = useOutletContext<{ role: string, fullName: string, userEmail: string | null, userId: string, isVerifiedStudent: boolean | null }>();
+    if (!context) {
+        console.warn('🛡️ Dashboard: Outlet context not yet available.');
+        return <div className="min-h-screen bg-black" />; // Silent fallback to prevent crash
+    }
+
+    const { role, fullName, userEmail, userId, isVerifiedStudent } = context;
     const cleanName = fullName?.trim() || userEmail?.split('@')[0]?.trim() || 'Admin';
     const { formatPrice, currency } = useCurrency();
     const { userProfile } = useTheme();

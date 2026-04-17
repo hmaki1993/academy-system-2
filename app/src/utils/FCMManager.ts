@@ -1,98 +1,31 @@
 import { messaging, getToken, onMessage, FCM_VAPID_KEY } from '../lib/firebase';
 import { supabase } from '../lib/supabase';
+import { Capacitor } from '@capacitor/core';
+import { PushNotifications } from '@capacitor/push-notifications';
 
 let _foregroundListenerActive = false;
 let _registrationInProgress = false;
 
 /**
- * 🔥 FCM Manager - Google Firebase Cloud Messaging
- * النظام الرسمي اللي بتستخدمه كل التطبيقات الكبيرة
- * يضمن Drop-down + Vibration حقيقي من نظام التشغيل
+ * 🔥 Hybrid FCM Manager (Native Capacitor + Web Push)
+ * Uses high-priority Native Push internally on APKs to bypass Oppo/Xiaomi limitations.
  */
 export const FCMManager = {
 
-    /**
-     * تسجيل الجهاز وحفظ الـ FCM Token في Supabase
-     * آمن من التشغيل المتعدد (idempotent)
-     */
     register: async (userId: string, force = false): Promise<boolean> => {
-        // منع التسجيل المتكرر
         if (_registrationInProgress && !force) return false;
         _registrationInProgress = true;
 
         try {
             if (!userId) return false;
-            console.log(`🔥 FCMManager: Starting registration (force=${force})...`);
+            console.log(`🔥 FCMManager: Starting registration (Native: ${Capacitor.isNativePlatform()}) (force=${force})...`);
 
-            // 1. Check لو الـ Browser يدعم الـ Push
-            if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
-                console.warn('🔥 FCMManager: Push not supported on this browser');
-                return false;
+            if (Capacitor.isNativePlatform()) {
+                return await registerNativePush(userId);
+            } else {
+                return await registerWebPush(userId, force);
             }
-
-            // 2. طلب Permission
-            const permission = await Notification.requestPermission();
-            if (permission !== 'granted') {
-                console.warn('🔥 FCMManager: Permission denied');
-                return false;
-            }
-
-            // 3. 🧹 NUCLEAR RESET: امسح كل السيرفس وركرز والاشتراكات لو طلبنا force
-            if (force) {
-                console.log('🔥 FCMManager: ☢️ NUCLEAR RESET INITIATED...');
-                try {
-                    const allRegistrations = await navigator.serviceWorker.getRegistrations();
-                    for (const reg of allRegistrations) {
-                        await reg.unregister();
-                        console.log('🔥 FCMManager: Unregistered SW');
-                    }
-                    // إضافة تأخير بسيط للتأكد من التنظيف
-                    await new Promise(r => setTimeout(r, 1000));
-                } catch (cleanupErr) {
-                    console.warn('🔥 FCMManager: Cleanup warning:', cleanupErr);
-                }
-            }
-
-            // 4. 🛡️ سجل الـ Firebase Service Worker
-            console.log('🔥 FCMManager: Registering Firebase Service Worker...');
-            const swRegistration = await navigator.serviceWorker.register('/firebase-messaging-sw.js', {
-                scope: '/'
-            });
-            await navigator.serviceWorker.ready;
-
-            // 5. خد الـ FCM Token
-            const fcmToken = await getToken(messaging, {
-                vapidKey: FCM_VAPID_KEY,
-                serviceWorkerRegistration: swRegistration
-            });
-
-            if (!fcmToken) {
-                console.error('🔥 FCMManager: Failed to get token - check VAPID key');
-                return false;
-            }
-
-            console.log('🔥 FCMManager: Token obtained ✅');
-
-            // 5. احفظ الـ Token في Supabase (Upsert = Update or Insert)
-            const { error } = await supabase
-                .from('user_fcm_tokens')
-                .upsert({
-                    user_id: userId,
-                    fcm_token: fcmToken,
-                    device_info: navigator.userAgent.substring(0, 200),
-                    updated_at: new Date().toISOString()
-                }, { onConflict: 'user_id,fcm_token' });
-
-            if (error) {
-                console.error('🔥 FCMManager: DB save error:', error.message);
-                return false;
-            }
-
-            console.log('🔥 FCMManager: ✅ Device registered for native notifications!');
-            return true;
-
         } catch (err: any) {
-            // إذا الخطأ من Firebase نفسه (مش مشكلة), نوضحه بس ما نكرهش التطبيق
             console.warn('🔥 FCMManager: Registration skipped -', err?.message || err);
             return false;
         } finally {
@@ -100,22 +33,117 @@ export const FCMManager = {
         }
     },
 
-    /**
-     * الاستماع للتنبيهات لما التطبيق مفتوح (Foreground)
-     * مضمون مش هيتسجل أكتر من مرة
-     */
     listenForeground: (callback: (payload: any) => void) => {
-        if (_foregroundListenerActive) return; // منع التكرار
+        if (_foregroundListenerActive) return;
         _foregroundListenerActive = true;
 
-        try {
-            onMessage(messaging, (payload) => {
-                console.log('🔥 FCMManager: Foreground notification received');
-                callback(payload);
+        if (Capacitor.isNativePlatform()) {
+            PushNotifications.addListener('pushNotificationReceived', (notification) => {
+                console.log('🚀 FCMManager Native: Foreground notification received', notification);
+                callback({ notification: { title: notification.title, body: notification.body }, data: notification.data });
             });
-        } catch (err) {
-            console.warn('🔥 FCMManager: Foreground listener error:', err);
-            _foregroundListenerActive = false;
+        } else {
+            try {
+                onMessage(messaging, (payload) => {
+                    console.log('🔥 FCMManager Web: Foreground notification received');
+                    callback(payload);
+                });
+            } catch (err) {
+                console.warn('🔥 FCMManager: Web Foreground listener error:', err);
+                _foregroundListenerActive = false;
+            }
         }
     }
 };
+
+/**
+ * 📲 NATIVE CAPACITOR PUSH LOGIC (Guaranteed Drop-Down & Sound)
+ */
+async function registerNativePush(userId: string): Promise<boolean> {
+    try {
+        let permStatus = await PushNotifications.checkPermissions();
+
+        if (permStatus.receive === 'prompt') {
+            permStatus = await PushNotifications.requestPermissions();
+        }
+
+        if (permStatus.receive !== 'granted') {
+            console.warn('🚨 FCMManager Native: User denied push permissions.');
+            return false;
+        }
+
+        // Register with Apple / Google
+        await PushNotifications.register();
+
+        return new Promise((resolve) => {
+            PushNotifications.addListener('registration', async (token) => {
+                console.log('🚀 Native FCM Token:', token.value);
+                await saveTokenToSupabase(userId, token.value, 'Native APK: ' + Capacitor.getPlatform());
+                resolve(true);
+            });
+
+            PushNotifications.addListener('registrationError', (error: any) => {
+                console.error('🚨 Native Push Registration Error:', error);
+                resolve(false);
+            });
+        });
+    } catch (e) {
+        console.error('🚨 FCMManager Native Setup Error:', e);
+        return false;
+    }
+}
+
+/**
+ * 🌐 WEB PUSH LOGIC (Chrome Fallback / TWA)
+ */
+async function registerWebPush(userId: string, force: boolean): Promise<boolean> {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+        console.warn('🔥 FCMManager: Push not supported on this browser');
+        return false;
+    }
+
+    const permission = await Notification.requestPermission();
+    if (permission !== 'granted') {
+        console.warn('🔥 FCMManager: Web Permission denied');
+        return false;
+    }
+
+    if (force) {
+        console.log('🔥 FCMManager: ☢️ NUCLEAR RESET INITIATED...');
+        try {
+            const allRegistrations = await navigator.serviceWorker.getRegistrations();
+            for (const reg of allRegistrations) {
+                await reg.unregister();
+            }
+            await new Promise(r => setTimeout(r, 1000));
+        } catch (err) {}
+    }
+
+    console.log('🔥 FCMManager: Registering Firebase Web Service Worker...');
+    const swRegistration = await navigator.serviceWorker.register('/firebase-messaging-sw.js', { scope: '/' });
+    await navigator.serviceWorker.ready;
+
+    const fcmToken = await getToken(messaging, { vapidKey: FCM_VAPID_KEY, serviceWorkerRegistration: swRegistration });
+
+    if (!fcmToken) return false;
+
+    console.log('🔥 FCMManager: Web Token obtained ✅');
+    return await saveTokenToSupabase(userId, fcmToken, navigator.userAgent.substring(0, 200));
+}
+
+async function saveTokenToSupabase(userId: string, token: string, deviceInfo: string): Promise<boolean> {
+    const { error } = await supabase
+        .from('user_fcm_tokens')
+        .upsert({
+            user_id: userId,
+            fcm_token: token,
+            device_info: deviceInfo,
+            updated_at: new Date().toISOString()
+        }, { onConflict: 'user_id,fcm_token' });
+
+    if (error) {
+        console.error('🔥 FCMManager: DB save error:', error.message);
+        return false;
+    }
+    return true;
+}

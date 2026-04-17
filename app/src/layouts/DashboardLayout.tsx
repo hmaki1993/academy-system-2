@@ -4,7 +4,8 @@ import { supabase } from '../lib/supabase';
 import { NotificationExpert } from '../utils/NotificationExpert';
 import { FCMManager } from '../utils/FCMManager';
 import { useTranslation } from 'react-i18next';
-
+import { Capacitor } from '@capacitor/core';
+import { PushNotifications } from '@capacitor/push-notifications';
 import {
     LayoutDashboard,
     Users,
@@ -466,6 +467,17 @@ export default function DashboardLayout() {
     };
 
     const handleForcePermission = async () => {
+        if (Capacitor.isNativePlatform()) {
+             let permStatus = await PushNotifications.requestPermissions();
+             if (permStatus.receive === 'granted' && userId) {
+                 await FCMManager.register(userId, true);
+                 window.location.reload();
+             } else {
+                 alert('يرجى تفعيل الإشعارات من إعدادات الهاتف.');
+             }
+             return;
+        }
+
         if (!('Notification' in window)) return;
         const permission = await Notification.requestPermission();
         if (permission === 'granted' && userId) {
@@ -479,7 +491,7 @@ export default function DashboardLayout() {
     return (
         <div className="fixed inset-0 w-full flex bg-background font-cairo overflow-hidden">
             {/* 🚨 Strict Permission Overlay */}
-            {'Notification' in window && Notification.permission !== 'granted' && (
+            {(!Capacitor.isNativePlatform()) && 'Notification' in window && Notification.permission !== 'granted' && (
                 <div className="absolute top-0 left-0 w-full z-[9999] bg-red-600/95 text-white p-6 flex flex-col items-center justify-center gap-3 backdrop-blur-md shadow-2xl border-b-2 border-red-500 animate-in slide-in-from-top fade-in duration-500">
                     <div className="text-center font-black text-xl md:text-2xl drop-shadow-md">
                         ⚠️ نظام الإشعارات العاجلة متوقف في جهازك!

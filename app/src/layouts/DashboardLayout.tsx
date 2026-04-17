@@ -147,12 +147,11 @@ export default function DashboardLayout() {
                     }
                 }).catch(e => console.warn('🔥 FCM registration skipped:', e));
 
-                // 🔥 FCM Foreground: استقبال التنبيهات لما التطبيق مفتوح
+                // 🔥 FCM Foreground: مجرد تسجيل - ROCKET_V2 بيعرض الـ Toast
+                // Firebase SW بيعرض الـ Native notification لما التطبيق مقفول
                 FCMManager.listenForeground((payload) => {
-                    const title = payload.notification?.title || 'تنبيه جديد';
-                    const body = payload.notification?.body || '';
-                    playNotificationSound('bell');
-                    toast(body, { icon: '🔔', duration: 5000 });
+                    console.log('🔥 FCM Foreground received (handled by ROCKET_V2):', payload.notification?.title);
+                    // لا نعمل toast هنا عشان ROCKET_V2 بيعمله بالفعل
                 });
             }
 
@@ -195,21 +194,7 @@ export default function DashboardLayout() {
                     // Background re-sync (Backup)
                     setTimeout(() => fetchNotifications(), 2000);
 
-                    // 🔔 NATIVE SYSTEM NOTIFICATION (WhatsApp-style drop from top of OS)
-                    if (Notification.permission === 'granted') {
-                        navigator.serviceWorker.ready.then(registration => {
-                            registration.showNotification(payload.notification?.title || "Strategic Update", {
-                                body: payload.notification?.message || "Tactical instruction received from Bridge.",
-                                icon: '/logo-premium.png',
-                                badge: '/logo-premium.png',
-                                vibrate: [200, 100, 200],
-                                data: { url: '/app' }
-                            } as any);
-                        });
-                    } else if (Notification.permission === 'default') {
-                        // Optional: Request if not yet asked (though Prompt usually handles this)
-                        Notification.requestPermission();
-                    }
+                    // 🔔 Firebase SW بيتولى الـ Native Notification - مش محتاجين نعمله هنا
                 })
                 .subscribe((status) => {
                     console.log(`🚀 ROCKET_V2: Connection Status for [${userId}]:`, status);

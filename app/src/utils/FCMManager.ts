@@ -15,14 +15,14 @@ export const FCMManager = {
      * تسجيل الجهاز وحفظ الـ FCM Token في Supabase
      * آمن من التشغيل المتعدد (idempotent)
      */
-    register: async (userId: string): Promise<boolean> => {
+    register: async (userId: string, force = false): Promise<boolean> => {
         // منع التسجيل المتكرر
-        if (_registrationInProgress) return false;
+        if (_registrationInProgress && !force) return false;
         _registrationInProgress = true;
 
         try {
             if (!userId) return false;
-            console.log('🔥 FCMManager: Starting registration...');
+            console.log(`🔥 FCMManager: Starting registration (force=${force})...`);
 
             // 1. Check لو الـ Browser يدعم الـ Push
             if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
@@ -37,25 +37,23 @@ export const FCMManager = {
                 return false;
             }
 
-            // 3. 🧹 امسح كل الـ Push Subscriptions القديمة (بتاعة NotificationExpert أو أي نظام قديم)
-            // ده بيحل مشكلة "A subscription with a different applicationServerKey already exists"
-            console.log('🔥 FCMManager: Cleaning up old push subscriptions...');
-            try {
-                const allRegistrations = await navigator.serviceWorker.getRegistrations();
-                for (const reg of allRegistrations) {
-                    try {
-                        const existingSub = await reg.pushManager.getSubscription();
-                        if (existingSub) {
-                            await existingSub.unsubscribe();
-                            console.log('🔥 FCMManager: ✅ Cleared old VAPID subscription');
-                        }
-                    } catch (e) { /* ignore per-registration errors */ }
+            // 3. 🧹 NUCLEAR RESET: امسح كل السيرفس وركرز والاشتراكات لو طلبنا force
+            if (force) {
+                console.log('🔥 FCMManager: ☢️ NUCLEAR RESET INITIATED...');
+                try {
+                    const allRegistrations = await navigator.serviceWorker.getRegistrations();
+                    for (const reg of allRegistrations) {
+                        await reg.unregister();
+                        console.log('🔥 FCMManager: Unregistered SW');
+                    }
+                    // إضافة تأخير بسيط للتأكد من التنظيف
+                    await new Promise(r => setTimeout(r, 1000));
+                } catch (cleanupErr) {
+                    console.warn('🔥 FCMManager: Cleanup warning:', cleanupErr);
                 }
-            } catch (cleanupErr) {
-                console.warn('🔥 FCMManager: Cleanup warning (ignored):', cleanupErr);
             }
 
-            // 4. 🛡️ سجل الـ Firebase Service Worker بعد التنظيف
+            // 4. 🛡️ سجل الـ Firebase Service Worker
             console.log('🔥 FCMManager: Registering Firebase Service Worker...');
             const swRegistration = await navigator.serviceWorker.register('/firebase-messaging-sw.js', {
                 scope: '/'

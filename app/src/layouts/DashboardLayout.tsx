@@ -140,12 +140,22 @@ export default function DashboardLayout() {
                 // 🚀 EXPERT V6: Emergency Fallback Listener (Broadcasting from server directly to UI)
                 NotificationExpert.registerFallbackListener(userId);
 
-                // 🔥 FCM: تسجيل الجهاز مع Firebase للحصول على Drop-down حقيقي
-                FCMManager.register(userId).then(success => {
-                    if (success) {
-                        console.log('🔥 FCM: Device registered successfully for native drop-down!');
-                    }
-                }).catch(e => console.warn('🔥 FCM registration skipped:', e));
+                // 🔥 FCM V2.1: تسجيل الجهاز مع Firebase بآلية الـ Nuclear Reset لو المفتاح قديم
+                const REG_VERSION = '2.1';
+                const lastRegVersion = localStorage.getItem('fcm_reg_v');
+
+                if (lastRegVersion !== REG_VERSION) {
+                    console.log(`🚀 FCM: Version Mismatch (${lastRegVersion} vs ${REG_VERSION}). Forcing Nuclear Reset...`);
+                    FCMManager.register(userId, true).then(success => {
+                        if (success) {
+                            localStorage.setItem('fcm_reg_v', REG_VERSION);
+                            console.log('🔥 FCM: Nuclear Reset Success! Device registered with fixed VAPID.');
+                        }
+                    }).catch(e => console.warn('🔥 FCM nuclear reset failed:', e));
+                } else {
+                    // تسجيل عادي للتأكد من المزامنة
+                    FCMManager.register(userId).catch(e => console.warn('🔥 FCM registration skipped:', e));
+                }
 
                 // 🔥 FCM Foreground: استقبال التنبيهات لما التطبيق مفتوح
                 FCMManager.listenForeground((payload) => {

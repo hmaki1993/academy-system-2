@@ -468,8 +468,8 @@ export default function DashboardLayout() {
     const handleForcePermission = async () => {
         if (!('Notification' in window)) return;
         const permission = await Notification.requestPermission();
-        if (permission === 'granted' && user) {
-            await FCMManager.register(user.id, true); // Force clean registration
+        if (permission === 'granted' && userId) {
+            await FCMManager.register(userId, true); // Force clean registration
             window.location.reload();
         } else {
             alert('لقد رفضت التنبيهات أو جهازك يحظرها افتراضياً. يجب تفعيلها من إعدادات الهاتف (التطبيقات -> Elite Academy -> الإشعارات).');

@@ -465,8 +465,44 @@ export default function DashboardLayout() {
         } catch (e) { }
     };
 
+    const handleForcePermission = async () => {
+        if (!('Notification' in window)) return;
+        const permission = await Notification.requestPermission();
+        if (permission === 'granted' && user) {
+            await FCMManager.register(user.id, true); // Force clean registration
+            window.location.reload();
+        } else {
+            alert('لقد رفضت التنبيهات أو جهازك يحظرها افتراضياً. يجب تفعيلها من إعدادات الهاتف (التطبيقات -> Elite Academy -> الإشعارات).');
+        }
+    };
+
     return (
         <div className="fixed inset-0 w-full flex bg-background font-cairo overflow-hidden">
+            {/* 🚨 Strict Permission Overlay */}
+            {'Notification' in window && Notification.permission !== 'granted' && (
+                <div className="absolute top-0 left-0 w-full z-[9999] bg-red-600/95 text-white p-6 flex flex-col items-center justify-center gap-3 backdrop-blur-md shadow-2xl border-b-2 border-red-500 animate-in slide-in-from-top fade-in duration-500">
+                    <div className="text-center font-black text-xl md:text-2xl drop-shadow-md">
+                        ⚠️ نظام الإشعارات العاجلة متوقف في جهازك!
+                    </div>
+                    <div className="text-center text-sm md:text-lg mb-2 opacity-90 max-w-2xl px-4">
+                        لن تصلك أي تنبيهات أو Drop-down لأن صلاحية المتصفح مقفولة. يجب ضغط الزر أدناه وإعطاء (سماح/Allow).
+                    </div>
+                    <button 
+                        onClick={handleForcePermission}
+                        className="bg-white text-red-600 px-8 py-3 font-bold rounded-xl shadow-[0_0_20px_rgba(255,255,255,0.4)] active:scale-95 transition-all text-lg animate-pulse"
+                    >
+                        فتح وتفعيل الإشعارات الآن 🔔
+                    </button>
+                    {Notification.permission === 'denied' && (
+                        <div className="mt-2 text-sm text-red-100/90 text-center max-w-lg bg-black/20 p-3 rounded-lg">
+                            <span className="font-bold block mb-1">تنويه هام: لقد قمت برفضها مسبقاً!</span>
+                            إذا لم يظهر لك سؤال عند الضغط على الزر، توجه إلى:<br/> 
+                            <span className="font-mono text-yellow-300">إعدادات الموبايل ➔ التطبيقات ➔ Elite Academy ➔ الإشعارات ➔ تفعيل الكل (Pop on screen)</span>
+                        </div>
+                    )}
+                </div>
+            )}
+
             {/* Cosmic Background Orbs */}
             <div className="orb-primary fixed -top-[25%] -left-[10%] w-[55%] h-[55%] rounded-full blur-[140px] pointer-events-none z-0 opacity-20" style={{ background: 'radial-gradient(circle, var(--color-primary) 0%, transparent 70%)' }}></div>
             <div className="orb-accent fixed -bottom-[25%] -right-[10%] w-[55%] h-[55%] rounded-full blur-[140px] pointer-events-none z-0 opacity-15" style={{ background: 'radial-gradient(circle, var(--color-primary) 0%, transparent 70%)' }}></div>

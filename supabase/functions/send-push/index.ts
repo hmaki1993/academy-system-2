@@ -121,20 +121,6 @@ serve(async (req) => {
             },
             data: {
               url: url || "/app",
-            },
-            webpush: {
-              headers: {
-                Urgency: "high",
-              },
-              notification: {
-                icon: "/logo-premium.png",
-                badge: "/logo-premium.png",
-                vibrate: [500, 250, 500, 250, 500],
-                requireInteraction: true,
-                renotify: true,
-                tag: "elite-msg"
-              },
-              fcm_options: { link: url || "/app" }
             }
           }
         };

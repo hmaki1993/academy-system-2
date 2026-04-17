@@ -147,11 +147,12 @@ export default function DashboardLayout() {
                     }
                 }).catch(e => console.warn('🔥 FCM registration skipped:', e));
 
-                // 🔥 FCM Foreground: مجرد تسجيل - ROCKET_V2 بيعرض الـ Toast
-                // Firebase SW بيعرض الـ Native notification لما التطبيق مقفول
+                // 🔥 FCM Foreground: استقبال التنبيهات لما التطبيق مفتوح
                 FCMManager.listenForeground((payload) => {
-                    console.log('🔥 FCM Foreground received (handled by ROCKET_V2):', payload.notification?.title);
-                    // لا نعمل toast هنا عشان ROCKET_V2 بيعمله بالفعل
+                    const title = payload.notification?.title || 'تنبيه جديد';
+                    const body = payload.notification?.body || '';
+                    playNotificationSound('bell');
+                    toast(body, { icon: '🤖', duration: 6000, style: { background: '#222', color: '#fff' } });
                 });
             }
 

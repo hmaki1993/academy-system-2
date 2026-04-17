@@ -121,6 +121,8 @@ serve(async (req) => {
             },
             data: {
               url: url || "/app",
+              title: title || "🏆 Elite Academy",
+              message: message || "لديك رسالة جديدة",
             }
           }
         };
@@ -136,8 +138,14 @@ serve(async (req) => {
 
         const result = await res.json();
 
-        // حذف الـ Token المنتهي
-        if (result.error?.code === 404 || result.error?.status === 'UNREGISTERED') {
+        // 🔍 DIAGNOSTIC LOGGING: اعرف بالظبط ليه الإشعار فشل
+        if (!res.ok) {
+          console.error(`❌ FCM Error [${fcm_token.substring(0, 10)}...]:`, JSON.stringify(result));
+        }
+
+        // حذف الـ Token المنتهي أو غير الصحيح (بسبب تغيير الـ VAPID Key)
+        if (result.error?.code === 404 || result.error?.status === 'UNREGISTERED' || result.error?.details?.[0]?.errorCode === 'INVALID_ARGUMENT') {
+          console.log(`🧹 FCM Cleanup: Removing dead/invalid token: ${fcm_token.substring(0, 10)}...`);
           await supabase.from('user_fcm_tokens').delete().eq('fcm_token', fcm_token);
         }
 

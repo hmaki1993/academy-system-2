@@ -115,20 +115,30 @@ serve(async (req) => {
         const fcmPayload = {
           message: {
             token: fcm_token,
-            // 🚨 DATA-ONLY Payload: We intentionally OMIT the 'notification' block.
-            // This forces the FCM Web SDK to wake up our Service Worker and call `messaging.onBackgroundMessage`.
-            // The SW then manually triggers `showNotification` with our custom Vibration and Drop-Down properties.
+            notification: {
+              title: title || "🏆 Elite Academy",
+              body: message || "لديك رسالة جديدة",
+            },
             data: {
               url: url || "/app",
               title: title || "🏆 Elite Academy",
               message: message || "لديك رسالة جديدة",
             },
             android: {
-              priority: "high"
+              priority: "high",
+              notification: {
+                notification_priority: "PRIORITY_MAX",
+                default_sound: true,
+                default_vibrate_timings: true,
+              }
             },
             webpush: {
               headers: {
-                Urgency: "high",
+                Urgency: "high"
+              },
+              notification: {
+                icon: "/logo-premium.png",
+                badge: "/logo-premium.png"
               },
               fcm_options: { link: url || "/app" }
             }

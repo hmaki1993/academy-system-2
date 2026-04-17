@@ -16,34 +16,8 @@ firebase.initializeApp({
 
 const messaging = firebase.messaging();
 
-// ✅ استقبال التنبيهات في الـ Background (لما التطبيق مقفول)
-// Firebase لو مفيش فيه 'notification' هينادي الدالة دي (Data-Only Message)
-messaging.onBackgroundMessage((payload) => {
-  console.log('🔥 Firebase SW: Background message received:', payload);
-
-  // استخراج الداتا (سواء كانت مبعوتة في notification أو data)
-  const title = payload.notification?.title || payload.data?.title || 'تنبيه جديد';
-  const body = payload.notification?.body || payload.data?.message || payload.data?.body || 'لديك رسالة جديدة';
-  
-  const notificationOptions = {
-    body: body,
-    icon: '/logo-premium.png',
-    badge: '/logo-premium.png',
-    // 📳 الهز الإجباري (بيصحي الموبايل)
-    vibrate: [500, 250, 500, 250, 500],
-    // 🏷️ الـ Tag لازم يكون ثابت عشان renotify تشتغل وميضربش Crash
-    tag: 'elite-urgent-alert',
-    renotify: true,
-    requireInteraction: true,
-    data: { url: payload.data?.url || '/app' },
-    actions: [
-      { action: 'open', title: 'دخول' },
-      { action: 'close', title: 'تجاهل' }
-    ]
-  };
-
-  return self.registration.showNotification(title, notificationOptions);
-});
+// Firebase بيتولى Show Notification بالـ Native OS Drop-down تلقائياً
+// لا داعي لكتابة onBackgroundMessage هنا عشان Firebase يتعامل بطبيعته الأصلية
 
 // ✅ فتح التطبيق لما المستخدم يضغط على التنبيه
 self.addEventListener('notificationclick', (event) => {

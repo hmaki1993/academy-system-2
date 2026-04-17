@@ -17,27 +17,32 @@ firebase.initializeApp({
 const messaging = firebase.messaging();
 
 // ✅ استقبال التنبيهات في الـ Background (لما التطبيق مقفول)
-// Firebase بيتولى هنا Show Notification بالـ Native OS Drop-down تلقائياً
+// Firebase لو مفيش فيه 'notification' هينادي الدالة دي (Data-Only Message)
 messaging.onBackgroundMessage((payload) => {
   console.log('🔥 Firebase SW: Background message received:', payload);
 
-  const notificationTitle = payload.notification?.title || 'تنبيه جديد';
+  // استخراج الداتا (سواء كانت مبعوتة في notification أو data)
+  const title = payload.notification?.title || payload.data?.title || 'تنبيه جديد';
+  const body = payload.notification?.body || payload.data?.message || payload.data?.body || 'لديك رسالة جديدة';
+  
   const notificationOptions = {
-    body: payload.notification?.body || 'لديك رسالة جديدة',
+    body: body,
     icon: '/logo-premium.png',
     badge: '/logo-premium.png',
-    vibrate: [500, 200, 500, 200, 500],
-    tag: `fcm-${Date.now()}`,
+    // 📳 الهز الإجباري (بيصحي الموبايل)
+    vibrate: [500, 250, 500, 250, 500],
+    // 🏷️ الـ Tag لازم يكون ثابت عشان renotify تشتغل وميضربش Crash
+    tag: 'elite-urgent-alert',
     renotify: true,
     requireInteraction: true,
     data: { url: payload.data?.url || '/app' },
     actions: [
-      { action: 'open', title: 'فتح الآن' },
-      { action: 'close', title: 'إغلاق' }
+      { action: 'open', title: 'دخول' },
+      { action: 'close', title: 'تجاهل' }
     ]
   };
 
-  return self.registration.showNotification(notificationTitle, notificationOptions);
+  return self.registration.showNotification(title, notificationOptions);
 });
 
 // ✅ فتح التطبيق لما المستخدم يضغط على التنبيه

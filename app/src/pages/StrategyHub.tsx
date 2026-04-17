@@ -307,7 +307,13 @@ const FloatingRemoteHub = ({ athlete, onClose }: { athlete: any, onClose: () => 
                                 const [h, m] = scheduledStartTime.split(':').map(Number);
                                 const picked = new Date();
                                 picked.setHours(h, m, 0, 0);
-                                return picked.getTime() > Date.now() + 60000; // More than 1 min in future
+                                
+                                // 💡 Handle Roll-over: If picked time is before current time, it must be for tomorrow
+                                if (picked.getTime() <= Date.now()) {
+                                    picked.setDate(picked.getDate() + 1);
+                                }
+                                
+                                return picked.getTime() > Date.now() + 30000; // More than 30 seconds in future
                             })();
 
                             return (

@@ -127,11 +127,8 @@ serve(async (req) => {
             android: {
               priority: "high",
               notification: {
-                notification_priority: "PRIORITY_MAX",
-                sound: "default",
-                default_sound: true,
-                default_vibrate_timings: false,
-                vibrate_timings: ["0s", "0.5s", "0.2s", "0.5s"],
+                channel_id: "epic_alerts",
+                sound: "default"
               }
             },
             webpush: {

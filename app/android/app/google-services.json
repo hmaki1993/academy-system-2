@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "872245266489",
+    "project_id": "skippy-toes-q8",
+    "storage_bucket": "skippy-toes-q8.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:872245266489:android:19986efef3703628f4e5e8",
+        "android_client_info": {
+          "package_name": "com.epicgym.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDj38N3_OYTKSxrelgOh1uostfF8PG_oQc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -21,6 +21,8 @@
   },
   "homepage": "https://github.com/hmaki1993/healy-system#readme",
   "dependencies": {
+    "googleapis": "^171.4.0",
+    "node-fetch": "^3.3.2",
     "sharp": "^0.34.5"
   }
 }

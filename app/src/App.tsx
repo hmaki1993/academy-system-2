@@ -164,7 +164,7 @@ function AppContent() {
                 // But we want to FORCE it now for the Nuclear fix.
                 console.log('☢️ CacheBreaker: New version detected. Force reloading...');
                 toast.success("Strategic Update Received! Syncing...", { icon: '🚀' });
-                setTimeout(() => window.location.reload(), 1500);
+                // setTimeout(() => window.location.reload(), 1500);
               }
             });
           }

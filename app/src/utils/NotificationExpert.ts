@@ -393,7 +393,8 @@ export const NotificationExpert = {
             if (success) {
                 toast.success('تم إصلاح نظام التنبيهات بنجاح! سيتم إعادة تحميل الصفحة...');
                 // 🔄 FORCE RELOAD to ensure fresh context
-                setTimeout(() => window.location.reload(), 2000);
+                // setTimeout(() => window.location.reload(), 2000); // 🛑 DISABLED TO STOP LOOP
+                console.log('🔄 Version update detected but reload suppressed');
             }
             return success;
         } catch (error) {

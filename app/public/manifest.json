@@ -10,25 +10,25 @@
     "theme_color": "#FF6B6B",
     "icons": [
         {
-            "src": "/logo-premium.png",
+            "src": "/icon-192x192.png",
             "sizes": "192x192",
             "type": "image/png",
             "purpose": "any"
         },
         {
-            "src": "/logo-premium.png",
+            "src": "/icon-192x192.png",
             "sizes": "192x192",
             "type": "image/png",
             "purpose": "maskable"
         },
         {
-            "src": "/logo-premium.png",
+            "src": "/icon-512x512.png",
             "sizes": "512x512",
             "type": "image/png",
             "purpose": "any"
         },
         {
-            "src": "/logo-premium.png",
+            "src": "/icon-512x512.png",
             "sizes": "512x512",
             "type": "image/png",
             "purpose": "maskable"
@@ -41,8 +41,9 @@
             "url": "/app/communications",
             "icons": [
                 {
-                    "src": "/logo-premium.png",
-                    "sizes": "192x192"
+                    "src": "/icon-192x192.png",
+                    "sizes": "192x192",
+                    "type": "image/png"
                 }
             ]
         }

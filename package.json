@@ -19,5 +19,8 @@
   "bugs": {
     "url": "https://github.com/hmaki1993/healy-system/issues"
   },
-  "homepage": "https://github.com/hmaki1993/healy-system#readme"
+  "homepage": "https://github.com/hmaki1993/healy-system#readme",
+  "dependencies": {
+    "sharp": "^0.34.5"
+  }
 }

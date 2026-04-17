@@ -364,9 +364,14 @@ export default function JumpRopeTraining() {
         }
     }, [isTracking, speak]);
 
+    const lastPoseTimeRef = useRef<number>(0);
+
     useEffect(() => {
         let active = true;
         let pose: any = null;
+        const TARGET_FPS = 15;
+        const frameInterval = 1000 / TARGET_FPS;
+
         const setupPose = async () => {
             try {
                 const mpPose = await import('@mediapipe/pose');
@@ -374,8 +379,16 @@ export default function JumpRopeTraining() {
                 pose = new PoseConstructor({ locateFile: (file: string) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose@${MEDIAPIPE_POSE_VERSION}/${file}` });
                 pose.setOptions({ modelComplexity: 0, smoothLandmarks: false, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 });
                 pose.onResults(onResults);
+                
                 const loop = async () => {
-                    if (webcamRef.current?.video?.readyState === 4 && pose) await pose.send({ image: webcamRef.current.video });
+                    const now = Date.now();
+                    const frameDelta = now - lastPoseTimeRef.current;
+                    
+                    if (frameDelta >= frameInterval && webcamRef.current?.video?.readyState === 4 && pose) {
+                        await pose.send({ image: webcamRef.current.video });
+                        lastPoseTimeRef.current = now;
+                    }
+
                     if (active) requestAnimationFrame(loop);
                 };
                 loop();

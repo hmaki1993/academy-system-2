@@ -84,6 +84,14 @@ async function registerNativePush(userId: string): Promise<boolean> {
             });
         }
 
+        // 🚨 CRITICAL: Explicitly request Notifications permission for Android 13+
+        if (Capacitor.getPlatform() === 'android') {
+            const notificationsPerm = await PushNotifications.requestPermissions();
+            if (notificationsPerm.receive !== 'granted') {
+                console.warn('🚨 FCMManager Native: Notification permission rejected by user.');
+            }
+        }
+
         // Register with Apple / Google
         await PushNotifications.register();
 

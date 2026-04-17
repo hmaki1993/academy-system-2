@@ -142,6 +142,7 @@ serve(async (req) => {
                 vibrate: [500, 200, 500, 200, 500],
                 requireInteraction: true,
                 renotify: true,
+                tag: "elite-priority-alert",
                 icon: "/logo-premium.png",
                 badge: "/logo-premium.png",
               },

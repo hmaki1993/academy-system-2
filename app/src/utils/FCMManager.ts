@@ -37,20 +37,24 @@ export const FCMManager = {
                 return false;
             }
 
-            // 3. 🧹 NUCLEAR CLEANUP: امسح أي اشتراكات قديمة أو Service Workers متعارضة
+            // 3. 💣 NUCLEAR RESET: امسح أي Service Worker قديم تماماً من جذوره
             try {
                 const registrations = await navigator.serviceWorker.getRegistrations();
                 for (const reg of registrations) {
-                    const sub = await reg.pushManager.getSubscription();
-                    if (sub) await sub.unsubscribe();
-                    console.log('🔥 FCMManager: Unsubscribed old registration');
+                    await reg.unregister();
+                    console.log('🔥 FCMManager: Unregistered Service Worker');
                 }
+                // بعد المسح، لازم ننتظر لحظة ونحدث الصفحة أو نعيد التسجيل
             } catch (cleanupErr) {
                 console.warn('🔥 FCMManager: Cleanup error (ignored):', cleanupErr);
             }
 
-            // 4. انتظر الـ Service Worker الأساسي وخد الـ Token
-            const swRegistration = await navigator.serviceWorker.ready;
+            // 4. إعادة التسجيل والتحميل
+            console.log('🔥 FCMManager: Re-registering...');
+            const swRegistration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+            await navigator.serviceWorker.ready;
+
+            // 5. خد الـ Token
             const fcmToken = await getToken(messaging, {
                 vapidKey: FCM_VAPID_KEY,
                 serviceWorkerRegistration: swRegistration

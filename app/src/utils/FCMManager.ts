@@ -37,21 +37,20 @@ export const FCMManager = {
                 return false;
             }
 
-            // 3. انتظر الـ Service Worker
-            const swRegistration = await navigator.serviceWorker.ready;
-
-            // 3.5 🧹 امسح أي subscription قديمة بـ VAPID مختلف (يمنع الـ Conflict)
+            // 3. 🧹 NUCLEAR CLEANUP: امسح أي اشتراكات قديمة أو Service Workers متعارضة
             try {
-                const existingSub = await swRegistration.pushManager.getSubscription();
-                if (existingSub) {
-                    await existingSub.unsubscribe();
-                    console.log('🔥 FCMManager: Cleared old push subscription');
+                const registrations = await navigator.serviceWorker.getRegistrations();
+                for (const reg of registrations) {
+                    const sub = await reg.pushManager.getSubscription();
+                    if (sub) await sub.unsubscribe();
+                    console.log('🔥 FCMManager: Unsubscribed old registration');
                 }
             } catch (cleanupErr) {
-                console.warn('🔥 FCMManager: Cleanup skipped:', cleanupErr);
+                console.warn('🔥 FCMManager: Cleanup error (ignored):', cleanupErr);
             }
 
-            // 4. احصل على الـ FCM Token
+            // 4. انتظر الـ Service Worker الأساسي وخد الـ Token
+            const swRegistration = await navigator.serviceWorker.ready;
             const fcmToken = await getToken(messaging, {
                 vapidKey: FCM_VAPID_KEY,
                 serviceWorkerRegistration: swRegistration

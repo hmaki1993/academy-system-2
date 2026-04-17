@@ -123,6 +123,29 @@ serve(async (req) => {
               url: url || "/app",
               title: title || "🏆 Elite Academy",
               message: message || "لديك رسالة جديدة",
+            },
+            android: {
+              priority: "high",
+              notification: {
+                notification_priority: "PRIORITY_MAX",
+                sound: "default",
+                default_sound: true,
+                default_vibrate_timings: true,
+                vibrate_timings_millis: ["0", "500", "200", "500"],
+              }
+            },
+            webpush: {
+              headers: {
+                Urgency: "high",
+              },
+              notification: {
+                vibrate: [500, 200, 500, 200, 500],
+                requireInteraction: true,
+                renotify: true,
+                icon: "/logo-premium.png",
+                badge: "/logo-premium.png",
+              },
+              fcm_options: { link: url || "/app" }
             }
           }
         };

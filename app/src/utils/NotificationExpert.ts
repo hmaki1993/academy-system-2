@@ -70,9 +70,21 @@ export const NotificationExpert = {
             // 2. Wait for Service Worker
             const registration = await navigator.serviceWorker.ready;
 
-            // 3. Subscribe to Push
-            const applicationServerKey = NotificationExpert.urlBase64ToUint8Array(VAPID_PUBLIC_KEY);
+            // 3. 🛑 DISABLED: Old VAPID subscription system - conflicts with FCM
+            // FCMManager is now the sole authority for push registration
+            // Instead of subscribing, we UNSUBSCRIBE any old conflicting subscription
+            const existingSubscription = await registration.pushManager.getSubscription();
+            if (existingSubscription) {
+                await existingSubscription.unsubscribe();
+                console.log('🛡️ NotificationExpert: Cleared old VAPID subscription (FCM takeover)');
+            }
             
+            // FCM handles everything now - just return success
+            console.log('🛡️ NotificationExpert: Delegating to FCMManager...');
+            return true;
+
+            /* OLD CODE - DISABLED (conflicts with FCM)
+            const applicationServerKey = NotificationExpert.urlBase64ToUint8Array(VAPID_PUBLIC_KEY);
             const subscription = await registration.pushManager.subscribe({
                 userVisibleOnly: true,
                 applicationServerKey: applicationServerKey
@@ -97,7 +109,7 @@ export const NotificationExpert = {
 
             if (error) throw error;
             console.log('🛡️ NotificationExpert: Tactical subscription active.');
-            
+            */
             // Store locally for quick self-healing checks
             localStorage.setItem('elite_push_active', 'true');
             localStorage.removeItem('elite_push_error'); // Clear previous errors

@@ -3,7 +3,7 @@ import { getMessaging, getToken, onMessage } from 'firebase/messaging';
 
 // 🔥 Firebase Config - Skippy Toes Q8
 const firebaseConfig = {
-  apiKey: "AIzaSyAI0B5eqfwRzQWG24gEs1t0w0RTdPt30Ss",
+  apiKey: "AIzaSyAI0B5eqfwRzQWG24gEs1tOw0RTdPt30Ss",
   authDomain: "skippy-toes-q8.firebaseapp.com",
   projectId: "skippy-toes-q8",
   storageBucket: "skippy-toes-q8.firebasestorage.app",

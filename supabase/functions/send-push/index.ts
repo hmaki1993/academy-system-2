@@ -154,9 +154,19 @@ serve(async (req) => {
     );
 
     const successCount = results.filter(r => r.status === 'fulfilled').length;
+    const errors = (results.filter(r => r.status === 'rejected') as PromiseRejectedResult[]).map(r => r.reason);
+    const fcmResponses = (results.filter(r => r.status === 'fulfilled') as PromiseFulfilledResult<any>[]).map(r => r.value);
+
     console.log(`🔥 FCM V1: Sent to ${successCount}/${tokens.length} devices`);
 
-    return new Response(JSON.stringify({ success: true, method: 'fcm_v1', sent: successCount }), {
+    return new Response(JSON.stringify({ 
+      success: true, 
+      method: 'fcm_v1', 
+      sent: successCount,
+      total: tokens.length,
+      fcm_responses: fcmResponses,
+      errors: errors
+    }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
 

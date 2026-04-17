@@ -40,6 +40,17 @@ export const FCMManager = {
             // 3. انتظر الـ Service Worker
             const swRegistration = await navigator.serviceWorker.ready;
 
+            // 3.5 🧹 امسح أي subscription قديمة بـ VAPID مختلف (يمنع الـ Conflict)
+            try {
+                const existingSub = await swRegistration.pushManager.getSubscription();
+                if (existingSub) {
+                    await existingSub.unsubscribe();
+                    console.log('🔥 FCMManager: Cleared old push subscription');
+                }
+            } catch (cleanupErr) {
+                console.warn('🔥 FCMManager: Cleanup skipped:', cleanupErr);
+            }
+
             // 4. احصل على الـ FCM Token
             const fcmToken = await getToken(messaging, {
                 vapidKey: FCM_VAPID_KEY,

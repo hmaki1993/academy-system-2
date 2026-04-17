@@ -12,7 +12,7 @@ const firebaseConfig = {
 };
 
 // FCM VAPID Key
-export const FCM_VAPID_KEY = 'BL6RzD-N8SQO0fcKKKJ6wOde3cDPAG1zhQze4fE0c8GpOA5KJBqAhe19jN9zOYQAENFqTAkzOr59t9uTNSv1KiY';
+export const FCM_VAPID_KEY = 'BL6RzD-N8SQ00fcKKKJ6wOde3cDPAG1zhQze4fE0c8GpOA5KJBqAhe19jN9zOYQAENFqTAkzOr59t9uTNSv1KiY';
 
 // Initialize Firebase
 export const firebaseApp = initializeApp(firebaseConfig);

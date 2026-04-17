@@ -16,8 +16,29 @@ firebase.initializeApp({
 
 const messaging = firebase.messaging();
 
-// Firebase بيتولى Show Notification بالـ Native OS Drop-down تلقائياً
-// لا داعي لكتابة onBackgroundMessage هنا عشان Firebase يتعامل بطبيعته الأصلية
+// ✅ استقبال التنبيهات في الـ Background (لما التطبيق مقفول)
+// Firebase بيتولى هنا Show Notification بالـ Native OS Drop-down تلقائياً
+messaging.onBackgroundMessage((payload) => {
+  console.log('🔥 Firebase SW: Background message received:', payload);
+
+  const notificationTitle = payload.notification?.title || 'تنبيه جديد';
+  const notificationOptions = {
+    body: payload.notification?.body || 'لديك رسالة جديدة',
+    icon: '/logo-premium.png',
+    badge: '/logo-premium.png',
+    vibrate: [500, 200, 500, 200, 500],
+    tag: `fcm-${Date.now()}`,
+    renotify: true,
+    requireInteraction: true,
+    data: { url: payload.data?.url || '/app' },
+    actions: [
+      { action: 'open', title: 'فتح الآن' },
+      { action: 'close', title: 'إغلاق' }
+    ]
+  };
+
+  return self.registration.showNotification(notificationTitle, notificationOptions);
+});
 
 // ✅ فتح التطبيق لما المستخدم يضغط على التنبيه
 self.addEventListener('notificationclick', (event) => {

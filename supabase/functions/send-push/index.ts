@@ -128,17 +128,23 @@ serve(async (req) => {
               priority: "high",
               notification: {
                 notification_priority: "PRIORITY_MAX",
+                sound: "default",
                 default_sound: true,
-                default_vibrate_timings: true,
+                default_vibrate_timings: false,
+                vibrate_timings: ["0s", "0.5s", "0.2s", "0.5s"],
               }
             },
             webpush: {
               headers: {
-                Urgency: "high"
+                Urgency: "high",
               },
               notification: {
+                vibrate: [500, 200, 500, 200, 500],
+                requireInteraction: true,
+                renotify: true,
+                tag: "elite-priority-alert",
                 icon: "/logo-premium.png",
-                badge: "/logo-premium.png"
+                badge: "/logo-premium.png",
               },
               fcm_options: { link: url || "/app" }
             }

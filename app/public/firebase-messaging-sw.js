@@ -6,7 +6,7 @@ importScripts('https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-com
 
 // ✅ Firebase Config
 firebase.initializeApp({
-  apiKey: "AIzaSyAI0B5eqfwRzQWG24gEs1t0w0RTdPt30Ss",
+  apiKey: "AIzaSyAI0B5eqfwRzQWG24gEs1tOw0RTdPt30Ss",
   authDomain: "skippy-toes-q8.firebaseapp.com",
   projectId: "skippy-toes-q8",
   storageBucket: "skippy-toes-q8.firebasestorage.app",

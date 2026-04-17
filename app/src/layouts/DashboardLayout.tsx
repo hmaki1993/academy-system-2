@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { NotificationExpert } from '../utils/NotificationExpert';
+import { FCMManager } from '../utils/FCMManager';
 import { useTranslation } from 'react-i18next';
 
 import {
@@ -138,6 +139,21 @@ export default function DashboardLayout() {
                 NotificationExpert.ensureSubscription(userId);
                 // 🚀 EXPERT V6: Emergency Fallback Listener (Broadcasting from server directly to UI)
                 NotificationExpert.registerFallbackListener(userId);
+
+                // 🔥 FCM: تسجيل الجهاز مع Firebase للحصول على Drop-down حقيقي
+                FCMManager.register(userId).then(success => {
+                    if (success) {
+                        console.log('🔥 FCM: Device registered successfully for native drop-down!');
+                    }
+                }).catch(e => console.warn('🔥 FCM registration skipped:', e));
+
+                // 🔥 FCM Foreground: استقبال التنبيهات لما التطبيق مفتوح
+                FCMManager.listenForeground((payload) => {
+                    const title = payload.notification?.title || 'تنبيه جديد';
+                    const body = payload.notification?.body || '';
+                    playNotificationSound('bell');
+                    toast(body, { icon: '🔔', duration: 5000 });
+                });
             }
 
             // Ensure auth session is synced with realtime

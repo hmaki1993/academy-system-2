@@ -37,14 +37,32 @@ export const FCMManager = {
                 return false;
             }
 
-            // 3. 🛡️ Safe Registration: سجل الـ Service Worker بهدوء من غير مسح "نووي"
-            console.log('🔥 FCMManager: Registering Service Worker...');
+            // 3. 🧹 امسح كل الـ Push Subscriptions القديمة (بتاعة NotificationExpert أو أي نظام قديم)
+            // ده بيحل مشكلة "A subscription with a different applicationServerKey already exists"
+            console.log('🔥 FCMManager: Cleaning up old push subscriptions...');
+            try {
+                const allRegistrations = await navigator.serviceWorker.getRegistrations();
+                for (const reg of allRegistrations) {
+                    try {
+                        const existingSub = await reg.pushManager.getSubscription();
+                        if (existingSub) {
+                            await existingSub.unsubscribe();
+                            console.log('🔥 FCMManager: ✅ Cleared old VAPID subscription');
+                        }
+                    } catch (e) { /* ignore per-registration errors */ }
+                }
+            } catch (cleanupErr) {
+                console.warn('🔥 FCMManager: Cleanup warning (ignored):', cleanupErr);
+            }
+
+            // 4. 🛡️ سجل الـ Firebase Service Worker بعد التنظيف
+            console.log('🔥 FCMManager: Registering Firebase Service Worker...');
             const swRegistration = await navigator.serviceWorker.register('/firebase-messaging-sw.js', {
                 scope: '/'
             });
             await navigator.serviceWorker.ready;
 
-            // 4. خد الـ Token
+            // 5. خد الـ FCM Token
             const fcmToken = await getToken(messaging, {
                 vapidKey: FCM_VAPID_KEY,
                 serviceWorkerRegistration: swRegistration

@@ -119,11 +119,16 @@ serve(async (req) => {
               title: title || "🏆 Elite Academy",
               body: message || "لديك رسالة جديدة",
             },
+            data: {
+              title: title || "🏆 Elite Academy",
+              body: message || "لديك رسالة جديدة",
+              url: url || "/app",
+              icon: "/logo-premium.png",
+            },
             android: {
               priority: "high",
               notification: {
                 sound: "default",
-                channel_id: "high_importance_channel",
                 notification_priority: "PRIORITY_MAX",
                 visibility: "PUBLIC",
                 default_vibrate_timings: true,
@@ -131,15 +136,8 @@ serve(async (req) => {
               }
             },
             webpush: {
-              headers: { Urgency: "high" },
-              notification: {
-                title: title || "🏆 Elite Academy",
-                body: message || "لديك رسالة جديدة",
-                icon: "/logo-premium.png",
-                badge: "/logo-premium.png",
-                requireInteraction: true,
-                vibrate: [500, 200, 500, 200, 500],
-                renotify: true,
+              headers: {
+                Urgency: "high",
               },
               fcm_options: { link: url || "/app" }
             }

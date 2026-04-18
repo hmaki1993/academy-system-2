@@ -3,6 +3,7 @@ import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { NotificationExpert } from '../utils/NotificationExpert';
 import { FCMManager } from '../utils/FCMManager';
+import { startNotificationBridge, stopNotificationBridge } from '../utils/NotificationBridge';
 import { useTranslation } from 'react-i18next';
 import { Capacitor } from '@capacitor/core';
 import { PushNotifications } from '@capacitor/push-notifications';
@@ -165,6 +166,14 @@ export default function DashboardLayout() {
                     playNotificationSound('bell');
                     toast(body, { icon: '🤖', duration: 6000, style: { background: '#222', color: '#fff' } });
                 });
+
+                // 🔔 NOTIFICATION BRIDGE: Local notifications via Supabase Realtime
+                // This is the GUARANTEED delivery method (same as Scooter Fuel)
+                startNotificationBridge(userId).then(bridge => {
+                    // Store bridge ref for cleanup
+                    (window as any).__notifBridge = bridge;
+                    console.log('🔔 NotificationBridge: Active ✅');
+                }).catch(e => console.warn('🔔 NotificationBridge failed:', e));
             }
 
             // Ensure auth session is synced with realtime

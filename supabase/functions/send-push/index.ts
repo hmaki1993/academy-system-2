@@ -127,7 +127,7 @@ serve(async (req) => {
             android: {
               priority: "high",
               notification: {
-                channel_id: "epic_alerts",
+                channel_id: "skippy_toes_alerts",
                 sound: "default"
               }
             },

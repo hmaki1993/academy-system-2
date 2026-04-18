@@ -72,12 +72,12 @@ async function registerNativePush(userId: string): Promise<boolean> {
             return false;
         }
 
-        // 🚨 CRITICAL: Create High-Importance Channel for Android Drop-downs!
+        // 🚨 CRITICAL: Create High-Importance Channel with New Brand Identity
         if (Capacitor.getPlatform() === 'android') {
             await PushNotifications.createChannel({
-                id: 'epic_alerts',
-                name: 'Elite Urgent Alerts',
-                description: 'High priority alerts that drop down and vibrate',
+                id: 'skippy_toes_alerts',
+                name: 'Skippy Alerts',
+                description: 'Urgent alerts that drop down and vibrate',
                 importance: 5, // 5 = MAX (Drop down)
                 visibility: 1, // 1 = PUBLIC
                 vibration: true

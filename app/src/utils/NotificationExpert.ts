@@ -3,7 +3,7 @@ import { toast } from 'react-hot-toast';
 
 // --- ELITE CONFIGURATION ---
 // Dynamically pull from environment for maximum sync stability
-const VAPID_PUBLIC_KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY || 'BELzOEt47g5qmytP8tX8deVC-P1YQR-MB2qr6ePeOYmQEVQDlLb1yyNKwxRtMADvPMCIgyJrvp3oZZOr3zhIh7s';
+const VAPID_PUBLIC_KEY = 'BAf_m7y1dSUX4uEf1uPNEVVLhfaExGvCqNdVDPh_izDASLvCVV-D9urzNNw4fHvZDoMIKE6YZSe4K3gcYPJTA_k';
 
 /**
  * ELITE NOTIFICATION EXPERT
@@ -70,20 +70,22 @@ export const NotificationExpert = {
             // 2. Wait for Service Worker
             const registration = await navigator.serviceWorker.ready;
 
-            // 3. 🛑 DISABLED: Old VAPID subscription system - conflicts with FCM
-            // FCMManager is now the sole authority for push registration
-            // Instead of subscribing, we UNSUBSCRIBE any old conflicting subscription
-            const existingSubscription = await registration.pushManager.getSubscription();
-            if (existingSubscription) {
-                await existingSubscription.unsubscribe();
-                console.log('🛡️ NotificationExpert: Cleared old VAPID subscription (FCM takeover)');
-            }
+            // 🛡️ BRANCHING LOGIC: Android (FCM) vs iOS/Desktop (Web Push)
+            const isAndroid = /Android/i.test(navigator.userAgent);
             
-            // FCM handles everything now - just return success
-            console.log('🛡️ NotificationExpert: Delegating to FCMManager...');
-            return true;
+            if (isAndroid) {
+                // FCM handles everything for Android - clear old VAPID subs
+                const existingSubscription = await registration.pushManager.getSubscription();
+                if (existingSubscription) {
+                    await existingSubscription.unsubscribe();
+                    console.log('🛡️ NotificationExpert: Cleared old VAPID subscription (FCM takeover)');
+                }
+                console.log('🛡️ NotificationExpert: Delegating to FCMManager for Android...');
+                return true;
+            }
 
-            /* OLD CODE - DISABLED (conflicts with FCM)
+            // 3. Web Push Subscription (For iOS PWA / Desktop Safari)
+            console.log('🛡️ NotificationExpert: Registering Web Push for [iPhone/Safari]...');
             const applicationServerKey = NotificationExpert.urlBase64ToUint8Array(VAPID_PUBLIC_KEY);
             const subscription = await registration.pushManager.subscribe({
                 userVisibleOnly: true,
@@ -101,15 +103,15 @@ export const NotificationExpert = {
                 endpoint: subJSON.endpoint,
                 p256dh: subJSON.keys.p256dh,
                 auth: subJSON.keys.auth,
-                device_type: /iPhone|iPad|iPod/i.test(navigator.userAgent) ? 'ios' : 
-                             /Android/i.test(navigator.userAgent) ? 'android' : 'desktop'
+                device_type: /iPhone|iPad|iPod/i.test(navigator.userAgent) ? 'ios' : 'desktop'
             }, {
                 onConflict: 'user_id, endpoint'
             });
 
             if (error) throw error;
-            console.log('🛡️ NotificationExpert: Tactical subscription active.');
-            */
+            console.log('🛡️ NotificationExpert: Safari/iOS Web Push subscription active.');
+
+
             // Store locally for quick self-healing checks
             localStorage.setItem('elite_push_active', 'true');
             localStorage.removeItem('elite_push_error'); // Clear previous errors

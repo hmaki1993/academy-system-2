@@ -1,5 +1,16 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
+import webpush from "https://esm.sh/web-push@3.6.6"
+
+// 🔥 VAPID KEYS: للآيفون والمتصفحات
+const VAPID_PUBLIC_KEY = "BAf_m7y1dSUX4uEf1uPNEVVLhfaExGvCqNdVDPh_izDASLvCVV-D9urzNNw4fHvZDoMIKE6YZSe4K3gcYPJTA_k";
+const VAPID_PRIVATE_KEY = Deno.env.get("VAPID_PRIVATE_KEY") || "xT4Y7UeacLm06bG9DT_0Q7QSoc9u1QwVITE9kbMqaP4";
+
+webpush.setVapidDetails(
+  "mailto:support@skippytoes.com",
+  VAPID_PUBLIC_KEY,
+  VAPID_PRIVATE_KEY
+);
 
 // 🔥 FCM V1 API - الأحدث والأقوى
 const FCM_PROJECT_ID = "skippy-toes-q8";
@@ -84,14 +95,23 @@ serve(async (req) => {
       return new Response("Missing userId", { status: 400 });
     }
 
-    // 1. احضر FCM Tokens
-    const { data: tokens } = await supabase
+    // 1. احضر FCM Tokens (Android)
+    const { data: fcmTokens } = await supabase
       .from("user_fcm_tokens")
       .select("fcm_token")
       .eq("user_id", userId);
 
-    // 2. إذا لم يوجد أجهزة مسجلة، استخدم نظام الـ Broadcast كحل بديل (للمتصفح)
-    if (!tokens || tokens.length === 0) {
+    // 2. احضر Web Push Subscriptions (iPhone / Desktop)
+    const { data: webSubscriptions } = await supabase
+      .from("user_push_subscriptions")
+      .select("endpoint, p256dh, auth")
+      .eq("user_id", userId);
+
+    const hasFcm = fcmTokens && fcmTokens.length > 0;
+    const hasWeb = webSubscriptions && webSubscriptions.length > 0;
+
+    // 3. إذا لم يوجد أجهزة مسجلة إطلاقاً، استخدم الـ Broadcast كحل أخير
+    if (!hasFcm && !hasWeb) {
       try {
         const channel = supabase.channel(`user-notifications:${userId}`);
         await channel.send({
@@ -106,69 +126,78 @@ serve(async (req) => {
       });
     }
 
-    // 3. احصل على Access Token
-    const accessToken = await getAccessToken(SERVICE_ACCOUNT_JSON);
+    // 4. احصل على Access Token لـ FCM (لو فيه أجهزة أندرويد)
+    let accessToken = "";
+    if (hasFcm) {
+      accessToken = await getAccessToken(SERVICE_ACCOUNT_JSON);
+    }
 
-    // 4. إرسال لكل جهاز عبر FCM V1
-    const results = await Promise.allSettled(
-      tokens.map(async ({ fcm_token }) => {
-        const fcmPayload = {
-          message: {
-            token: fcm_token,
-            // ✅ notification field = OS handles this NATIVELY when app is KILLED
-            // No custom Java code needed. Android OS draws the banner automatically.
-            notification: {
-              title: title || "🏆 Skippy Toes Q8",
-              body: message || "لديك رسالة جديدة",
-            },
-            // ✅ data field = delivered to Capacitor when app is ALIVE/BACKGROUND
-            data: {
-              url: url || "/app",
-              title: title || "🏆 Skippy Toes Q8",
-              message: message || "لديك رسالة جديدة",
-            },
-            android: {
-              priority: "high",  // Wakes device from Doze mode
-              ttl: "86400s",
-              notification: {
-                channel_id: "skippy_toes_alerts_v5", // Fresh channel - no bad cache
-                icon: "@mipmap/ic_launcher",
-                sound: "default",
-                visibility: "PUBLIC",
-                notification_priority: "PRIORITY_MAX"
-              },
-              fcm_options: {
-                analytics_label: "skippy-final-v5"
+    // 5. إرسال متوازي لكل الأنواع (FCM + WebPush)
+    const allSendPromises = [];
+
+    // --- مسار FCM (Android) ---
+    if (hasFcm) {
+      fcmTokens.forEach(({ fcm_token }) => {
+        allSendPromises.push((async () => {
+          const fcmPayload = {
+            message: {
+              token: fcm_token,
+              notification: { title: title || "🏆 Skippy Toes Q8", body: message || "لديك رسالة جديدة" },
+              data: { url: url || "/app", title: title || "🏆 Skippy Toes Q8", message: message || "لديك رسالة جديدة" },
+              android: {
+                priority: "high",
+                notification: { channel_id: "skippy_toes_alerts_v5", icon: "@mipmap/ic_launcher", sound: "default" }
               }
             }
+          };
+
+          const res = await fetch(FCM_V1_URL, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify(fcmPayload)
+          });
+          
+          const result = await res.json();
+          if (!res.ok) console.error(`❌ FCM Error:`, JSON.stringify(result));
+          
+          if (result.error?.code === 404 || result.error?.status === 'UNREGISTERED') {
+            await supabase.from('user_fcm_tokens').delete().eq('fcm_token', fcm_token);
           }
-        };
+          return { type: 'fcm', result };
+        })());
+      });
+    }
 
-        const res = await fetch(FCM_V1_URL, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${accessToken}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(fcmPayload)
-        });
+    // --- مسار WebPush (iPhone / Safari) ---
+    if (hasWeb) {
+      webSubscriptions.forEach((sub) => {
+        allSendPromises.push((async () => {
+          try {
+            const pushConfig = {
+              endpoint: sub.endpoint,
+              keys: { p256dh: sub.p256dh, auth: sub.auth }
+            };
 
-        const result = await res.json();
+            const payload = JSON.stringify({
+                title: title || "🏆 Skippy Toes Q8",
+                message: message || "لديك رسالة جديدة. افتح التطبيق للمتابعة.",
+                url: url || "/app"
+            });
 
-        // 🔍 DIAGNOSTIC LOGGING: اعرف بالظبط ليه الإشعار فشل
-        if (!res.ok) {
-          console.error(`❌ FCM Error [${fcm_token.substring(0, 10)}...]:`, JSON.stringify(result));
-        }
+            await webpush.sendNotification(pushConfig, payload);
+            return { type: 'webpush', success: true };
+          } catch (err) {
+            console.error('❌ WebPush Error:', err);
+            if (err.statusCode === 410 || err.statusCode === 404) {
+              await supabase.from('user_push_subscriptions').delete().eq('endpoint', sub.endpoint);
+            }
+            return { type: 'webpush', success: false, error: err.message };
+          }
+        })());
+      });
+    }
 
-        // حذف الـ Token المنتهي أو غير الصحيح (بسبب تغيير الـ VAPID Key)
-        if (result.error?.code === 404 || result.error?.status === 'UNREGISTERED' || result.error?.details?.[0]?.errorCode === 'INVALID_ARGUMENT') {
-          console.log(`🧹 FCM Cleanup: Removing dead/invalid token: ${fcm_token.substring(0, 10)}...`);
-          await supabase.from('user_fcm_tokens').delete().eq('fcm_token', fcm_token);
-        }
-
-        return result;
-      })
-    );
+    const results = await Promise.allSettled(allSendPromises);
 
     const successCount = results.filter(r => r.status === 'fulfilled').length;
     const errors = (results.filter(r => r.status === 'rejected') as PromiseRejectedResult[]).map(r => r.reason);

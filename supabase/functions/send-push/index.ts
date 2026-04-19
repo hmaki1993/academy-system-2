@@ -84,23 +84,23 @@ serve(async (req) => {
       return new Response("Missing userId", { status: 400 });
     }
 
-    // 1. إرسال Realtime Broadcast (للـ Foreground / Fallback)
-    try {
-      const channel = supabase.channel(`user-notifications:${userId}`);
-      await channel.send({
-        type: 'broadcast',
-        event: 'mission-alert',
-        payload: { title: title || "Elite Academy", body: message || "New Mission!", url: url || "/app" }
-      });
-    } catch (e) { console.warn('Broadcast failed:', e); }
-
-    // 2. احضر FCM Tokens
+    // 1. احضر FCM Tokens
     const { data: tokens } = await supabase
       .from("user_fcm_tokens")
       .select("fcm_token")
       .eq("user_id", userId);
 
+    // 2. إذا لم يوجد أجهزة مسجلة، استخدم نظام الـ Broadcast كحل بديل (للمتصفح)
     if (!tokens || tokens.length === 0) {
+      try {
+        const channel = supabase.channel(`user-notifications:${userId}`);
+        await channel.send({
+          type: 'broadcast',
+          event: 'mission-alert',
+          payload: { title: title || "Elite Academy", body: message || "New Mission!", url: url || "/app" }
+        });
+      } catch (e) { console.warn('Broadcast fallback failed:', e); }
+
       return new Response(JSON.stringify({ success: true, method: 'broadcast_only' }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });

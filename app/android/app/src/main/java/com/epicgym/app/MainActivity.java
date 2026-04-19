@@ -24,9 +24,30 @@ public class MainActivity extends BridgeActivity {
     public void onCreate(Bundle savedInstanceState) {
         registerPlugin(SkippyPlugin.class);
         super.onCreate(savedInstanceState);
+        
+        // 🛡️ NUCLEAR CLEANUP: Remove old buggy channels causing triplicate alerts
+        cleanupStaleChannels(this);
         createSkippyChannel(this);
+        
         // 🔥 Visual proof that the new native code is running
-        android.widget.Toast.makeText(this, "Skippy Native Engine V2 Loaded ✅", android.widget.Toast.LENGTH_LONG).show();
+        android.widget.Toast.makeText(this, "Skippy Pro-Shield V5 Active 🛡️", android.widget.Toast.LENGTH_LONG).show();
+    }
+
+    private void cleanupStaleChannels(Context ctx) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            NotificationManager nm = (NotificationManager) ctx.getSystemService(Context.NOTIFICATION_SERVICE);
+            if (nm == null) return;
+            
+            // Get all current channels
+            for (NotificationChannel channel : nm.getNotificationChannels()) {
+                String id = channel.getId();
+                // 🛑 DELETE EVERYTHING that isn't our consolidated V5 channels
+                if (!id.equals("skippy_toes_alerts_v5") && !id.equals("SkippyWatchdogChannel_v5")) {
+                    android.util.Log.d("SkippyCleanup", "🛡️ Deleting stale channel: " + id);
+                    nm.deleteNotificationChannel(id);
+                }
+            }
+        }
     }
 
     public static void createSkippyChannel(Context ctx) {
@@ -38,9 +59,9 @@ public class MainActivity extends BridgeActivity {
             NotificationChannel alertCh = new NotificationChannel(
                 "skippy_toes_alerts_v5", "Skippy Alerts Premium", NotificationManager.IMPORTANCE_HIGH
             );
-            alertCh.setDescription("Skippy Toes Q8 Priority Alerts");
+            alertCh.setDescription("Skippy Toes Q8 Single-Direct Channel");
             alertCh.enableVibration(true);
-            alertCh.setVibrationPattern(new long[]{0, 400, 200, 400, 200, 800});
+            alertCh.setVibrationPattern(new long[]{0, 500, 200, 500});
             alertCh.enableLights(true);
             alertCh.setLightColor(0xFFFF3B30);
             alertCh.setLockscreenVisibility(android.app.Notification.VISIBILITY_PUBLIC);
@@ -54,9 +75,9 @@ public class MainActivity extends BridgeActivity {
 
             // 2. Watchdog Channel (LOW) - For Persistent Tracker
             NotificationChannel watchdogCh = new NotificationChannel(
-                "SkippyWatchdogChannel_v5", "Skippy Monitoring", NotificationManager.IMPORTANCE_LOW
+                "SkippyWatchdogChannel_v5", "Active Shield Service", NotificationManager.IMPORTANCE_LOW
             );
-            watchdogCh.setDescription("Turn this OFF to hide the background icon.");
+            watchdogCh.setDescription("Running in background to ensure notification delivery.");
             watchdogCh.setShowBadge(false);
             nm.createNotificationChannel(watchdogCh);
         }

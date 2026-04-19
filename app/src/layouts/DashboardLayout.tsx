@@ -186,18 +186,12 @@ export default function DashboardLayout() {
                     return 'Not on a native platform or plugin missing.';
                 };
 
-                // 🔥 FCM Foreground: استقبال التنبيهات لما التطبيق مفتوح
+                // 🔥 FCM Foreground: Silent sync when app is open
                 FCMManager.listenForeground((payload) => {
-                    const title = payload.notification?.title || 'تنبيه جديد';
-                    const body = payload.notification?.body || '';
+                    console.log('🔥 FCM: Foreground sync received', payload);
                     playNotificationSound('bell');
-                    // We don't just toast now, we try to force native Skippy popup!
-                    if (Capacitor.isNativePlatform()) {
-                        const SkippyPlugin = (Capacitor as any).Plugins?.SkippyPlugin;
-                        if (SkippyPlugin) SkippyPlugin.showAlert({ title, body });
-                    } else {
-                        toast(body, { icon: '🤖', duration: 6000, style: { background: '#222', color: '#fff' } });
-                    }
+                    // 🚨 REMOVED manual showAlert to prevent DOUBLE BANNERS. 
+                    // Android OS already shows the native banner for high-priority FCM.
                 });
 
                 // 🔔 NOTIFICATION BRIDGE: Local notifications via Supabase Realtime

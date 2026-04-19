@@ -201,12 +201,12 @@ export function useSmartPlan() {
             queryClient.invalidateQueries({ queryKey: ['training_plan_history', studentId] });
             queryClient.invalidateQueries({ queryKey: ['training_plan_history', studentIdRaw] });
             
-            // 🚀 CRITICAL FIX: Trigger the background push notification relay
+            // 🚀 MASTER PUSH: Unified command for FCM + Broadcast
             await import('../utils/NotificationExpert').then(m => {
                 m.NotificationExpert.invokePush(
                     studentIdRaw, 
-                    '🏆 خطة تدريب جديدة!', 
-                    'الكابتن بعتلك خطة ذكية جديدة.. افتح عشان تشوف التارجت!'
+                    '🏆 New Training Plan!', 
+                    'Click to view your new smart mission goals.'
                 );
             });
             
@@ -246,29 +246,7 @@ export function useSmartPlan() {
             // 🛡️ DYNAMIC MESSAGE: Cleaner, more professional notification text
             const finalMessage = `🚀 New Mission from Coach Maryam: ${jumpsDisplay} jumps & ${minsDisplay} mins starting at ${timeDisplay}. Good luck!`;
 
-            // 🛡️ PRE-CONSTRUCT MOCK NOTIFICATION (For zero-latency broadcast)
-            const mockNotif = {
-                id: `temp-${Date.now()}`,
-                user_id: studentIdRaw,
-                type: 'coach',
-                title: 'New Mission Target!',
-                message: finalMessage,
-                is_read: false,
-                created_at: new Date().toISOString()
-            };
-
-            // 1. Persistent Notification (Background Task)
-            supabase.from('notifications').insert({
-                user_id: studentIdRaw, // GUID
-                type: 'coach',
-                title: 'New Mission Target!',
-                message: finalMessage,
-                is_read: false
-            }).select('id').maybeSingle().then(({ data, error }) => {
-                if (error) console.warn('Notification DB Insert Error:', error);
-                if (data?.id) mockNotif.id = data.id;
-            });
-
+            // 1. Resolve Identity and Prepare State
             const studentId = await resolveStudentId(studentIdRaw);
             const payload = {
                 target_time: targetTime === '' ? null : targetTime,
@@ -277,7 +255,7 @@ export function useSmartPlan() {
                 status: scheduledStart ? 'scheduled' : 'live'
             };
 
-            // Atomic update - leave plan_content and other fields untouched
+            // 2. Atomic DB Update (Persistence)
             const { error: updateError } = await supabase
                 .from('training_plans')
                 .update(payload)
@@ -285,60 +263,19 @@ export function useSmartPlan() {
             
             if (updateError) {
                 console.error("FIRE/ROCKET DB ERROR:", updateError);
-                toast.error('DB Update failed, pushing notification anyway!');
-                // throw updateError; // Bypass crash!
+                toast.error('لم نتمكن من تحديث القاعدة، جاري إرسال الإشعار فقط!');
             }
 
-            // 🚀 CRITICAL FIX: Trigger the background push notification relay for the AI Tracker / Rocket Feature!
+            // 🚀 MASTER PUSH: Unified command for FCM + Broadcast
             await import('../utils/NotificationExpert').then(m => {
                 m.NotificationExpert.invokePush(
                     studentIdRaw, 
-                    '🎯 جاهز يا بطل؟', 
+                    '🎯 Ready for Mission?', 
                     finalMessage
                 );
             });
 
-            // If no plan starts yet, ensure we at least have a record
-            const { data } = await supabase.from('training_plans').select('id').eq('student_id', studentId).maybeSingle();
-            if (!data) {
-                await supabase.from('training_plans').insert({ 
-                    student_id: studentId, 
-                    ...payload,
-                    plan_content: [], 
-                    bmr: 0, tdee: 0, target_calories: 0
-                });
-            }
-
-            // 2. Direct Broadcast (V2 PROTOCOL: ISOLATED ROCKET CHANNEL)
-            const channel = supabase.channel(`athlete_rocket_v2_${studentIdRaw}`);
-            await channel.subscribe(async (statusSub) => {
-                if (statusSub === 'SUBSCRIBED') {
-                    console.log(`🚀 COACH: Initiating ROCKET_NOTIFICATION broadcast for [${studentIdRaw}]`);
-                    const resp = await channel.send({
-                        type: 'broadcast',
-                        event: 'ROCKET_NOTIFICATION',
-                        payload: { 
-                            type: 'target_update',
-                            target_time: targetTime, 
-                            target_jumps: targetJumps, 
-                            refresh_plan: true,
-                            notification: mockNotif, 
-                            timestamp: new Date().toISOString()
-                        }
-                    });
-                    console.log(`🚀 COACH: Rocket result:`, resp);
-                    setTimeout(() => supabase.removeChannel(channel), 3000);
-                }
-            });
-
             queryClient.invalidateQueries({ queryKey: ['training_plans', studentId] });
-            
-            // 3. BACKGROUND PUSH NOTIFICATION (Isolated Expert Logic)
-            await NotificationExpert.invokePush(
-                studentIdRaw,
-                'Elite Alpha: New Mission Detected!',
-                finalMessage
-            );
             
             toast.success('Session targets updated!');
         } catch (error: any) {

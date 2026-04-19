@@ -368,8 +368,9 @@ const FloatingRemoteHub = ({ athlete, onClose }: { athlete: any, onClose: () => 
                                 const picked = new Date();
                                 picked.setHours(h, m, 0, 0);
                                 
-                                // 🚀 Handle Roll-over: If picked time is before current time, it must be for tomorrow
-                                if (picked.getTime() <= Date.now()) {
+                                // 🚀 Handle Roll-over: If picked time is significantly in the past (more than 5 mins), it must be for tomorrow.
+                                // Giving a 5-minute grace period ensures if the coach just opens the modal and sits on the current time without changing it, it triggers 'Start Now' rather than scheduling for tomorrow.
+                                if (picked.getTime() <= Date.now() - 300000) {
                                     picked.setDate(picked.getDate() + 1);
                                 }
                                 

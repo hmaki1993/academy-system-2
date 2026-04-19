@@ -162,8 +162,8 @@ function AppContent() {
               if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
                 // New content is available and will be used when all tabs are closed
                 // But we want to FORCE it now for the Nuclear fix.
-                console.log('☢️ CacheBreaker: New version detected. Force reloading...');
-                toast.success("Strategic Update Received! Syncing...", { icon: '🚀' });
+                // console.log('☢️ CacheBreaker: New version detected. Force reloading...');
+                // toast.success("Strategic Update Received! Syncing...", { icon: '🚀' });
                 // setTimeout(() => window.location.reload(), 1500);
               }
             });

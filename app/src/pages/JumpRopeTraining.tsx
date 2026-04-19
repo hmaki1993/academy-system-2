@@ -105,6 +105,7 @@ export default function JumpRopeTraining() {
     const setupStatusRef = useRef<'READY' | 'TOO_CLOSE' | 'STEP_BACK' | 'MOVING' | 'STABLE'>('READY');
     const smoothedVelXRef = useRef(0); // EMA of horizontal velocity
     const smoothedScaleVelRef = useRef(0); // EMA of scale velocity for strict approach detection
+    const hasSavedRef = useRef(false);
 
     // --- Silent WebRTC Broadcast ---
     // Extract the exact video element reference for broadcasting
@@ -437,16 +438,23 @@ export default function JumpRopeTraining() {
         return () => clearInterval(interval);
     }, [isSessionActive, isTracking]);
 
-    const handleFinish = useCallback(() => {
-        setIsSessionActive(false);
-        isSessionActiveRef.current = false;
+    // --- Core Save Logic (Reads from Refs for Unmount Stability) ---
+    const finalizeAndSaveSession = useCallback((forceSummary = false) => {
+        if (hasSavedRef.current) return;
         
-        // Finalize Stat Calculations from Refs (Source of Truth)
         const totalWork = workTimeRef.current;
         const totalRest = restTimeRef.current;
         const totalJumps = jumpCountRef.current;
-        const finalRpm = Math.round(totalJumps / ((totalWork || 1) / 60)) || 0;
+        
+        // Threshold: Save if at least 2 jumps or 10 seconds of session
+        if (totalJumps < 2 && (totalWork + totalRest) < 10) {
+            return;
+        }
 
+        const finalRpm = Math.round(totalJumps / ((totalWork || 1) / 60)) || 0;
+        hasSavedRef.current = true;
+
+        // UI Updates if still mounted
         setFinalRestSecs(totalRest);
         setJumps(totalJumps);
         setRpm(finalRpm);
@@ -459,9 +467,36 @@ export default function JumpRopeTraining() {
             work_duration: totalWork,
             rest_duration: totalRest
         });
-        setShowSummary(true);
-        speak(`${totalJumps} jumps completed.`);
+
+        if (forceSummary) {
+            setShowSummary(true);
+            speak(`${totalJumps} jumps completed.`);
+        }
     }, [addSession, speak]);
+
+    // --- Unmount / Tab Closure Protection ---
+    useEffect(() => {
+        const handleBeforeUnload = () => {
+            if (isSessionActiveRef.current && !hasSavedRef.current) {
+                finalizeAndSaveSession();
+            }
+        };
+
+        window.addEventListener('beforeunload', handleBeforeUnload);
+        
+        return () => {
+            window.removeEventListener('beforeunload', handleBeforeUnload);
+            if (isSessionActiveRef.current && !hasSavedRef.current) {
+                finalizeAndSaveSession();
+            }
+        };
+    }, [finalizeAndSaveSession]);
+
+    const handleFinish = useCallback(() => {
+        setIsSessionActive(false);
+        isSessionActiveRef.current = false;
+        finalizeAndSaveSession(true);
+    }, [finalizeAndSaveSession]);
 
     const handleStart = () => {
         const total = (countdownMins * 60) + countdownSecs;
@@ -489,6 +524,7 @@ export default function JumpRopeTraining() {
         intensityHistoryRef.current = [];
         setIntensityStatus('READY');
         setCurrentRestSecs(0);
+        hasSavedRef.current = false;
     };
 
     return (

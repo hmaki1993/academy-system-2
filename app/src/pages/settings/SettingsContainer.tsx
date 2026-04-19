@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import {
-    User, Settings as SettingsIcon, Moon, Sun, Bell, Shield, LogOut, ChevronRight, Camera,
+    User, Settings as SettingsIcon, Moon, Sun, Shield, LogOut, ChevronRight, Camera,
     Check, Save, Globe, CreditCard, Plus, Trash2, Palette, Menu, X, Layout, LayoutDashboard,
     Type, Maximize, Minimize, Box, RefreshCw, Building2, Loader2, CheckCircle2, Sparkles,
-    Zap, ShieldCheck, AlertTriangle, Lock as LockIcon, Key as KeyIcon, Search, Edit2,
+    Zap, ShieldCheck, Lock as LockIcon, Key as KeyIcon, Search, Edit2,
     Upload, Calendar, Clock, ArrowRight, ChevronDown, Wand2, MoveVertical, Scissors,
-    Circle, History, Move, ZoomIn, Droplets, MousePointer2, Target, Pipette, Monitor, Smartphone, Award, Wrench
+    Circle, History, Move, ZoomIn, Droplets, MousePointer2, Target, Pipette, Monitor, Smartphone, Award
 } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
@@ -27,7 +27,6 @@ import { LogoEditorModal, MediaLibraryModal } from './components/Modals';
 import { SubscriptionPlansManager } from './components/SubscriptionPlansManager';
 import PaletteImportModal from '../../components/PaletteImportModal';
 import PageHeader from '../../components/PageHeader';
-import { NotificationExpert } from '../../utils/NotificationExpert';
 
 
 
@@ -63,7 +62,7 @@ export default function Settings() {
     const [designMode, setDesignMode] = useState<'desktop' | 'mobile'>(() => {
         return window.innerWidth < 768 || /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ? 'mobile' : 'desktop';
     });
-    const [activeTab, setActiveTab] = useState<'appearance' | 'profile' | 'academy' | 'login' | 'notifications'>(() => {
+    const [activeTab, setActiveTab] = useState<'appearance' | 'profile' | 'academy' | 'login'>(() => {
         const savedSecret = localStorage.getItem('academy_settings_secret_revealed');
         if (role !== 'admin') return 'appearance';
         return savedSecret === 'true' ? 'login' : 'appearance';
@@ -101,20 +100,6 @@ export default function Settings() {
     const [profileLoading, setProfileLoading] = useState(false);
     const [passwordLoading, setPasswordLoading] = useState(false);
 
-    // Notification Diagnostics
-    const [notifDiagnostic, setNotifDiagnostic] = useState<any>(null);
-    const [isRepairing, setIsRepairing] = useState(false);
-
-    const runDiagnostic = async () => {
-        const report = await NotificationExpert.checkDiagnostic();
-        setNotifDiagnostic(report);
-    };
-
-    useEffect(() => {
-        if (activeTab === 'notifications') {
-            runDiagnostic();
-        }
-    }, [activeTab]);
 
     useEffect(() => {
         if (secretClicks > 0) {
@@ -928,13 +913,6 @@ export default function Settings() {
                         <User className="w-3.5 h-3.5" />
                         {t('settings.profile')}
                     </button>
-                <button
-                    onClick={() => setActiveTab('notifications')}
-                    className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all duration-300 ${activeTab === 'notifications' ? 'bg-primary text-white shadow-lg shadow-primary/20 scale-105 ring-1 ring-white/10' : 'text-white/40 hover:text-white hover:bg-white/5'}`}
-                >
-                    <Bell className="w-3.5 h-3.5" />
-                    {t('settings.notifications', 'Notifications')}
-                </button>
             </div>
 
             <div className="grid grid-cols-1 gap-8">
@@ -1224,271 +1202,11 @@ export default function Settings() {
                                     {t('common.reset', 'RESET')}
                                 </button>
                             </div>
-                            </div>
                         </div>
                     </div>
-                )}
+                </div>
+            )}
 
-                {/* Notifications Settings */}
-                {activeTab === 'notifications' && (
-                    <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-500 pb-20">
-                        <div className="p-2 md:p-4 h-fit relative overflow-hidden max-w-2xl mx-auto">
-                            <h2 className="text-lg md:text-xl font-black text-white uppercase tracking-tight flex items-center gap-3 mb-8">
-                                <div className="p-2.5 bg-blue-500/20 rounded-xl text-blue-500">
-                                    <Bell className="w-5 h-5" />
-                                </div>
-                                {t('settings.notifications', 'Notifications')}
-                            </h2>
-
-                            <div className="space-y-6">
-                                <div className="p-8 bg-white/[0.02] rounded-[2.5rem] border border-white/[0.03] space-y-6">
-                                    <h3 className="text-[10px] font-black text-white/30 uppercase tracking-[0.3em] mb-4">
-                                        {t('settings.preferences')}
-                                    </h3>
-
-                                    <div className="space-y-4">
-                                        <PremiumSwitch
-                                            label={t('settings.enableSounds', 'Notification Sounds')}
-                                            checked={draftSettings.notify_sounds !== false}
-                                            onChange={(val) => setDraftSettings({ ...draftSettings, notify_sounds: val })}
-                                        />
-                                        <p className="text-[10px] text-white/20 font-bold uppercase tracking-wide ml-12">
-                                            {t('settings.soundsDescription')}
-                                        </p>
-                                    </div>
-
-                                    <div className="pt-6 border-t border-white/5 space-y-6">
-                                        <h3 className="text-[10px] font-black text-white/30 uppercase tracking-[0.3em] mb-4">
-                                            {t('settings.alertTypes')}
-                                        </h3>
-                                        
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                                            <PremiumSwitch
-                                                label={t('settings.notifyPayments', 'Payments')}
-                                                checked={draftSettings.notify_payments !== false}
-                                                onChange={(val) => setDraftSettings({ ...draftSettings, notify_payments: val })}
-                                            />
-                                            <PremiumSwitch
-                                                label={t('settings.notifyAbsence', 'Absence')}
-                                                checked={draftSettings.notify_absences !== false}
-                                                onChange={(val) => setDraftSettings({ ...draftSettings, notify_absences: val })}
-                                            />
-                                            <PremiumSwitch
-                                                label={t('settings.notifyRegistrations', 'Registrations')}
-                                                checked={draftSettings.notify_registrations !== false}
-                                                onChange={(val) => setDraftSettings({ ...draftSettings, notify_registrations: val })}
-                                            />
-                                            <PremiumSwitch
-                                                label={t('settings.browserPush', 'Browser Notifications')}
-                                                checked={draftSettings.notify_browser_push || false}
-                                                onChange={async (val) => {
-                                                    if (val) {
-                                                        const success = await NotificationExpert.subscribe(userData.email || 'user');
-                                                        if (success) {
-                                                            setDraftSettings({ ...draftSettings, notify_browser_push: true });
-                                                            toast.success("Notification Link Established!");
-                                                            runDiagnostic();
-                                                        }
-                                                    } else {
-                                                        setDraftSettings({ ...draftSettings, notify_browser_push: false });
-                                                        localStorage.removeItem('elite_push_active');
-                                                    }
-                                                }}
-                                            />
-                                        </div>
-
-                                        {/* EXPERT DIAGNOSTICS SECTION */}
-                                        <div className="pt-8 border-t border-white/5 space-y-6">
-                                            <div className="flex items-center justify-between">
-                                                <div className="flex flex-col">
-                                                    <h3 className="text-[10px] font-black text-amber-500 uppercase tracking-[0.3em]">
-                                                        Diagnostic Hub
-                                                    </h3>
-                                                    <p className="text-[8px] text-white/30 font-bold uppercase tracking-tight mt-1">
-                                                        Troubleshoot background notification failures
-                                                    </p>
-                                                </div>
-                                                <button 
-                                                    onClick={runDiagnostic}
-                                                    className="p-2 bg-white/5 hover:bg-white/10 rounded-lg transition-all"
-                                                >
-                                                    <RefreshCw className={`w-3 h-3 text-white/40 ${isRepairing ? 'animate-spin' : ''}`} />
-                                                </button>
-                                            </div>
-
-                                            {notifDiagnostic && (
-                                                <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-                                                    <div className="p-2 bg-white/[0.02] rounded-xl border border-white/[0.05]">
-                                                        <span className="text-[7px] text-white/20 font-black uppercase block mb-1">Permission</span>
-                                                        <span className={`text-[9px] font-black uppercase ${notifDiagnostic.permission === 'granted' ? 'text-emerald-500' : 'text-rose-500'}`}>
-                                                            {notifDiagnostic.permission}
-                                                        </span>
-                                                    </div>
-                                                    <div className="p-2 bg-white/[0.02] rounded-xl border border-white/[0.05]">
-                                                        <span className="text-[7px] text-white/20 font-black uppercase block mb-1">Service Worker</span>
-                                                        <span className={`text-[9px] font-black uppercase ${notifDiagnostic.swActive ? 'text-emerald-500' : 'text-rose-500'}`}>
-                                                            {notifDiagnostic.swActive ? 'Active' : 'Offline'}
-                                                        </span>
-                                                    </div>
-                                                    <div className="p-2 bg-white/[0.02] rounded-xl border border-white/[0.05]">
-                                                        <span className="text-[7px] text-white/20 font-black uppercase block mb-1">Push Signal</span>
-                                                        <span className={`text-[9px] font-black uppercase ${notifDiagnostic.pushSubscription ? 'text-emerald-500' : notifDiagnostic.fallbackActive ? 'text-emerald-400 animate-pulse' : 'text-rose-500'}`}>
-                                                            {notifDiagnostic.pushSubscription ? 'Connected' : notifDiagnostic.fallbackActive ? 'Resilient' : 'Broken'}
-                                                        </span>
-                                                    </div>
-                                                    <div className="p-2 bg-white/[0.02] rounded-xl border border-white/[0.05]">
-                                                        <span className="text-[7px] text-white/20 font-black uppercase block mb-1">Real-time Link</span>
-                                                        <span className={`text-[9px] font-black uppercase ${notifDiagnostic.realtimeConnected ? 'text-emerald-500' : 'text-rose-500'}`}>
-                                                            {notifDiagnostic.realtimeConnected ? 'Fused' : 'Disconnected'}
-                                                        </span>
-                                                    </div>
-                                                    <div className="p-2 bg-white/[0.02] rounded-xl border border-white/[0.05]">
-                                                        <span className="text-[7px] text-white/20 font-black uppercase block mb-1">Local Flag</span>
-                                                        <span className={`text-[9px] font-black uppercase ${notifDiagnostic.localStorage ? 'text-emerald-500' : 'text-rose-500'}`}>
-                                                            {notifDiagnostic.localStorage ? 'Verified' : 'Missing'}
-                                                        </span>
-                                                    </div>
-                                                </div>
-                                            )}
-
-                                            <div className="flex flex-col sm:flex-row gap-4 pt-2">
-                                                <button
-                                                    onClick={async () => {
-                                                        const result = await NotificationExpert.invokePush() as any;
-                                                        
-                                                        if (result.success) {
-                                                            toast.success("Test signal sent to server!");
-                                                        } else {
-                                                            toast.error(`Dispatch Failed: ${result.error}`);
-                                                        }
-                                                    }}
-                                                    className="flex-1 py-3 px-4 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-[9px] font-black text-white/60 hover:text-white uppercase tracking-widest transition-all"
-                                                >
-                                                    {t('settings.notifications.sendTest', 'Send Test Notification')}
-                                                </button>
-                                                <button
-                                                    onClick={() => {
-                                                        NotificationExpert.triggerLocal(
-                                                            "UI Check 🎯",
-                                                            "If you see this sliding down, your screen & app are ready!"
-                                                        );
-                                                        toast.success("Local UI trigger fired!");
-                                                    }}
-                                                    className="flex-1 py-3 px-4 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 text-[9px] font-black text-emerald-500 uppercase tracking-widest transition-all"
-                                                >
-                                                    TEST UI ONLY 🎯
-                                                </button>
-                                                <button
-                                                    onClick={async () => {
-                                                        setIsRepairing(true);
-                                                        const user = (await supabase.auth.getUser()).data.user;
-                                                        if (user) {
-                                                            await NotificationExpert.repair(user.id);
-                                                            runDiagnostic();
-                                                        }
-                                                        setIsRepairing(false);
-                                                    }}
-                                                    disabled={isRepairing}
-                                                    className="flex-1 py-3 px-4 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 text-[9px] font-black text-rose-400 hover:text-rose-300 uppercase tracking-widest transition-all flex items-center justify-center gap-2"
-                                                >
-                                                    {isRepairing ? <Loader2 className="w-3 h-3 animate-spin" /> : <ShieldCheck className="w-3 h-3" />}
-                                                    Nuclear Repair
-                                                </button>
-                                            </div>
-
-                                            {/* TECHNICAL LOG (EXPERT DIAGNOSTIC) */}
-                                            {notifDiagnostic?.lastError && (
-                                                <div className="flex gap-2 p-3 rounded-xl bg-rose-500/5 border border-rose-500/10">
-                                                    <AlertTriangle className="w-3 h-3 text-rose-500/50 shrink-0 mt-0.5" />
-                                                    <div className="space-y-1">
-                                                        <p className="text-[6px] font-black text-rose-500/30 uppercase tracking-tighter">Hardware Technical Log</p>
-                                                        <p className="text-[8px] font-mono text-rose-400/80 leading-snug break-all italic">
-                                                            {notifDiagnostic.lastError}
-                                                        </p>
-                                                    </div>
-                                                </div>
-                                            )}
-
-                                            {/* STANDALONE HINT */}
-                                            {window.matchMedia('(display-mode: standalone)').matches && (
-                                                <div className="flex gap-2 p-3 rounded-xl bg-amber-500/5 border border-amber-500/10">
-                                                    <Wrench className="w-3 h-3 text-amber-500/50 shrink-0 mt-0.5" />
-                                                    <p className="text-[7.5px] font-bold text-amber-500/40 uppercase leading-relaxed">
-                                                        Note: If repair fails, go to Android Settings → Apps → App Info → Storage → Clear Data.
-                                                    </p>
-                                                </div>
-                                            )}
-
-                                            {notifDiagnostic?.pushToken && (
-                                                <div className="p-3 bg-black/40 rounded-xl border border-white/5 overflow-hidden">
-                                                    <span className="text-[6px] text-white/10 font-black uppercase block mb-1">Hardware Token Fingerprint</span>
-                                                    <code className="text-[7px] text-white/20 font-mono break-all leading-tight italic">
-                                                        {notifDiagnostic.pushToken}
-                                                    </code>
-                                                </div>
-                                            )}
-
-                                            {/* 🚀 CACHE BREAKER BUTTON */}
-                                            <div className="flex flex-col gap-2 pt-2 border-t border-white/5 mt-2">
-                                                <div className="flex justify-between items-center px-1">
-                                                    <span className="text-[6px] text-white/10 font-black uppercase tracking-widest">Diagnostic Meta</span>
-                                                    <span className="text-[6px] text-emerald-500/30 font-mono italic">{notifDiagnostic?.version || 'v1-legacy'}</span>
-                                                </div>
-                                                <button
-                                                    onClick={async () => {
-                                                        const confirm = window.confirm("This will perform a NUCLEAR RESET of the app cache. You will be logged out and the app will reload. Continue?");
-                                                        if (!confirm) return;
-
-                                                        toast.loading("Busting Cache & Resetting ServiceWorkers...", { id: 'nuclear-reset' });
-
-                                                        // 1. Clear LocalStorage
-                                                        localStorage.clear();
-
-                                                        // 2. Unregister ALL Service Workers
-                                                        if ('serviceWorker' in navigator) {
-                                                            const registrations = await navigator.serviceWorker.getRegistrations();
-                                                            for (let registration of registrations) {
-                                                                await registration.unregister();
-                                                            }
-                                                        }
-
-                                                        // 3. Clear ALL Caches
-                                                        if ('caches' in window) {
-                                                            const keys = await caches.keys();
-                                                            for (let key of keys) {
-                                                                await caches.delete(key);
-                                                            }
-                                                        }
-
-                                                        toast.success("Cleanup Complete. Reloading...", { id: 'nuclear-reset' });
-                                                        
-                                                        // 4. Hard Reload
-                                                        setTimeout(() => {
-                                                            window.location.href = window.location.origin + '/?cachebuster=' + Date.now();
-                                                        }, 1500);
-                                                    }}
-                                                    className="w-full py-2 px-4 rounded-lg bg-rose-500/20 hover:bg-rose-500/40 border border-rose-500/30 text-[7px] font-black text-rose-400 uppercase tracking-widest transition-all shadow-[0_0_15px_rgba(244,63,94,0.1)]"
-                                                >
-                                                    ☢️ NUCLEAR CACHE BUSTER ☢️
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div className="flex justify-center pt-8">
-                                    <button
-                                        onClick={handleSaveTheme}
-                                        className="relative group overflow-hidden bg-gradient-to-r from-primary via-accent to-primary bg-size-200 bg-pos-0 hover:bg-pos-100 text-white px-10 py-4 rounded-2xl font-black uppercase tracking-[0.2em] text-[10px] flex items-center justify-center gap-3 transition-all duration-500 shadow-xl hover:shadow-primary/40 hover:scale-105 border border-white/20"
-                                    >
-                                        <Save className="w-4 h-4" />
-                                        {t('common.save', 'SAVE PREFERENCES')}
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                )}
 
                 {/* Academy Settings (Admin Only) */}
                 {activeTab === 'academy' && role === 'admin' && (
@@ -2460,7 +2178,8 @@ export default function Settings() {
                     }}
                 />
             </div>
-        </div >
+        </div>
+
     );
 }
 

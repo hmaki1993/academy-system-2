@@ -255,18 +255,55 @@ export function useSmartPlan() {
                 status: scheduledStart ? 'scheduled' : 'live'
             };
 
-            // 2. Atomic DB Update (Persistence)
-            const { error: updateError } = await supabase
+            // 2. Atomic DB Update (Persistence with Upsert logic)
+            const { data: updateData, error: updateError } = await supabase
                 .from('training_plans')
                 .update(payload)
-                .eq('student_id', studentId);
+                .eq('student_id', studentId)
+                .select('id');
             
             if (updateError) {
-                console.error("FIRE/ROCKET DB ERROR:", updateError);
-                toast.error('لم نتمكن من تحديث القاعدة، جاري إرسال الإشعار فقط!');
+                console.error("FIRE/ROCKET DB UPDATE ERROR:", updateError);
             }
 
-            // 🚀 MASTER PUSH: Unified command for FCM + Broadcast
+            // If no row was updated, record doesn't exist - so we INSERT
+            if (!updateData || updateData.length === 0) {
+                console.log("No existing plan found for student during Rocket Send. Creating new entry...");
+                const { error: insertError } = await supabase
+                    .from('training_plans')
+                    .insert({ student_id: studentId, ...payload });
+                
+                if (insertError) {
+                    console.error("FIRE/ROCKET DB INSERT ERROR:", insertError);
+                    toast.error('لم نتمكن من تحديث القاعدة، جاري إرسال الإشعار فقط!');
+                }
+            }
+
+            // 🚀 MASTER BROADCAST: Instant signal to Student UI (Zero Latency)
+            const channelId = `direct_broadcasts_${studentIdRaw}`;
+            const bc = supabase.channel(channelId);
+            bc.subscribe(async (status) => {
+                if (status === 'SUBSCRIBED') {
+                    console.log(`📡 COACH: Initiating TARGET_UPDATE broadcast for [${studentIdRaw}]`);
+                    await bc.send({
+                        type: 'broadcast',
+                        event: 'SYNC_ALERTS',
+                        payload: { 
+                            type: 'target_update',
+                            status: payload.status,
+                            target_jumps: payload.target_jumps,
+                            target_time: payload.target_time,
+                            scheduled_start: payload.scheduled_start,
+                            refresh_plan: true,
+                            timestamp: new Date().toISOString()
+                        }
+                    });
+                    // Small delay then cleanup
+                    setTimeout(() => supabase.removeChannel(bc), 1500);
+                }
+            });
+
+            // 📱 BACKUP PUSH: FCM for Background Delivery
             await import('../utils/NotificationExpert').then(m => {
                 m.NotificationExpert.invokePush(
                     studentIdRaw, 

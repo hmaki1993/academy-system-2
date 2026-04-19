@@ -60,7 +60,10 @@ export default function JumpRopeTraining() {
     const lastPlanIdRef = useRef<string | null>(null);
     const minsScrollRef = useRef<HTMLDivElement>(null);
     const secsScrollRef = useRef<HTMLDivElement>(null);
+    const isUnmountingRef = useRef(false); // 🛡️ Connection Lifecycle Guard
     const [scheduledRemaining, setScheduledRemaining] = useState<number | null>(null);
+    const [isTransitioning, setIsTransitioning] = useState(false);
+    const [transitionRemaining, setTransitionRemaining] = useState(0);
     const ITEM_H = 44;
     const MIN_OPTIONS = Array.from({ length: 21 }, (_, i) => i);
     const SEC_OPTIONS = Array.from({ length: 12 }, (_, i) => i * 5);
@@ -192,29 +195,44 @@ export default function JumpRopeTraining() {
                 isRemotePausedRef.current = false;
             }
 
-            // Auto-set session as active if live, but don't start timer yet
-            if (plan.target_time && !isSessionActiveRef.current) {
-                const totalSecs = Number(plan.target_time) * 60;
-                setCountdownMins(Number(plan.target_time));
-                setCountdownSecs(0);
-                setTimerRemaining(totalSecs);
-                timerRemainingRef.current = totalSecs;
+            // Auto-set session as active if live, even if target_time is empty (Free/Infinite mode)
+            if (!isSessionActiveRef.current && !isTransitioning) {
+                // 🚀 ROCKET SYNC: Initiate 10s buffer even for manual starts
+                setIsTransitioning(true);
+                setTransitionRemaining(10);
+                speak(t('smartTraining.prepareToJump'));
 
-                // Auto-launch the session structure
-                setIsSessionActive(true);
-                isSessionActiveRef.current = true;
+                const transitionInterval = setInterval(() => {
+                    setTransitionRemaining(prev => {
+                        if (prev <= 1) {
+                            clearInterval(transitionInterval);
+                            setIsTransitioning(false);
+                            
+                            // Finish auto-launch after transition
+                            const mins = plan.target_time ? Number(plan.target_time) : 0;
+                            const totalSecs = mins * 60;
+                            
+                            setCountdownMins(mins);
+                            setCountdownSecs(0);
+                            setTimerRemaining(totalSecs > 0 ? totalSecs : null);
+                            timerRemainingRef.current = totalSecs > 0 ? totalSecs : null;
+                            
+                            setIsSessionActive(true);
+                            isSessionActiveRef.current = true;
+                            setIsTimerActive(false);
+                            isTimerActiveRef.current = false;
+                            isTimerStartedRef.current = true;
+                            return 0;
+                        }
+                        return prev - 1;
+                    });
+                }, 1000);
 
-                // START MOD: Keep timer inactive initially
-                setIsTimerActive(false);
-                isTimerActiveRef.current = false;
-
-                isTimerStartedRef.current = true;
                 jumpCountRef.current = 0;
                 workTimeRef.current = 0;
                 restTimeRef.current = 0;
                 lastActivityTimeRef.current = 0;
                 intensityHistoryRef.current = [];
-                speak(t('smartTraining.readyJump'));
             }
         } else if (plan.status === 'scheduled') {
             setIsRemoteLocked(!isAdmin); // Admins bypass lock
@@ -277,51 +295,82 @@ export default function JumpRopeTraining() {
         }
     }, [user?.id, applyPlanTargets]);
 
-    // 2. Automated Scheduled Start Checker
+    // 2. Automated Scheduled Start Checker (Hardened for Day Roll-over)
     useEffect(() => {
         if (!activePlan || activePlan.status !== 'scheduled' || !activePlan.scheduled_start) {
             setScheduledRemaining(null);
             return;
         }
 
-        const checkTime = setInterval(async () => {
+        const calculateDiff = () => {
             const now = new Date();
-            const [targetH, targetM] = activePlan.scheduled_start.split(':').map(Number);
-            const targetDate = new Date();
-            targetDate.setHours(targetH, targetM, 0, 0);
+            let targetDate;
+            if (activePlan.scheduled_start.includes('T')) {
+                // Exact globally synced timestamp provided by Coach Hub
+                targetDate = new Date(activePlan.scheduled_start);
+            } else {
+                // Legacy HH:mm parsing fallback
+                const [targetH, targetM] = activePlan.scheduled_start.split(':').map(Number);
+                targetDate = new Date();
+                targetDate.setHours(targetH, targetM, 0, 0);
 
-            // Calculate diff.
-            let diffSeconds = Math.ceil((targetDate.getTime() - now.getTime()) / 1000);
-            const isToday = now.toDateString() === targetDate.toDateString();
+                // 💡 SMART ROLL-OVER: If target is more than 1 minute ago, it's probably for tomorrow
+                if (targetDate.getTime() <= now.getTime() - 60000) {
+                    targetDate.setDate(targetDate.getDate() + 1);
+                }
+            }
+            return Math.ceil((targetDate.getTime() - new Date().getTime()) / 1000);
+        };
 
-            // 🎯 SECURE AUTO-START:
-            // Only fire if it's TODAY and the time has arrived.
-            if (isToday && diffSeconds <= 0 && activePlan.status === 'scheduled') {
-                console.log("🎯 SCHEDULED TIME REACHED! AUTO-STARTING...");
+        // Initialize immediately so it shows instantly without 1s blink
+        const initialDiff = calculateDiff();
+        if (initialDiff > 0) setScheduledRemaining(initialDiff);
+
+        const checkTime = setInterval(async () => {
+            const diffSeconds = calculateDiff();
+
+            if (diffSeconds <= 0 && activePlan.status === 'scheduled' && !isTransitioning) {
+                console.log("🎯 SCHEDULED TIME REACHED! INITIATING TRANSITION...");
+                setIsTransitioning(true);
+                setTransitionRemaining(10);
+                speak(t('smartTraining.prepareToJump'));
+                
+                // Countdown the transition locally
+                const transitionInterval = setInterval(() => {
+                    setTransitionRemaining(prev => {
+                        if (prev <= 1) {
+                            clearInterval(transitionInterval);
+                            // Finish transition and update DB
+                            (async () => {
+                                try {
+                                    await supabase
+                                        .from('training_plans')
+                                        .update({ status: 'live' })
+                                        .eq('id', activePlan.id);
+                                    
+                                    setIsTransitioning(false);
+                                    fetchLatestPlan();
+                                } catch (err) {
+                                    console.error("Transition update failed:", err);
+                                    setIsTransitioning(false);
+                                }
+                            })();
+                            return 0;
+                        }
+                        return prev - 1;
+                    });
+                }, 1000);
+
                 clearInterval(checkTime);
                 setScheduledRemaining(0);
-
-                try {
-                    await supabase
-                        .from('training_plans')
-                        .update({ status: 'live' })
-                        .eq('id', activePlan.id);
-                    
-                    fetchLatestPlan();
-                } catch (err) {
-                    console.error("Failed to auto-transition scheduled session:", err);
-                }
             } else if (diffSeconds > 0) {
-                setScheduledRemaining(diffSeconds);
-            } else if (isToday) {
-                setScheduledRemaining(0);
-            } else {
-                setScheduledRemaining(null);
+                // Prevent state-flapping: only update if it's a new second
+                setScheduledRemaining(prev => prev === diffSeconds ? prev : diffSeconds);
             }
-        }, 1000); // Check every 1 second for smooth countdown
+        }, 1000);
 
         return () => clearInterval(checkTime);
-    }, [activePlan, fetchLatestPlan]);
+    }, [activePlan?.id, activePlan?.status, activePlan?.scheduled_start, fetchLatestPlan]);
 
     // 1. Fetch Personal Training Plan and Poll for Status Changes
     useEffect(() => {
@@ -397,6 +446,32 @@ export default function JumpRopeTraining() {
 
                 // 2. Direct Target Updates
                 if (payload?.type === 'target_update' || payload?.refresh_plan) {
+                    console.log('🎯 ROCKET: Applying immediate target update:', payload);
+                    
+                    // Instant optimistic UI update from broadcast payload
+                    if (payload.target_jumps !== undefined) setTargetJumps(payload.target_jumps);
+                    if (payload.target_time !== undefined) {
+                        const total = Number(payload.target_time) * 60;
+                        setCountdownMins(Number(payload.target_time));
+                        setCountdownSecs(0);
+                        setTimerRemaining(total);
+                        timerRemainingRef.current = total;
+                    }
+
+                    // 🚀 ZERO-LATENCY STATE INJECTION: Update activePlan directly to trigger UI/Logic
+                    if (payload.status || payload.scheduled_start) {
+                        setActivePlan((prev: any) => {
+                            const base = prev || { id: 'temp_scheduled', status: 'idle' };
+                            return {
+                                ...base,
+                                status: payload.status || base.status,
+                                scheduled_start: payload.scheduled_start || base.scheduled_start,
+                                target_jumps: payload.target_jumps || base.target_jumps,
+                                target_time: payload.target_time || base.target_time
+                            };
+                        });
+                    }
+                    
                     fetchLatestPlan();
                 }
             })
@@ -413,11 +488,15 @@ export default function JumpRopeTraining() {
                     console.log('🤝 HANDSHAKE: BROADCASTED PRESENCE');
                 }
                 if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
-                    console.warn(`⚠️ STUDENT: Channel ${status}. Connection might be fragile.`);
+                    // 🛡️ Only warn if NOT unmounting intentionally
+                    if (!isUnmountingRef.current) {
+                        console.warn(`⚠️ STUDENT: Channel ${status}. Connection might be fragile.`);
+                    }
                 }
             });
 
         return () => {
+            isUnmountingRef.current = true; // 🏁 Lock warnings
             console.log(`🔌 STUDENT: Cleaning up channel [${channelId}]`);
             supabase.removeChannel(channel);
         };
@@ -945,9 +1024,31 @@ export default function JumpRopeTraining() {
                     </div>
 
                     {/* Session Lock / Scheduled Overlay (Perfectly Centered) */}
-                    {isRemoteLocked && !isAdmin && (
+                    {((isRemoteLocked && !isAdmin) || isTransitioning || activePlan?.status === 'scheduled') && (
                         <div className="absolute inset-0 z-[100] backdrop-blur-2xl flex flex-col items-center justify-center gap-8 text-center p-6 pointer-events-auto" style={{ background: 'rgba(10,10,20,0.55)' }}>
-                            {activePlan?.status === 'scheduled' ? (
+                            {isTransitioning ? (
+                                /* High-Visibility 10s Ready Phase */
+                                <div className="w-full max-w-[420px] p-12 rounded-[3.5rem] border border-orange-500/30 flex flex-col items-center gap-10 animate-in zoom-in-75 duration-300" style={{ background: 'rgba(249,115,22,0.08)', backdropFilter: 'blur(60px)' }}>
+                                    <div className="relative">
+                                        <div className="absolute -inset-12 bg-orange-500/20 rounded-full blur-3xl animate-pulse" />
+                                        <Zap size={64} className="text-orange-500 drop-shadow-[0_0_30px_rgba(249,115,22,0.6)]" fill="currentColor" />
+                                    </div>
+                                    <div className="flex flex-col gap-4">
+                                        <h2 className="text-white font-black text-3xl uppercase tracking-[0.4em] leading-none">{t('smartTraining.getReady')}</h2>
+                                        <div className="flex flex-col items-center gap-2">
+                                            <span className="text-8xl font-black text-white tabular-nums tracking-tighter animate-pulse drop-shadow-[0_0_40px_rgba(255,255,255,0.4)]">
+                                                {transitionRemaining}
+                                            </span>
+                                            <p className="text-orange-500 text-[10px] font-black uppercase tracking-[0.5em]">{t('smartTraining.missionStartingNow')}</p>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-3">
+                                        {[0, 1, 2, 3, 4].map(i => (
+                                            <div key={i} className="w-2.5 h-2.5 rounded-full bg-orange-500 shadow-[0_0_15px_rgba(249,115,22,0.8)] animate-bounce" style={{ animationDelay: `${i * 150}ms` }} />
+                                        ))}
+                                    </div>
+                                </div>
+                            ) : activePlan?.status === 'scheduled' ? (
                                 /* Emerald Mission Control / Scheduled Overlay */
                                 <div className="w-full max-w-[380px] aspect-square flex flex-col items-center justify-center p-8 rounded-[2.5rem] border border-emerald-500/20 shadow-2xl animate-in zoom-in-95 duration-700 saturate-[1.2]" style={{ background: 'rgba(16,185,129,0.04)', backdropFilter: 'blur(40px)' }}>
                                     <div className="relative">
@@ -999,10 +1100,27 @@ export default function JumpRopeTraining() {
                                         <div className="relative drop-shadow-[0_0_20px_rgba(249,115,22,0.4)]" style={{ fontSize: 56 }}>🔒</div>
                                     </div>
                                     <div className="flex flex-col gap-3 max-w-xs">
-                                        <h2 className="text-white font-black text-xl uppercase tracking-[0.3em] leading-none drop-shadow-lg">{t('smartTraining.waitingForCoach')}</h2>
-                                        <p className="text-white/40 text-[9px] font-black uppercase tracking-[0.4em] leading-relaxed">
-                                            {t('smartTraining.readyStart')}
-                                        </p>
+                                        <h2 className="text-white font-black text-xl uppercase tracking-[0.3em] leading-none drop-shadow-lg">
+                                            {scheduledRemaining != null && scheduledRemaining > 0 ? t('smartTraining.launchingSoon') : t('smartTraining.waitingForCoach')}
+                                        </h2>
+                                        
+                                        {scheduledRemaining != null && scheduledRemaining > 0 ? (
+                                            <div className="mt-4 flex flex-col items-center gap-2">
+                                                <div className="flex items-center gap-3 px-6 py-3 bg-white/5 border border-white/10 rounded-2xl shadow-xl">
+                                                    <Timer size={20} className="text-orange-500 animate-pulse" />
+                                                    <span className="text-4xl font-black text-white tabular-nums tracking-tighter">
+                                                        {Math.floor(scheduledRemaining / 60)}:{String(scheduledRemaining % 60).padStart(2, '0')}
+                                                    </span>
+                                                </div>
+                                                <p className="text-orange-500/60 text-[8px] font-black uppercase tracking-[0.4em] animate-bounce mt-2">
+                                                    {t('smartTraining.prepareToJump')}
+                                                </p>
+                                            </div>
+                                        ) : (
+                                            <p className="text-white/40 text-[9px] font-black uppercase tracking-[0.4em] leading-relaxed">
+                                                {t('smartTraining.readyStart')}
+                                            </p>
+                                        )}
                                     </div>
                                     <div className="flex items-center gap-2">
                                         {[0, 1, 2].map(i => (

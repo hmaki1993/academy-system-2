@@ -906,7 +906,7 @@ export function useJumpRopeAdminStats() {
     return useQuery({
         queryKey: ['jump_rope_admin_stats'],
         queryFn: async () => {
-            // 1. Fetch only official students with 'student' role (Source of Truth)
+            // 1. Fetch official students with 'student' role
             const { data: students, error: sError } = await supabase
                 .from('students')
                 .select('id, profile_id, parent_contact, full_name, email, profiles!inner ( avatar_url, last_active_at, role )')
@@ -917,16 +917,18 @@ export function useJumpRopeAdminStats() {
             // 2. Fetch all jump rope sessions
             const { data: sessionsData } = await supabase
                 .from('jump_rope_sessions')
-                .select('jumps, created_at, user_id')
+                .select('jumps, created_at, user_id, student_id')
                 .order('created_at', { ascending: false });
 
-            // Build athlete stats
+            // Build athlete stats lookup registries
             const userStats: Record<string, JrAdminStat> = {};
+            const studentIdToProfileId: Record<string, string> = {};
 
             students?.forEach(student => {
                 const uid = student.profile_id;
                 if (!uid) return;
 
+                studentIdToProfileId[student.id] = uid;
                 const prof = student.profiles as any;
 
                 userStats[uid] = {
@@ -944,14 +946,27 @@ export function useJumpRopeAdminStats() {
                 };
             });
 
-            // Accumulate session data for active students
+            // Accumulate session data for active students (Dual-ID Aggregation)
             sessionsData?.forEach(session => {
+                const sid = session.student_id;
                 const uid = session.user_id;
-                if (!uid || !userStats[uid]) return;
-                userStats[uid].totalJumps += session.jumps;
-                userStats[uid].sessionsCount += 1;
-                if (!userStats[uid].lastSession || new Date(session.created_at) > new Date(userStats[uid].lastSession!)) {
-                    userStats[uid].lastSession = session.created_at;
+                
+                // Priority 1: Match by explicit student_id (Used in Coach-Led/Remote sessions)
+                let targetUid = sid ? studentIdToProfileId[sid] : null;
+                
+                // Priority 2: Fallback to user_id (Used in standard Student-Led sessions)
+                if (!targetUid && uid) {
+                    targetUid = uid;
+                }
+
+                if (!targetUid || !userStats[targetUid]) return;
+
+                const stat = userStats[targetUid];
+                stat.totalJumps += (session.jumps || 0);
+                stat.sessionsCount += 1;
+                
+                if (!stat.lastSession || new Date(session.created_at) > new Date(stat.lastSession)) {
+                    stat.lastSession = session.created_at;
                 }
             });
 

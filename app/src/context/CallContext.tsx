@@ -137,10 +137,9 @@ export function CallProvider({ children, currentUserId }: { children: React.Reac
                         primer.muted = false;
                         primer.loop = true;
                         incomingRingtoneRef.current = primer;
-                        console.log('[Call] Audio pre-unlocked and ringtone primed ✓');
+                        console.log('[Call] Ringtone element initialized via global primer.');
                     }).catch(() => {
-                        // Couldn't unlock even with gesture – will retry on next gesture
-                        audioUnlockedRef.current = false;
+                        // Background blocked - will sync on next interaction
                     });
                 }
             } catch (e) {
@@ -167,7 +166,10 @@ export function CallProvider({ children, currentUserId }: { children: React.Reac
         const isSecureOrLocalhost = window.location.protocol === 'https:' || window.location.hostname === 'localhost';
         if (!isSecureOrLocalhost) {
             console.warn('[Call] Insecure origin detected. Service Workers and Push Notifications are blocked by mobile browsers.');
-            toast.error('أنت بتستخدم رابط HTTP مش آمن. الإشعارات ومكالمات الخلفية مش هتشتغل على الموبايل غير لو استخدمت HTTPS.', { duration: 6000 });
+            const isNoiselessPage = window.location.pathname.includes('/login') || window.location.pathname.includes('/registration');
+            if (!isNoiselessPage) {
+                toast.error('أنت بتستخدم رابط HTTP مش آمن. الإشعارات ومكالمات الخلفية مش هتشتغل على الموبايل غير لو استخدمت HTTPS.', { duration: 6000 });
+            }
             return;
         }
 
@@ -181,7 +183,10 @@ export function CallProvider({ children, currentUserId }: { children: React.Reac
                 const alreadyWarned = sessionStorage.getItem('academy_notif_warning_shown');
                 if (!alreadyWarned) {
                     console.warn('[Call] Notifications are blocked.');
-                    toast.error('علشان يوصلك رنّة لما الموبايل يكون مقفول، لازم توافق على الإشعارات من إعدادات المتصفح.');
+                    const isNoiselessPage = window.location.pathname.includes('/login') || window.location.pathname.includes('/registration');
+                    if (!isNoiselessPage) {
+                        toast.error('علشان يوصلك رنّة لما الموبايل يكون مقفول، لازم توافق على الإشعارات من إعدادات المتصفح.');
+                    }
                     sessionStorage.setItem('academy_notif_warning_shown', 'true');
                 }
             }

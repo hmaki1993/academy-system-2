@@ -328,16 +328,24 @@ export default function DashboardLayout() {
     // PRE-RESUME AUDIO
     useEffect(() => {
         const resumeAudio = () => {
-            // ✅ MUST be synchronous — async callbacks (dynamic import .then) are rejected by browser autoplay policy
-            resumeAudioContext();
+            // ✅ Centralized gesture unlock
+            resumeAudioContext(true);
+            
+            // Clean up all possible triggers
             window.removeEventListener('mousedown', resumeAudio);
             window.removeEventListener('touchstart', resumeAudio);
+            window.removeEventListener('pointerdown', resumeAudio);
+            window.removeEventListener('keydown', resumeAudio);
         };
         window.addEventListener('mousedown', resumeAudio);
         window.addEventListener('touchstart', resumeAudio);
+        window.addEventListener('pointerdown', resumeAudio);
+        window.addEventListener('keydown', resumeAudio);
         return () => {
             window.removeEventListener('mousedown', resumeAudio);
             window.removeEventListener('touchstart', resumeAudio);
+            window.removeEventListener('pointerdown', resumeAudio);
+            window.removeEventListener('keydown', resumeAudio);
         };
     }, []);
 
@@ -680,16 +688,6 @@ export default function DashboardLayout() {
                             {isHoveringSidebar && <span className="font-black uppercase tracking-[0.3em] text-[10px] whitespace-nowrap">{t('common.logout')}</span>}
                         </button>
 
-                        {/* VERSION MARKER (CACHING VERIFICATION) */}
-                        <div className={`mt-auto pt-4 border-t border-white/5 transition-opacity duration-700 ${isHoveringSidebar ? 'opacity-100' : 'opacity-0'}`}>
-                            <span className="text-[7px] font-black text-white/10 uppercase tracking-[0.2em] block">System Health</span>
-                            <div className="flex items-center gap-2 mt-1">
-                                <div className={`w-1.5 h-1.5 rounded-full animate-pulse ${isExpertActive ? 'bg-emerald-500/80 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-rose-500/80 shadow-[0_0_8px_rgba(244,63,94,0.5)]'}`} />
-                                <span className={`text-[8px] font-black tracking-widest ${isExpertActive ? 'text-emerald-500/40' : 'text-rose-500/40'}`}>
-                                    V-NUCLEAR-4.2
-                                </span>
-                            </div>
-                        </div>
                     </div>
                 </div>
 
@@ -778,23 +776,6 @@ export default function DashboardLayout() {
                         </button>
                     </div>
 
-                    {/* MOBILE VERSION MARKER */}
-                    <div className="mt-8 pt-6 border-t border-white/5">
-                        <div className="flex items-center justify-between">
-                            <div className="space-y-1">
-                                <span className="text-[8px] font-black text-white/10 uppercase tracking-[0.2em] block">PWA Core Status</span>
-                                <div className="flex items-center gap-3">
-                                    <div className={`w-2 h-2 rounded-full animate-pulse ${isExpertActive ? 'bg-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.4)]' : 'bg-rose-500 shadow-[0_0_15px_rgba(244,63,94,0.4)]'}`} />
-                                    <span className={`text-[10px] font-black tracking-[0.2em] ${isExpertActive ? 'text-emerald-500/60' : 'text-rose-500/60'}`}>
-                                        V-NUCLEAR-4.2
-                                    </span>
-                                </div>
-                            </div>
-                            <div className="px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-[7px] font-black text-white/20 uppercase tracking-widest text-center">
-                                OPPO-OPT-V1
-                            </div>
-                        </div>
-                    </div>
                 </div>
             </aside>
 

@@ -611,7 +611,10 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
                     // 🛑 OPEN GATE: We NO LONGER sign the user out automatically.
                     // Instead, we show an error toast if profile fetch failed completely.
                     if (!isUnauthorizedGhost && !profileRes.data && retryCount >= maxRetries) {
-                        toast.error(`Identity Check failed: Using fallback profile.`, { id: 'auth-warn' });
+                        const isNoiselessPage = window.location.pathname.includes('/login') || window.location.pathname.includes('/registration');
+                        if (!isNoiselessPage) {
+                            toast.error(`Identity Check failed: Using fallback profile.`, { id: 'auth-warn' });
+                        }
                     }
 
                     // Provide a minimal fallback profile so the user can still use the Dashboard

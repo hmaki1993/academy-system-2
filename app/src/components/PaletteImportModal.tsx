@@ -407,7 +407,7 @@ function ColorEditor({ colors, assignments, onAssign, activeRole, onSetActive, p
 
                 {/* ── RIGHT: Live Dashboard Preview ── */}
                 <div className="overflow-hidden flex flex-col gap-3 px-3 py-4">
-                    <p className="text-[10px] md:text-[12px] font-black text-white/15 uppercase tracking-[0.15em] md:tracking-[0.2em] flex items-center gap-2 flex-shrink-0">
+                    <div className="text-[10px] md:text-[12px] font-black text-white/15 uppercase tracking-[0.15em] md:tracking-[0.2em] flex items-center gap-2 flex-shrink-0">
                         <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse inline-block" />
                         {activeRole
                             ? <span className="text-purple-400 animate-pulse">Highlighting: {activeRole.toUpperCase()}</span>
@@ -427,7 +427,7 @@ function ColorEditor({ colors, assignments, onAssign, activeRole, onSetActive, p
                             ))}
                         </div>
                         <span className="ml-2 text-[9px] font-mono text-white/20">{Math.round(previewScale * 100)}% · scroll to zoom · drag to pan</span>
-                    </p>
+                    </div>
 
                     {/* Real iframe - scaled-down live app */}
                     <div

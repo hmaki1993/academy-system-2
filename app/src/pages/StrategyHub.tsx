@@ -19,12 +19,25 @@ import { useTranslation } from 'react-i18next';
 const FloatingRemoteHub = ({ athlete, onClose }: { athlete: any, onClose: () => void }) => {
     const { t } = useTranslation();
     const { sendDirectTargets, updateSessionStatus, isSending } = useSmartPlan();
-    const [liveJumps, setLiveJumps] = useState<number | ''>('');
-    const [liveTime, setLiveTime] = useState<number | ''>('');
+    const [liveJumps, setLiveJumps] = useState<number | ''>(() => {
+        if (!athlete?.userId) return '';
+        try {
+            const saved = localStorage.getItem(`jr_remote_draft_${athlete.userId}`);
+            return saved ? JSON.parse(saved).jumps : '';
+        } catch (e) { return ''; }
+    });
+    
+    const [liveTime, setLiveTime] = useState<number | ''>(() => {
+        if (!athlete?.userId) return '';
+        try {
+            const saved = localStorage.getItem(`jr_remote_draft_${athlete.userId}`);
+            return saved ? JSON.parse(saved).time : '';
+        } catch (e) { return ''; }
+    });
     const [isAthletePresent, setIsAthletePresent] = useState(false);
     const hasToasted = React.useRef(false);
 
-    // ─── Bidirectional Handshake: Listen for Athlete Presence ─────────────────
+    // GöÇGöÇGöÇ Bidirectional Handshake: Listen for Athlete Presence GöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇ
     useEffect(() => {
         if (!athlete?.userId) return;
         const channel = supabase.channel(`direct_broadcasts_${athlete.userId}`)
@@ -32,7 +45,7 @@ const FloatingRemoteHub = ({ athlete, onClose }: { athlete: any, onClose: () => 
                 setIsAthletePresent(true);
                 if (!hasToasted.current) {
                     toast.success(`${athlete.name} is ready!`, {
-                        icon: '🚀',
+                        icon: '=ƒÜÇ',
                         style: { background: '#0b0e18', color: '#10b981', border: '1px solid rgba(16,185,129,0.2)' }
                     });
                     hasToasted.current = true;
@@ -47,29 +60,71 @@ const FloatingRemoteHub = ({ athlete, onClose }: { athlete: any, onClose: () => 
     const initialMM = String(now.getMinutes()).padStart(2, '0');
     const initialPeriod = initialH24 >= 12 ? 'PM' : 'AM';
     
-    const [scheduledStartTime, setScheduledStartTime] = useState<string>(`${String(initialH24).padStart(2, '0')}:${initialMM}`); // Stores as HH:mm (24h)
-    const [period, setPeriod] = useState<'AM' | 'PM'>(initialPeriod);
-    const [pos, setPos] = useState({ x: 0, y: 0 });
+    const [scheduledStartTime, setScheduledStartTime] = useState<string>(() => {
+        if (!athlete?.userId) return `${String(initialH24).padStart(2, '0')}:${initialMM}`;
+        try {
+            const saved = localStorage.getItem(`jr_remote_draft_${athlete.userId}`);
+            return saved ? (JSON.parse(saved).schedule || `${String(initialH24).padStart(2, '0')}:${initialMM}`) : `${String(initialH24).padStart(2, '0')}:${initialMM}`;
+        } catch (e) { return `${String(initialH24).padStart(2, '0')}:${initialMM}`; }
+    });
+
+    const currentPeriod = Number(scheduledStartTime.split(':')[0]) >= 12 ? 'PM' : 'AM';
+    
+    const [pos, setPos] = useState(() => {
+        try {
+            const saved = localStorage.getItem('jr_hub_pos');
+            return saved ? JSON.parse(saved) : { x: 0, y: 0 };
+        } catch (e) { return { x: 0, y: 0 }; }
+    });
+
+    // NOTE: Persistence is now handled via state initializers
+
+    // --- PERSISTENCE: Auto-Save ---
+    useEffect(() => {
+        if (!athlete?.userId) return;
+        const draft = { jumps: liveJumps, time: liveTime, schedule: scheduledStartTime };
+        localStorage.setItem(`jr_remote_draft_${athlete.userId}`, JSON.stringify(draft));
+    }, [liveJumps, liveTime, scheduledStartTime, athlete?.userId]);
+
+    useEffect(() => {
+        localStorage.setItem('jr_hub_pos', JSON.stringify(pos));
+    }, [pos]);
+
+    const clearDraft = useCallback(() => {
+        if (!athlete?.userId) return;
+        localStorage.removeItem(`jr_remote_draft_${athlete.userId}`);
+        setLiveJumps('');
+        setLiveTime('');
+    }, [athlete?.userId]);
+
+    // Clear draft ONLY when session finishes (transitions from live/scheduled to idle)
+    const prevStatusRef = React.useRef(athlete?.status);
+    useEffect(() => {
+        if ((prevStatusRef.current === 'live' || prevStatusRef.current === 'scheduled') && athlete?.status === 'idle') {
+            clearDraft();
+        }
+        prevStatusRef.current = athlete?.status;
+    }, [athlete?.status, clearDraft]);
     
     const hRef = React.useRef<HTMLDivElement>(null);
     const mRef = React.useRef<HTMLDivElement>(null);
     const pRef = React.useRef<HTMLDivElement>(null);
 
-    // Auto-scroll to current time on mount
+    // Auto-scroll to SAVED time on mount
     React.useEffect(() => {
         const itemHeight = 36;
-        const currentH12 = initialH24 === 0 ? 12 : (initialH24 > 12 ? initialH24 - 12 : initialH24);
-        const currentMM = Number(initialMM);
-        const pIdx = initialPeriod === 'AM' ? 0 : 1;
+        const [savedH24, savedM] = scheduledStartTime.split(':').map(Number);
+        const currentH12 = savedH24 === 0 ? 12 : (savedH24 > 12 ? savedH24 - 12 : savedH24);
+        const pIdx = savedH24 >= 12 ? 1 : 0;
 
         if (hRef.current) hRef.current.scrollTop = (currentH12 - 1) * itemHeight;
-        if (mRef.current) mRef.current.scrollTop = currentMM * itemHeight;
+        if (mRef.current) mRef.current.scrollTop = savedM * itemHeight;
         if (pRef.current) pRef.current.scrollTop = pIdx * itemHeight;
-    }, [initialH24, initialMM, initialPeriod]);
+    }, []); // Run ONLY on mount to snap to saved time
     const dragRef = React.useRef<{ startX: number; startY: number; startPosX: number; startPosY: number } | null>(null);
     const hubRef = React.useRef<HTMLDivElement>(null);
 
-    // ─── Click Outside to Close ─────────────────
+    // GöÇGöÇGöÇ Click Outside to Close GöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇ
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
             if (hubRef.current && !hubRef.current.contains(event.target as Node)) {
@@ -110,7 +165,7 @@ const FloatingRemoteHub = ({ athlete, onClose }: { athlete: any, onClose: () => 
                 }}
                 onClick={(e) => e.stopPropagation()}
             >
-                {/* Header — drag zone */}
+                {/* Header GÇö drag zone */}
                 <div
                     className="flex items-center justify-between cursor-grab active:cursor-grabbing select-none"
                     onMouseDown={onMouseDown}
@@ -119,7 +174,7 @@ const FloatingRemoteHub = ({ athlete, onClose }: { athlete: any, onClose: () => 
                         <Zap size={10} className="text-cyan-400 fill-cyan-400" />
                         <span className="text-[7px] font-black text-white/60 uppercase tracking-widest">{t('strategy.control')}</span>
                     </div>
-                    {/* X — red, no background */}
+                    {/* X GÇö red, no background */}
                     <button
                         onClick={(e) => { e.stopPropagation(); onClose(); }}
                         className="w-8 h-8 rounded-lg bg-red-500/5 hover:bg-red-500/10 text-red-500/50 hover:text-red-400 transition-all flex items-center justify-center"
@@ -180,7 +235,10 @@ const FloatingRemoteHub = ({ athlete, onClose }: { athlete: any, onClose: () => 
                                 const itemHeight = 36;
                                 const h12 = Math.round(e.target.scrollTop / itemHeight) + 1;
                                 if (h12 < 1 || h12 > 12) return;
-                                const h24 = period === 'PM' ? (h12 === 12 ? 12 : h12 + 12) : (h12 === 12 ? 0 : h12);
+                                
+                                const isPM = Number(scheduledStartTime.split(':')[0]) >= 12;
+                                const h24 = isPM ? (h12 === 12 ? 12 : h12 + 12) : (h12 === 12 ? 0 : h12);
+                                
                                 const mm = scheduledStartTime.split(':')[1] || '00';
                                 setScheduledStartTime(`${String(h24).padStart(2, '0')}:${mm}`);
                             }}>
@@ -232,17 +290,19 @@ const FloatingRemoteHub = ({ athlete, onClose }: { athlete: any, onClose: () => 
                                 const itemHeight = 36;
                                 const pIdx = Math.round(e.target.scrollTop / itemHeight);
                                 const newP = pIdx === 0 ? 'AM' : 'PM';
-                                if (newP === period) return;
-                                setPeriod(newP);
-                                const h24Old = Number(scheduledStartTime.split(':')[0] || 0);
-                                const h12 = h24Old === 0 ? 12 : (h24Old > 12 ? h24Old - 12 : h24Old);
-                                const h24New = newP === 'PM' ? (h12 === 12 ? 12 : h12 + 12) : (h12 === 12 ? 0 : h12);
-                                const mm = scheduledStartTime.split(':')[1] || '00';
-                                setScheduledStartTime(`${String(h24New).padStart(2, '0')}:${mm}`);
+                                
+                                const [currentH24, currentMM] = scheduledStartTime.split(':').map(Number);
+                                const isCurrentlyPM = currentH24 >= 12;
+                                
+                                if (isCurrentlyPM && newP === 'AM') {
+                                    setScheduledStartTime(`${String(currentH24 === 12 ? 0 : currentH24 - 12).padStart(2, '0')}:${String(currentMM).padStart(2, '0')}`);
+                                } else if (!isCurrentlyPM && newP === 'PM') {
+                                    setScheduledStartTime(`${String(currentH24 === 0 ? 12 : currentH24 + 12).padStart(2, '0')}:${String(currentMM).padStart(2, '0')}`);
+                                }
                             }}>
                             {['AM', 'PM'].map((p) => (
                                 <div key={p} className="h-9 flex items-center justify-center snap-center transition-all duration-300">
-                                    <span className={`text-[10px] font-black tracking-[0.1em] transition-colors duration-300 ${period === p ? 'text-white' : 'text-white/10'}`}>
+                                    <span className={`text-[10px] font-black tracking-[0.1em] transition-colors duration-300 ${currentPeriod === p ? 'text-white' : 'text-white/10'}`}>
                                         {p}
                                     </span>
                                 </div>
@@ -264,7 +324,7 @@ const FloatingRemoteHub = ({ athlete, onClose }: { athlete: any, onClose: () => 
                     }
                 `}</style>
 
-                {/* Control Icons — gap-2 */}
+                {/* Control Icons GÇö gap-2 */}
                 <div className="flex items-center gap-2 mt-2">
                     {/* Restart: Always Active */}
                     <button onClick={(e) => { 
@@ -283,7 +343,7 @@ const FloatingRemoteHub = ({ athlete, onClose }: { athlete: any, onClose: () => 
                         const isScheduled = status === 'scheduled';
                         const isActive = isLive || isPaused;
                         
-                        // 📅 CASE 1: Scheduled Session (Lock controls, allow Override)
+                        // 🚀 CASE 1: Scheduled Session (Lock controls, allow Override)
                         if (isScheduled) {
                             return (
                                 <button 
@@ -291,7 +351,7 @@ const FloatingRemoteHub = ({ athlete, onClose }: { athlete: any, onClose: () => 
                                         e.stopPropagation(); 
                                         // 🚀 FORCE START NOW: Overrides schedule and starts immediately!
                                         athlete.status = 'live'; 
-                                        sendDirectTargets(athlete.userId, Number(liveTime), Number(liveJumps), null); 
+                                        sendDirectTargets(athlete.userId, liveTime, liveJumps, null); 
                                     }}
                                     className="flex-[2] h-10 rounded-lg bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 hover:bg-cyan-500 hover:text-black flex flex-col items-center justify-center transition-all active:scale-95 shadow-lg shadow-cyan-500/10">
                                     <span className="text-[7px] font-black uppercase tracking-widest opacity-60">{t('strategy.override')}</span>
@@ -300,20 +360,23 @@ const FloatingRemoteHub = ({ athlete, onClose }: { athlete: any, onClose: () => 
                             );
                         }
 
-                        // 🛑 CASE 2: No Active Session (Start or Schedule)
+                        // 🎯 CASE 2: No Active Session (Start or Schedule)
                         if (!isActive) {
-                            const isPickingFuture = (() => {
-                                if (!scheduledStartTime) return false;
+                            const { isPickingFuture, isoString } = (() => {
+                                if (!scheduledStartTime) return { isPickingFuture: false, isoString: null };
                                 const [h, m] = scheduledStartTime.split(':').map(Number);
                                 const picked = new Date();
                                 picked.setHours(h, m, 0, 0);
                                 
-                                // 💡 Handle Roll-over: If picked time is before current time, it must be for tomorrow
+                                // 🚀 Handle Roll-over: If picked time is before current time, it must be for tomorrow
                                 if (picked.getTime() <= Date.now()) {
                                     picked.setDate(picked.getDate() + 1);
                                 }
                                 
-                                return picked.getTime() > Date.now() + 30000; // More than 30 seconds in future
+                                return {
+                                    isPickingFuture: picked.getTime() > Date.now(), // Allow scheduling ANY future time
+                                    isoString: picked.toISOString()
+                                };
                             })();
 
                             return (
@@ -322,7 +385,7 @@ const FloatingRemoteHub = ({ athlete, onClose }: { athlete: any, onClose: () => 
                                         e.stopPropagation(); 
                                         // 🎯 Check if we are scheduling or starting
                                         athlete.status = isPickingFuture ? 'scheduled' : 'live';
-                                        sendDirectTargets(athlete.userId, Number(liveTime), Number(liveJumps), isPickingFuture ? scheduledStartTime : null); 
+                                        sendDirectTargets(athlete.userId, liveTime, liveJumps, isPickingFuture ? isoString : null); 
                                     }}
                                     className={`flex-[2] h-10 rounded-lg flex items-center justify-center gap-2 transition-all active:scale-95 font-black uppercase text-[10px] tracking-widest shadow-lg ${
                                         isPickingFuture 
@@ -335,7 +398,7 @@ const FloatingRemoteHub = ({ athlete, onClose }: { athlete: any, onClose: () => 
                             );
                         }
 
-                        // ⚡ CASE 3: Active Session (Handshake Lock applied)
+                        // GÜí CASE 3: Active Session (Handshake Lock applied)
                         return (
                             <button 
                                 disabled={!isAthletePresent}
@@ -360,6 +423,7 @@ const FloatingRemoteHub = ({ athlete, onClose }: { athlete: any, onClose: () => 
                         e.stopPropagation(); 
                         athlete.status = 'idle';
                         updateSessionStatus(athlete.userId, 'idle'); 
+                        clearDraft();
                     }}
                         className="flex-1 h-10 rounded-lg bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white flex items-center justify-center transition-all active:scale-95 shadow-lg shadow-red-500/5">
                         <X size={16} />
@@ -402,8 +466,8 @@ const InlinePlanBuilder = ({ studentId, studentName, onClose, onSendReady, exist
         } else {
             // Default empty day
             setEditablePlan([{
-                day: i18n.language === 'ar' ? 'اليوم 1' : 'Day 1',
-                focus: i18n.language === 'ar' ? 'هيكل التدريب' : 'Training Structure',
+                day: i18n.language === 'ar' ? '+º+ä+è+ê+à 1' : 'Day 1',
+                focus: i18n.language === 'ar' ? '+ç+è+â+ä +º+ä+¬+»+¦+è+¿' : 'Training Structure',
                 details: []
             }]);
         }
@@ -434,8 +498,8 @@ const InlinePlanBuilder = ({ studentId, studentName, onClose, onSendReady, exist
 
     const handleAddDay = () => {
         setEditablePlan([...editablePlan, {
-            day: isAr ? `اليوم ${editablePlan.length + 1}` : `Day ${editablePlan.length + 1}`,
-            focus: isAr ? 'هيكل التدريب' : 'Training Structure',
+            day: isAr ? `+º+ä+è+ê+à ${editablePlan.length + 1}` : `Day ${editablePlan.length + 1}`,
+            focus: isAr ? '+ç+è+â+ä +º+ä+¬+»+¦+è+¿' : 'Training Structure',
             details: []
         }]);
     };
@@ -462,7 +526,7 @@ const InlinePlanBuilder = ({ studentId, studentName, onClose, onSendReady, exist
             
             await sendPlan(studentId, finalPlan);
 
-            // 🔔 PERSISTENT NOTIFICATION: Record in DB
+            // =ƒöö PERSISTENT NOTIFICATION: Record in DB
             await supabase.from('notifications').insert({
                 user_id: studentId, 
                 title: 'Tactical Blueprint',
@@ -471,7 +535,7 @@ const InlinePlanBuilder = ({ studentId, studentName, onClose, onSendReady, exist
                 is_read: false
             });
 
-            // 📻 BROADCAST SIGNAL: Tell student to refresh UI instantly (Bypasses 400 DB errors)
+            // =ƒô+ BROADCAST SIGNAL: Tell student to refresh UI instantly (Bypasses 400 DB errors)
             const syncChannel = supabase.channel(`athlete-broadcast-${studentId}`);
             await syncChannel.subscribe(async (status) => {
                 if (status === 'SUBSCRIBED') {
@@ -1000,7 +1064,7 @@ export default function StrategyHub() {
         );
     }
 
-    // 🔑 Page Swap: if athlete selected, render full detail page instead of grid
+    // =ƒöæ Page Swap: if athlete selected, render full detail page instead of grid
     if (selectedAthlete) {
         return (
             <div className="flex-1 flex flex-col overflow-hidden">
@@ -1175,3 +1239,5 @@ export default function StrategyHub() {
         </div>
     );
 }
+
+

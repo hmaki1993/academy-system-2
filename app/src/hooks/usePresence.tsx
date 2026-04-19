@@ -103,7 +103,7 @@ export function usePresence(config?: {
             if (config?.notifySounds) {
                 playNotificationSound('bell');
             }
-        }, 5000); // 5 second grace period for refreshes
+        }, 1500); // 1.5 second grace period for refreshes (Reduced from 5s for 'instant' feel)
     };
 
     // ─── 2. WebSocket Presence ───────────────────────────────────────────────────
@@ -215,11 +215,11 @@ export function usePresence(config?: {
     // ─── 3. Database Pulse (Backup for offline detection) ──────────────────────
     useEffect(() => {
         const fetchInitialDbPresence = async () => {
-            const threeMinsAgo = new Date(Date.now() - 180000).toISOString();
+            const oneMinAgo = new Date(Date.now() - 60000).toISOString(); // Reduced from 3m to 1m for faster recovery
             const { data } = await supabase
                 .from('profiles')
                 .select('id, full_name, role, last_active_at')
-                .gt('last_active_at', threeMinsAgo);
+                .gt('last_active_at', oneMinAgo);
             
             if (data) {
                 const map: Record<string, any> = {};
@@ -236,14 +236,14 @@ export function usePresence(config?: {
                 const next = { ...prev };
                 let changed = false;
                 Object.keys(next).forEach(id => {
-                    if (now - new Date(next[id].last_active_at).getTime() >= 180000) {
+                    if (now - new Date(next[id].last_active_at).getTime() >= 60000) { // Threshold reduced from 3m to 1m
                         delete next[id];
                         changed = true;
                     }
                 });
                 return changed ? next : prev;
             });
-        }, 60000);
+        }, 10000); // Interval reduced from 60s to 10s for 'instant' presence synchronization
 
         return () => { 
             clearInterval(cleanup);

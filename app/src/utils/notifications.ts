@@ -8,6 +8,7 @@
  */
 
 let audioContext: AudioContext | null = null;
+let isSystemPrimed = false; // 🛡️ Audio Autoplay Guard
 
 const getContext = (): AudioContext => {
     if (!audioContext) {
@@ -20,11 +21,18 @@ const getContext = (): AudioContext => {
  * Must be called SYNCHRONOUSLY inside a click/touch event handler to satisfy
  * browser autoplay policy. Creates and warms up the shared AudioContext.
  */
-export const resumeAudioContext = () => {
+export const resumeAudioContext = (isGesture = false) => {
+    if (isGesture) isSystemPrimed = true;
+    
+    // 🛡️ Silent Exit: Prevents the "AudioContext not allowed" console error
+    // if called programmatically before the first click.
+    if (!isSystemPrimed && !isGesture) return;
+
     try {
         const ctx = getContext();
         if (ctx.state === 'suspended') {
-            ctx.resume(); // fire-and-forget — just warming it up during a gesture
+            ctx.resume(); 
+            if (isGesture) console.log('🔊 [Audio] System Primed and Ready.');
         }
     } catch (e) {
         console.warn('AudioContext resume failed:', e);

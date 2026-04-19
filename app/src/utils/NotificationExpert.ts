@@ -86,6 +86,14 @@ export const NotificationExpert = {
 
             // 3. Web Push Subscription (For iOS PWA / Desktop Safari)
             console.log('🛡️ NotificationExpert: Registering Web Push for [iPhone/Safari]...');
+            
+            // ☢️ KEY MISMATCH FIX: Unsubscribe from ANY existing sub first to prevent 'InvalidStateError'
+            const existingSub = await registration.pushManager.getSubscription();
+            if (existingSub) {
+                await existingSub.unsubscribe();
+                console.log('🛡️ NotificationExpert: Forced cleanup of legacy subscription (Self-Healing)');
+            }
+
             const applicationServerKey = NotificationExpert.urlBase64ToUint8Array(VAPID_PUBLIC_KEY);
             const subscription = await registration.pushManager.subscribe({
                 userVisibleOnly: true,

@@ -177,7 +177,8 @@ export function useSmartPlan() {
 
             if (dbError) {
                 console.error("FINAL DB ERROR:", JSON.stringify(dbError, null, 2));
-                throw dbError;
+                toast.error('لم يتم الحفظ في القاعدة بسبب الصلاحيات، جاري إرسال الإشعار...');
+                // throw dbError; // 🚀 TEMPORARILY DISABLED: Allow Push Notification to fire!
             }
 
             // 3. Real-time Broadcast (Immediate Dashboard/App Sync)
@@ -199,6 +200,16 @@ export function useSmartPlan() {
 
             queryClient.invalidateQueries({ queryKey: ['training_plan_history', studentId] });
             queryClient.invalidateQueries({ queryKey: ['training_plan_history', studentIdRaw] });
+            
+            // 🚀 CRITICAL FIX: Trigger the background push notification relay
+            await import('../utils/NotificationExpert').then(m => {
+                m.NotificationExpert.invokePush(
+                    studentIdRaw, 
+                    '🏆 خطة تدريب جديدة!', 
+                    'الكابتن بعتلك خطة ذكية جديدة.. افتح عشان تشوف التارجت!'
+                );
+            });
+            
             toast.success('Training plan sent to student!');
         } catch (error: any) {
             toast.error(error.message);
@@ -272,7 +283,20 @@ export function useSmartPlan() {
                 .update(payload)
                 .eq('student_id', studentId);
             
-            if (updateError) throw updateError;
+            if (updateError) {
+                console.error("FIRE/ROCKET DB ERROR:", updateError);
+                toast.error('DB Update failed, pushing notification anyway!');
+                // throw updateError; // Bypass crash!
+            }
+
+            // 🚀 CRITICAL FIX: Trigger the background push notification relay for the AI Tracker / Rocket Feature!
+            await import('../utils/NotificationExpert').then(m => {
+                m.NotificationExpert.invokePush(
+                    studentIdRaw, 
+                    '🎯 جاهز يا بطل؟', 
+                    finalMessage
+                );
+            });
 
             // If no plan starts yet, ensure we at least have a record
             const { data } = await supabase.from('training_plans').select('id').eq('student_id', studentId).maybeSingle();

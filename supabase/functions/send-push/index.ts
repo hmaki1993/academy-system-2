@@ -115,35 +115,31 @@ serve(async (req) => {
         const fcmPayload = {
           message: {
             token: fcm_token,
+            // ✅ notification field = OS handles this NATIVELY when app is KILLED
+            // No custom Java code needed. Android OS draws the banner automatically.
             notification: {
-              title: title || "🏆 Elite Academy",
+              title: title || "🏆 Skippy Toes Q8",
               body: message || "لديك رسالة جديدة",
             },
+            // ✅ data field = delivered to Capacitor when app is ALIVE/BACKGROUND
             data: {
               url: url || "/app",
-              title: title || "🏆 Elite Academy",
+              title: title || "🏆 Skippy Toes Q8",
               message: message || "لديك رسالة جديدة",
             },
             android: {
-              priority: "high",
+              priority: "high",  // Wakes device from Doze mode
+              ttl: "86400s",
               notification: {
-                channel_id: "skippy_toes_alerts",
-                sound: "default"
+                channel_id: "skippy_toes_alerts_v5", // Fresh channel - no bad cache
+                icon: "@mipmap/ic_launcher",
+                sound: "default",
+                visibility: "PUBLIC",
+                notification_priority: "PRIORITY_MAX"
+              },
+              fcm_options: {
+                analytics_label: "skippy-final-v5"
               }
-            },
-            webpush: {
-              headers: {
-                Urgency: "high",
-              },
-              notification: {
-                vibrate: [500, 200, 500, 200, 500],
-                requireInteraction: true,
-                renotify: true,
-                tag: "elite-priority-alert",
-                icon: "/logo-premium.png",
-                badge: "/logo-premium.png",
-              },
-              fcm_options: { link: url || "/app" }
             }
           }
         };

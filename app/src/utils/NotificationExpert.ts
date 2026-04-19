@@ -206,24 +206,26 @@ export const NotificationExpert = {
                 url
             );
 
-            console.log('🛡️ NotificationExpert: Dispatching via Database Relay...');
-            const { error } = await supabase.from('push_relay_queue').insert({
-                user_id: activeId,
-                title: title || 'System Alert 🚀',
-                body: message || 'Notification Test Signal',
-                url,
-                status: 'pending'
+            console.log('🛡️ NotificationExpert: Changing architecture: Invoking FCM send-push directly...');
+            const { data, error } = await supabase.functions.invoke('send-push', {
+                body: {
+                    userId: activeId,
+                    title: title || 'System Alert 🚀',
+                    message: message || 'Notification Test Signal',
+                    url
+                }
             });
             
             if (error) {
-                console.error('🛡️ NotificationExpert: Relay DB Error:', error);
+                console.error('🛡️ NotificationExpert: FCM Invoke Error:', error);
                 return { success: false, error: error.message };
             }
             
-            return { success: true };
+            console.log('🛡️ NotificationExpert: FCM Invoke Success:', data);
+            return { success: true, data };
         } catch (err: any) {
-            console.error('🛡️ NotificationExpert: Relay Critical Failure:', err);
-            return { success: false, error: err.message || 'Relay Connection Error' };
+            console.error('🛡️ NotificationExpert: FCM Critical Failure:', err);
+            return { success: false, error: err.message || 'FCM Connection Error' };
         }
     },
 

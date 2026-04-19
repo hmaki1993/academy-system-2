@@ -142,6 +142,18 @@ export default function DashboardLayout() {
                 // 🚀 EXPERT V6: Emergency Fallback Listener (Broadcasting from server directly to UI)
                 NotificationExpert.registerFallbackListener(userId);
 
+                // 🔔 BACKGROUND WATCHDOG: Start the persistent service (Scooter Fuel style)
+                // This is the ONLY way to prevent aggressive devices (Oppo, Xiaomi) from killing FCM.
+                // We will instruct the user to mute the notification channel manually to hide the icon.
+                if (Capacitor.isNativePlatform()) {
+                    const SkippyPlugin = (Capacitor as any).Plugins?.SkippyPlugin;
+                    if (SkippyPlugin && SkippyPlugin.startWatchdog) {
+                        SkippyPlugin.startWatchdog({ coachName: "Maryam" })
+                            .then(() => console.log('🛡️ Watchdog: Shield Active.'))
+                            .catch((e: any) => console.warn('🛡️ Watchdog failed to start:', e));
+                    }
+                }
+
                 // 🔥 FCM V2.1: تسجيل الجهاز مع Firebase بآلية الـ Nuclear Reset لو المفتاح قديم
                 const REG_VERSION = '2.1';
                 const lastRegVersion = localStorage.getItem('fcm_reg_v');
@@ -159,12 +171,33 @@ export default function DashboardLayout() {
                     FCMManager.register(userId).catch(e => console.warn('🔥 FCM registration skipped:', e));
                 }
 
+                // 🧪 GLOBAL DEBUG TOOL: allow testing from console
+                (window as any).sendTestSkippyNotification = (title?: string, body?: string) => {
+                    if (Capacitor.isNativePlatform()) {
+                        const SkippyPlugin = (Capacitor as any).Plugins?.SkippyPlugin;
+                        if (SkippyPlugin) {
+                            SkippyPlugin.showAlert({ 
+                                title: title || '🧪 Native Test', 
+                                body: body || 'This is a test notification from the console.' 
+                            });
+                            return 'Alert sent to plugin! Check your screen.';
+                        }
+                    }
+                    return 'Not on a native platform or plugin missing.';
+                };
+
                 // 🔥 FCM Foreground: استقبال التنبيهات لما التطبيق مفتوح
                 FCMManager.listenForeground((payload) => {
                     const title = payload.notification?.title || 'تنبيه جديد';
                     const body = payload.notification?.body || '';
                     playNotificationSound('bell');
-                    toast(body, { icon: '🤖', duration: 6000, style: { background: '#222', color: '#fff' } });
+                    // We don't just toast now, we try to force native Skippy popup!
+                    if (Capacitor.isNativePlatform()) {
+                        const SkippyPlugin = (Capacitor as any).Plugins?.SkippyPlugin;
+                        if (SkippyPlugin) SkippyPlugin.showAlert({ title, body });
+                    } else {
+                        toast(body, { icon: '🤖', duration: 6000, style: { background: '#222', color: '#fff' } });
+                    }
                 });
 
                 // 🔔 NOTIFICATION BRIDGE: Local notifications via Supabase Realtime
@@ -174,6 +207,32 @@ export default function DashboardLayout() {
                     (window as any).__notifBridge = bridge;
                     console.log('🔔 NotificationBridge: Active ✅');
                 }).catch(e => console.warn('🔔 NotificationBridge failed:', e));
+
+                // 🛡️ SUPREME POSTGRES FALLBACK: Listen straight to DB inserts!
+                // If the edge function broadcast fails, this WILL catch it!
+                const dbAlertChannel = supabase.channel(`supreme-alerts-${userId}`)
+                    .on('postgres_changes', { 
+                        event: 'INSERT', 
+                        schema: 'public', 
+                        table: 'notifications', 
+                        filter: `user_id=eq.${userId}` 
+                    }, (payload) => {
+                        console.log('🚨 SUPREME DB ALERT:', payload.new);
+                        if (Capacitor.isNativePlatform()) {
+                            const SkippyPlugin = (Capacitor as any).Plugins?.SkippyPlugin;
+                            if (SkippyPlugin) {
+                                SkippyPlugin.showAlert({
+                                    title: payload.new.title || '🏆 Skippy Toes Q8',
+                                    body: payload.new.message || 'لديك إشعار مهم'
+                                });
+                            }
+                        } else {
+                            toast(payload.new.message, { icon: '🔥', duration: 6000 });
+                        }
+                    })
+                    .subscribe();
+
+                (window as any).__dbAlerts = dbAlertChannel;
             }
 
             // Ensure auth session is synced with realtime
@@ -215,7 +274,16 @@ export default function DashboardLayout() {
                     // Background re-sync (Backup)
                     setTimeout(() => fetchNotifications(), 2000);
 
-                    // 🔔 Firebase SW بيتولى الـ Native Notification - مش محتاجين نعمله هنا
+                    // 🔔 FORCE NATIVE POPUP: Same as FCM Foreground
+                    if (Capacitor.isNativePlatform()) {
+                        const SkippyPlugin = (Capacitor as any).Plugins?.SkippyPlugin;
+                        if (SkippyPlugin) {
+                            SkippyPlugin.showAlert({
+                                title: payload.notification?.title || '🚀 Rocket Alert',
+                                body: payload.notification?.message || "Tactical Update Received!"
+                            });
+                        }
+                    }
                 })
                 .subscribe((status) => {
                     console.log(`🚀 ROCKET_V2: Connection Status for [${userId}]:`, status);

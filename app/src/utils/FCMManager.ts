@@ -152,18 +152,27 @@ async function registerWebPush(userId: string, force: boolean): Promise<boolean>
 }
 
 async function saveTokenToSupabase(userId: string, token: string, deviceInfo: string): Promise<boolean> {
+    // 🔥 CRITICAL FIX: Delete ALL old tokens for this user first, then save the new one.
+    // Using upsert with (user_id, fcm_token) conflict allows accumulation of dead tokens,
+    // which causes FCM delivery failures when the server tries stale tokens first.
+    await supabase
+        .from('user_fcm_tokens')
+        .delete()
+        .eq('user_id', userId);
+
     const { error } = await supabase
         .from('user_fcm_tokens')
-        .upsert({
+        .insert({
             user_id: userId,
             fcm_token: token,
             device_info: deviceInfo,
             updated_at: new Date().toISOString()
-        }, { onConflict: 'user_id,fcm_token' });
+        });
 
     if (error) {
         console.error('🔥 FCMManager: DB save error:', error.message);
         return false;
     }
+    console.log('✅ FCMManager: Token saved (old tokens purged)');
     return true;
 }

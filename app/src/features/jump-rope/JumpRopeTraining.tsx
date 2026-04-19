@@ -62,8 +62,7 @@ export default function JumpRopeTraining() {
     const secsScrollRef = useRef<HTMLDivElement>(null);
     const isUnmountingRef = useRef(false); // 🛡️ Connection Lifecycle Guard
     const [scheduledRemaining, setScheduledRemaining] = useState<number | null>(null);
-    const [isTransitioning, setIsTransitioning] = useState(false);
-    const [transitionRemaining, setTransitionRemaining] = useState(0);
+
     const ITEM_H = 44;
     const MIN_OPTIONS = Array.from({ length: 21 }, (_, i) => i);
     const SEC_OPTIONS = Array.from({ length: 12 }, (_, i) => i * 5);
@@ -196,37 +195,21 @@ export default function JumpRopeTraining() {
             }
 
             // Auto-set session as active if live, even if target_time is empty (Free/Infinite mode)
-            if (!isSessionActiveRef.current && !isTransitioning) {
-                // 🚀 ROCKET SYNC: Initiate 10s buffer even for manual starts
-                setIsTransitioning(true);
-                setTransitionRemaining(10);
-                speak(t('smartTraining.prepareToJump'));
-
-                const transitionInterval = setInterval(() => {
-                    setTransitionRemaining(prev => {
-                        if (prev <= 1) {
-                            clearInterval(transitionInterval);
-                            setIsTransitioning(false);
-                            
-                            // Finish auto-launch after transition
-                            const mins = plan.target_time ? Number(plan.target_time) : 0;
-                            const totalSecs = mins * 60;
-                            
-                            setCountdownMins(mins);
-                            setCountdownSecs(0);
-                            setTimerRemaining(totalSecs > 0 ? totalSecs : null);
-                            timerRemainingRef.current = totalSecs > 0 ? totalSecs : null;
-                            
-                            setIsSessionActive(true);
-                            isSessionActiveRef.current = true;
-                            setIsTimerActive(false);
-                            isTimerActiveRef.current = false;
-                            isTimerStartedRef.current = true;
-                            return 0;
-                        }
-                        return prev - 1;
-                    });
-                }, 1000);
+            if (!isSessionActiveRef.current) {
+                // 🚀 ROCKET SYNC: Initiate instantly
+                const mins = plan.target_time ? Number(plan.target_time) : 0;
+                const totalSecs = mins * 60;
+                
+                setCountdownMins(mins);
+                setCountdownSecs(0);
+                setTimerRemaining(totalSecs > 0 ? totalSecs : null);
+                timerRemainingRef.current = totalSecs > 0 ? totalSecs : null;
+                
+                setIsSessionActive(true);
+                isSessionActiveRef.current = true;
+                setIsTimerActive(false);
+                isTimerActiveRef.current = false;
+                isTimerStartedRef.current = true;
 
                 jumpCountRef.current = 0;
                 workTimeRef.current = 0;
@@ -329,37 +312,24 @@ export default function JumpRopeTraining() {
         const checkTime = setInterval(async () => {
             const diffSeconds = calculateDiff();
 
-            if (diffSeconds <= 0 && activePlan.status === 'scheduled' && !isTransitioning) {
-                console.log("🎯 SCHEDULED TIME REACHED! INITIATING TRANSITION...");
-                setIsTransitioning(true);
-                setTransitionRemaining(10);
-                speak(t('smartTraining.prepareToJump'));
+            if (diffSeconds <= 0 && activePlan.status === 'scheduled') {
+                console.log("🎯 SCHEDULED TIME REACHED! STARTING LIVE...");
+                clearInterval(checkTime);
+                setScheduledRemaining(0);
                 
-                // Countdown the transition locally
-                const transitionInterval = setInterval(() => {
-                    setTransitionRemaining(prev => {
-                        if (prev <= 1) {
-                            clearInterval(transitionInterval);
-                            // Finish transition and update DB
-                            (async () => {
-                                try {
-                                    await supabase
-                                        .from('training_plans')
-                                        .update({ status: 'live' })
-                                        .eq('id', activePlan.id);
-                                    
-                                    setIsTransitioning(false);
-                                    fetchLatestPlan();
-                                } catch (err) {
-                                    console.error("Transition update failed:", err);
-                                    setIsTransitioning(false);
-                                }
-                            })();
-                            return 0;
-                        }
-                        return prev - 1;
-                    });
-                }, 1000);
+                // Finish transition and update DB
+                (async () => {
+                    try {
+                        await supabase
+                            .from('training_plans')
+                            .update({ status: 'live' })
+                            .eq('id', activePlan.id);
+                        
+                        fetchLatestPlan();
+                    } catch (err) {
+                        console.error("Transition update failed:", err);
+                    }
+                })();
 
                 clearInterval(checkTime);
                 setScheduledRemaining(0);
@@ -1024,31 +994,9 @@ export default function JumpRopeTraining() {
                     </div>
 
                     {/* Session Lock / Scheduled Overlay (Perfectly Centered) */}
-                    {((isRemoteLocked && !isAdmin) || isTransitioning || activePlan?.status === 'scheduled') && (
+                    {((isRemoteLocked && !isAdmin) || activePlan?.status === 'scheduled') && (
                         <div className="absolute inset-0 z-[100] backdrop-blur-2xl flex flex-col items-center justify-center gap-8 text-center p-6 pointer-events-auto" style={{ background: 'rgba(10,10,20,0.55)' }}>
-                            {isTransitioning ? (
-                                /* High-Visibility 10s Ready Phase */
-                                <div className="w-full max-w-[420px] p-12 rounded-[3.5rem] border border-orange-500/30 flex flex-col items-center gap-10 animate-in zoom-in-75 duration-300" style={{ background: 'rgba(249,115,22,0.08)', backdropFilter: 'blur(60px)' }}>
-                                    <div className="relative">
-                                        <div className="absolute -inset-12 bg-orange-500/20 rounded-full blur-3xl animate-pulse" />
-                                        <Zap size={64} className="text-orange-500 drop-shadow-[0_0_30px_rgba(249,115,22,0.6)]" fill="currentColor" />
-                                    </div>
-                                    <div className="flex flex-col gap-4">
-                                        <h2 className="text-white font-black text-3xl uppercase tracking-[0.4em] leading-none">{t('smartTraining.getReady')}</h2>
-                                        <div className="flex flex-col items-center gap-2">
-                                            <span className="text-8xl font-black text-white tabular-nums tracking-tighter animate-pulse drop-shadow-[0_0_40px_rgba(255,255,255,0.4)]">
-                                                {transitionRemaining}
-                                            </span>
-                                            <p className="text-orange-500 text-[10px] font-black uppercase tracking-[0.5em]">{t('smartTraining.missionStartingNow')}</p>
-                                        </div>
-                                    </div>
-                                    <div className="flex items-center gap-3">
-                                        {[0, 1, 2, 3, 4].map(i => (
-                                            <div key={i} className="w-2.5 h-2.5 rounded-full bg-orange-500 shadow-[0_0_15px_rgba(249,115,22,0.8)] animate-bounce" style={{ animationDelay: `${i * 150}ms` }} />
-                                        ))}
-                                    </div>
-                                </div>
-                            ) : activePlan?.status === 'scheduled' ? (
+                            {activePlan?.status === 'scheduled' ? (
                                 /* Emerald Mission Control / Scheduled Overlay */
                                 <div className="w-full max-w-[380px] aspect-square flex flex-col items-center justify-center p-8 rounded-[2.5rem] border border-emerald-500/20 shadow-2xl animate-in zoom-in-95 duration-700 saturate-[1.2]" style={{ background: 'rgba(16,185,129,0.04)', backdropFilter: 'blur(40px)' }}>
                                     <div className="relative">

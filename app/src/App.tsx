@@ -67,7 +67,7 @@ import { ThemeProvider, useTheme } from './context/ThemeContext';
 import { CallProvider } from './context/CallContext';
 import GlobalCallOverlay from './components/GlobalCallOverlay';
 import NotificationSoundHandler from './components/NotificationSoundHandler';
-import NotificationFixerOverlay from './components/NotificationFixerOverlay';
+
 
 import BackButtonHandler from './components/BackButtonHandler';
 import { PresenceProvider } from './context/PresenceContext';
@@ -178,7 +178,7 @@ function AppContent() {
       <Router>
         <GlobalCallOverlay />
         <NotificationSoundHandler />
-        <NotificationFixerOverlay />
+
         <BackButtonHandler />
         <Toaster
           position="top-center"

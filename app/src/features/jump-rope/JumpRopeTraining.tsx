@@ -7,6 +7,7 @@ import { supabase } from '../../lib/supabase';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { useRocketSync } from '../../context/RocketSyncContext';
 import { useWebRTCBroadcast } from '../../hooks/useWebRTCBroadcast';
 import PageHeader from '../../components/PageHeader';
 import PremiumSelect from '../../components/PremiumSelect';
@@ -16,7 +17,7 @@ import { toast } from 'react-hot-toast';
 const MEDIAPIPE_POSE_VERSION = '0.5.1675469404';
 
 export default function JumpRopeTraining() {
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
     const navigate = useNavigate();
     const webcamRef = useRef<Webcam>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -38,60 +39,116 @@ export default function JumpRopeTraining() {
     const [rpm, setRpm] = useState(0);
     const [finalRestSecs, setFinalRestSecs] = useState(0);
     const [currentRestSecs, setCurrentRestSecs] = useState(0);
-    const [isSessionActive, setIsSessionActive] = useState(false);
-    const isSessionActiveRef = useRef(false);
+    const [isSessionActive, setIsSessionActive] = useState(() => {
+        return sessionStorage.getItem('ai_session_active') === 'true';
+    });
+    const isSessionActiveRef = useRef(sessionStorage.getItem('ai_session_active') === 'true');
 
     // Plan & Admin States
-    const [showPlanModal, setShowPlanModal] = useState(false);
-    const [activePlan, setActivePlan] = useState<any>(null);
-    const [selectedStudentId, setSelectedStudentId] = useState<string>('');
-    const [isRemotePaused, setIsRemotePaused] = useState(false);
-    const [resolvedStudentId, setResolvedStudentId] = useState<string>('');
-    const { updateSessionStatus } = useSmartPlan();
-    const [targetJumps, setTargetJumps] = useState<number | null>(null);
-    const [targetTime, setTargetTime] = useState<number | null>(null);
+    const { 
+        activePlan, 
+        targetJumps: syncTargetJumps, 
+        targetTime: syncTargetTime, 
+        isRemoteLocked, 
+        isRemotePaused: syncRemotePaused,
+        scheduledRemaining,
+        studentId: syncStudentId,
+        lastPulse,
+        refreshPlan: fetchLatestPlan
+    } = useRocketSync();
 
-    // Countdown Timer State
-    const [countdownMins, setCountdownMins] = useState(0);
+    const [targetJumps, setTargetJumps] = useState<number>(() => Number(sessionStorage.getItem('ai_session_target_jumps')) || 0);
+    const [countdownMins, setCountdownMins] = useState<number>(() => Number(sessionStorage.getItem('ai_session_countdown_mins')) || 0);
     const [countdownSecs, setCountdownSecs] = useState(0);
-    const [timerRemaining, setTimerRemaining] = useState<number | null>(null);
+    const [timerRemaining, setTimerRemaining] = useState<number | null>(() => {
+        const cached = sessionStorage.getItem('ai_session_timer_remaining');
+        return cached ? Number(cached) : null;
+    });
     const [isTimerActive, setIsTimerActive] = useState(false);
     const [showTimerPicker, setShowTimerPicker] = useState(false);
     const lastPlanIdRef = useRef<string | null>(null);
     const minsScrollRef = useRef<HTMLDivElement>(null);
     const secsScrollRef = useRef<HTMLDivElement>(null);
     const isUnmountingRef = useRef(false); // 🛡️ Connection Lifecycle Guard
-    const [scheduledRemaining, setScheduledRemaining] = useState<number | null>(null);
+    const mountTimeRef = useRef(Date.now());
+
+    const [showPlanModal, setShowPlanModal] = useState(false);
+    const [resolvedStudentId, setResolvedStudentId] = useState<string>('');
+    const [isRemotePaused, setIsRemotePaused] = useState(false);
+    const isRemotePausedRef = useRef(false);
+    const { updateSessionStatus } = useSmartPlan();
 
     const ITEM_H = 44;
     const MIN_OPTIONS = Array.from({ length: 21 }, (_, i) => i);
     const SEC_OPTIONS = Array.from({ length: 12 }, (_, i) => i * 5);
 
     const { data: assignmentData } = useTrainingAssignment();
-    const { data: access } = useJumpRopeAccess();
+    const { data: accessData } = useJumpRopeAccess();
     const { data: students } = useStudents();
-    const isAdmin = access?.isAdmin;
-    const user = (access as any)?.user;
+    const isAdmin = accessData?.isAdmin;
+    const user = accessData?.user;
     const assignment = assignmentData as any;
 
     const speak = useCallback((text: string) => {
         if (!voiceEnabled || !window.speechSynthesis) return;
-        window.speechSynthesis.cancel();
-        const utterance = new SpeechSynthesisUtterance(text);
-        utterance.rate = 1.2;
-        utterance.pitch = 1.1;
-        window.speechSynthesis.speak(utterance);
-    }, [voiceEnabled]);
+        
+        try {
+            window.speechSynthesis.cancel();
+            const utterance = new SpeechSynthesisUtterance(text);
+            
+            // 🎙️ Dynamic Voice Selection
+            const voices = window.speechSynthesis.getVoices();
+            const isArabic = i18n.language.startsWith('ar');
+            
+            // Find best matching voice
+            const preferredVoice = voices.find(v => 
+                isArabic ? v.lang.startsWith('ar') : (v.lang.startsWith('en') && v.name.includes('Google'))
+            ) || voices.find(v => isArabic ? v.lang.startsWith('ar') : v.lang.startsWith('en')) || voices[0];
 
-    const handleFinish = useCallback(async () => {
+            if (preferredVoice) {
+                utterance.voice = preferredVoice;
+                utterance.lang = preferredVoice.lang;
+            }
+
+            utterance.rate = 1.1;
+            utterance.pitch = 1.0;
+            window.speechSynthesis.speak(utterance);
+        } catch (e) {
+            console.error("Speech Synthesis Error:", e);
+        }
+    }, [voiceEnabled, i18n.language]);
+
+    // 🚀 VOICE WAKE-UP: Prima the TTS engine on first user interaction
+    // Necessary for mobile/chrome autoplay policies
+    useEffect(() => {
+        const primeTTS = () => {
+            if (window.speechSynthesis) {
+                const utterance = new SpeechSynthesisUtterance(""); // Silent prime
+                window.speechSynthesis.speak(utterance);
+                console.log("🎙️ AI Voice Engine: Primed & Ready");
+            }
+            window.removeEventListener('click', primeTTS);
+            window.removeEventListener('touchstart', primeTTS);
+        };
+
+        window.addEventListener('click', primeTTS);
+        window.addEventListener('touchstart', primeTTS);
+        return () => {
+            window.removeEventListener('click', primeTTS);
+            window.removeEventListener('touchstart', primeTTS);
+        };
+    }, []);
+
+    // --- Core Operations (Hoisted for Reliability) ---
+    async function handleFinish() {
         setIsSessionActive(false);
         isSessionActiveRef.current = false;
+        sessionStorage.removeItem('ai_session_active');
         const totalWork = workTimeRef.current;
         const totalRest = restTimeRef.current;
         const totalJumps = jumpCountRef.current;
         const finalRpm = Math.round(totalJumps / ((totalWork || 1) / 60)) || 0;
 
-        // Guarantee session delivery to Admin Hub
         if (totalJumps > 0) {
             addSession({
                 jumps: totalJumps,
@@ -101,33 +158,25 @@ export default function JumpRopeTraining() {
                 work_duration: totalWork,
                 rest_duration: totalRest
             }, {
-                onSuccess: () => {
-                    toast.success(t('smartTraining.sessionSaved'));
-                },
-                onError: (err: any) => {
-                    console.error('Session sync error:', err);
-                    toast.error(t('smartTraining.sessionSyncError'));
-                }
+                onSuccess: () => { toast.success(t('smartTraining.sessionSaved')); },
+                onError: (err: any) => { toast.error(t('smartTraining.sessionSyncError')); }
             });
         }
-
 
         setFinalRestSecs(totalRest);
         setJumps(totalJumps);
         setRpm(finalRpm);
         setTotalSeconds(totalWork + totalRest);
 
-        // Auto-lock session on completion for "Remote Control" experience
         if (resolvedStudentId) {
             await updateSessionStatus(resolvedStudentId, 'idle');
         }
 
         setShowSummary(true);
         speak(`${totalJumps} ${t('smartTraining.jumpsCompleted')}`);
-    }, [addSession, speak, resolvedStudentId, updateSessionStatus, t]);
+    }
 
-    const handleRestart = useCallback(() => {
-        // Reset everything to deep zero
+    function handleRestart() {
         setJumps(0);
         jumpCountRef.current = 0;
         setRpm(0);
@@ -139,7 +188,6 @@ export default function JumpRopeTraining() {
         setIntensityStatus('READY');
         setCurrentRestSecs(0);
 
-        // Timer Reset Logic
         const total = (countdownMins * 60) + countdownSecs;
         setTimerRemaining(total > 0 ? total : null);
         timerRemainingRef.current = total > 0 ? total : null;
@@ -147,330 +195,95 @@ export default function JumpRopeTraining() {
         setIsTimerActive(false);
         isTimerActiveRef.current = false;
         isTimerStartedRef.current = false;
-
-        // Return to "Start Training" state
         setIsSessionActive(false);
         setIsTracking(false);
         setIsRemotePaused(false);
         isRemotePausedRef.current = false;
 
         speak(t('smartTraining.sessionReset'));
-    }, [speak, countdownMins, countdownSecs, t]);
+    }
 
-    // Admins are never locked; students start locked until coach sends 'live'
-    // 🛡️ INITIAL STATE FIX: Default to false (unlocked) to prevent flickering while loading
-    const [isRemoteLocked, setIsRemoteLocked] = useState(false);
-    const isRemotePausedRef = useRef(false);
-    
-    useEffect(() => {
-        isRemotePausedRef.current = isRemotePaused;
-    }, [isRemotePaused]);
-    
-    useEffect(() => {
-        // Only lock if we are SURE it's not an admin and isLocked is true
-        if (access) {
-            if (access.isAdmin) {
-                setIsRemoteLocked(false);
-            } else if (access.isLocked) {
-                setIsRemoteLocked(true);
-            }
+    async function handleStart() {
+        const total = (countdownMins * 60) + countdownSecs;
+        setTimerRemaining(total > 0 ? total : null);
+        timerRemainingRef.current = total > 0 ? total : null;
+        setIsTracking(true);
+        setIsSessionActive(true);
+        isSessionActiveRef.current = true;
+        setIsTimerActive(false);
+        isTimerActiveRef.current = false;
+
+        if (resolvedStudentId) {
+            updateSessionStatus(resolvedStudentId, 'live');
         }
-    }, [access]);
 
-    // 1. Fetch Personal Training Plan and Poll for Status Changes
-    const applyPlanTargets = useCallback((plan: any) => {
-        if (!plan) return;
-        setActivePlan(plan);
+        speak(t('smartTraining.readyStart'));
+        jumpCountRef.current = 0; setJumps(0); setRpm(0); setTotalSeconds(0);
+        workTimeRef.current = 0; restTimeRef.current = 0; lastActivityTimeRef.current = 0;
+        intensityHistoryRef.current = [];
+        setIntensityStatus('READY'); setCurrentRestSecs(0);
+    }
 
-        const isNewPlan = lastPlanIdRef.current !== plan.id;
+    // 🚀 SYNC SYNC SYNC: Sync local display states with global RocketSync
+    useEffect(() => {
+        if (syncTargetJumps !== undefined) setTargetJumps(syncTargetJumps);
+    }, [syncTargetJumps]);
 
-        if (plan.status === 'live') {
-            setIsRemoteLocked(false);
+    useEffect(() => {
+        setIsRemotePaused(syncRemotePaused);
+        isRemotePausedRef.current = syncRemotePaused;
+    }, [syncRemotePaused]);
+
+    useEffect(() => {
+        if (syncStudentId) {
+            setResolvedStudentId(syncStudentId);
+        }
+    }, [syncStudentId]);
+
+    useEffect(() => {
+        if (syncTargetTime !== undefined && syncTargetTime !== null && !isSessionActiveRef.current) {
+            const total = syncTargetTime * 60;
+            setCountdownMins(syncTargetTime);
+            setCountdownSecs(0);
+            setTimerRemaining(total);
+            timerRemainingRef.current = total;
+            setIsTimerActive(false);
+            isTimerActiveRef.current = false;
+            sessionStorage.setItem('ai_session_timer_remaining', total.toString());
+        }
+    }, [syncTargetTime]);
+
+    // 🚀 ROCKET AUTO-START: Detect 'Live' signal from background and launch UI instantly
+    useEffect(() => {
+        if (activePlan?.status === 'live' && !isSessionActiveRef.current) {
+            console.log("🚀 ROCKET SYNC: AUTO-STARTING SESSION...");
+            handleStart();
             
-            // 🛡️ SYNC PROTECTION: Only force-unpause if it's a BRAND NEW plan being launched.
-            // This prevents the 3-second polling interval from overwriting an Admin's local "Pause" click.
-            if (isNewPlan) {
-                setIsRemotePaused(false);
-                isRemotePausedRef.current = false;
-            }
+            toast.success(t('smartTraining.missionLive'), { 
+                icon: '🔥',
+                style: { background: '#0b0e18', color: '#10b981', border: '1px solid #10b981' }
+            });
+            speak(t('smartTraining.missionLive'));
+        }
+    }, [activePlan?.status, handleStart, speak, t]);
 
-            // Auto-set session as active if live, even if target_time is empty (Free/Infinite mode)
-            if (!isSessionActiveRef.current) {
-                // 🚀 ROCKET SYNC: Initiate instantly
-                const mins = plan.target_time ? Number(plan.target_time) : 0;
-                const totalSecs = mins * 60;
-                
-                setCountdownMins(mins);
-                setCountdownSecs(0);
-                setTimerRemaining(totalSecs > 0 ? totalSecs : null);
-                timerRemainingRef.current = totalSecs > 0 ? totalSecs : null;
-                
-                setIsSessionActive(true);
-                isSessionActiveRef.current = true;
-                setIsTimerActive(false);
-                isTimerActiveRef.current = false;
-                isTimerStartedRef.current = true;
-
-                jumpCountRef.current = 0;
-                workTimeRef.current = 0;
-                restTimeRef.current = 0;
-                lastActivityTimeRef.current = 0;
-                intensityHistoryRef.current = [];
-            }
-        } else if (plan.status === 'scheduled') {
-            setIsRemoteLocked(!isAdmin); // Admins bypass lock
-        } else if (plan.status === 'paused') {
-            setIsRemotePaused(true);
-        } else if (plan.status === 'idle') {
-            setIsRemoteLocked(!isAdmin); // Admins bypass lock
-        } else if (plan.status === 'restarting') {
-            setIsRemoteLocked(false);
-            setIsRemotePaused(false);
-            const restartKey = plan.updated_at || plan.id || plan.created_at || 'once';
+    // Handle Restart signals from global status
+    useEffect(() => {
+        if (activePlan?.status === 'restarting') {
+            const restartKey = activePlan.updated_at || activePlan.id || 'once';
             if ((window as any).__lastRestartKey !== restartKey) {
                 (window as any).__lastRestartKey = restartKey;
                 handleRestart();
             }
         }
+    }, [activePlan?.status, activePlan?.updated_at, handleRestart]);
 
-        // Update targets ONLY if session is not already active to prevent timer reset "jumps"
-        if (plan.target_jumps != null) setTargetJumps(Number(plan.target_jumps));
-        if (plan.target_time != null && !isSessionActiveRef.current) {
-            const total = Number(plan.target_time) * 60;
-            setCountdownMins(Number(plan.target_time));
-            setCountdownSecs(0);
-            setTimerRemaining(total);
-            timerRemainingRef.current = total;
-        }
-        lastPlanIdRef.current = plan.id;
-    }, [handleRestart, speak, isAdmin]);
-
-    const fetchLatestPlan = useCallback(async () => {
-        // 🛡️ Strict Guard: Ensure user id exists and looks like a valid UUID before querying profiles/students
-        if (!user?.id || user.id.length < 30) return; 
-        
-        try {
-            // Step 1: Get the student's integer ID using their profile UUID
-            const { data: stData, error: stError } = await supabase
-                .from('students')
-                .select('id')
-                .eq('profile_id', user.id)
-                .maybeSingle();
-
-            if (stError || !stData?.id) return; // Student not registered yet
-
-            // Step 2: Fetch their training plan by integer student_id
-            const { data: planData, error: planError } = await supabase
-                .from('training_plans')
-                .select('*')
-                .eq('student_id', stData.id)
-                .order('created_at', { ascending: false })
-                .limit(1);
-
-            if (planError) throw planError;
-
-            if (planData && planData.length > 0) {
-                setResolvedStudentId(stData.id);
-                applyPlanTargets(planData[0]);
-            }
-        } catch (e) {
-            console.error('fetchLatestPlan SafeGuard:', e);
-        }
-    }, [user?.id, applyPlanTargets]);
-
-    // 2. Automated Scheduled Start Checker (Hardened for Day Roll-over)
+    // Cleanup local mounts
     useEffect(() => {
-        if (!activePlan || activePlan.status !== 'scheduled' || !activePlan.scheduled_start) {
-            setScheduledRemaining(null);
-            return;
-        }
-
-        const calculateDiff = () => {
-            const now = new Date();
-            let targetDate;
-            if (activePlan.scheduled_start.includes('T')) {
-                // Exact globally synced timestamp provided by Coach Hub
-                targetDate = new Date(activePlan.scheduled_start);
-            } else {
-                // Legacy HH:mm parsing fallback
-                const [targetH, targetM] = activePlan.scheduled_start.split(':').map(Number);
-                targetDate = new Date();
-                targetDate.setHours(targetH, targetM, 0, 0);
-
-                // 💡 SMART ROLL-OVER: If target is more than 1 minute ago, it's probably for tomorrow
-                if (targetDate.getTime() <= now.getTime() - 60000) {
-                    targetDate.setDate(targetDate.getDate() + 1);
-                }
-            }
-            return Math.ceil((targetDate.getTime() - new Date().getTime()) / 1000);
-        };
-
-        // Initialize immediately so it shows instantly without 1s blink
-        const initialDiff = calculateDiff();
-        if (initialDiff > 0) setScheduledRemaining(initialDiff);
-
-        const checkTime = setInterval(async () => {
-            const diffSeconds = calculateDiff();
-
-            if (diffSeconds <= 0 && activePlan.status === 'scheduled') {
-                console.log("🎯 SCHEDULED TIME REACHED! STARTING LIVE...");
-                clearInterval(checkTime);
-                setScheduledRemaining(0);
-                
-                // Finish transition and update DB
-                (async () => {
-                    try {
-                        await supabase
-                            .from('training_plans')
-                            .update({ status: 'live' })
-                            .eq('id', activePlan.id);
-                        
-                        fetchLatestPlan();
-                    } catch (err) {
-                        console.error("Transition update failed:", err);
-                    }
-                })();
-
-                clearInterval(checkTime);
-                setScheduledRemaining(0);
-            } else if (diffSeconds > 0) {
-                // Prevent state-flapping: only update if it's a new second
-                setScheduledRemaining(prev => prev === diffSeconds ? prev : diffSeconds);
-            }
-        }, 1000);
-
-        return () => clearInterval(checkTime);
-    }, [activePlan?.id, activePlan?.status, activePlan?.scheduled_start, fetchLatestPlan]);
-
-    // 1. Fetch Personal Training Plan and Poll for Status Changes
-    useEffect(() => {
-        if (!user?.id) return;
-
-        let pollInterval: any = null;
-
-        const init = async () => {
-            if (!user?.id || user.id.length < 30) return;
-
-            // Resolve student_id for handleFinish auto-lock
-            const { data: stData, error: stError } = await supabase
-                .from('students')
-                .select('id')
-                .eq('profile_id', user.id)
-                .maybeSingle();
-            
-            if (stError) console.error('Init st lookup error:', stError);
-            if (stData?.id) setResolvedStudentId(stData.id);
-
-            // Initial fetch
-            await fetchLatestPlan();
-
-            // 🚀 ADMINISTRATIVE BYPASS: If we already know the user is a staff member, unlock immediately
-            if (isAdmin) setIsRemoteLocked(false);
-
-            // Poll every 3 seconds for status changes from coach
-            pollInterval = setInterval(() => {
-                fetchLatestPlan();
-            }, 3000);
-        };
-
-        init();
-
         return () => {
-            if (pollInterval) clearInterval(pollInterval);
+            isUnmountingRef.current = true;
         };
-    }, [fetchLatestPlan, user?.id]);
-
-    // 🛰️ CONSOLIDATED BROADCAST HUB: Presence + Instructions (ROCK-SOLID)
-    useEffect(() => {
-        if (!user?.id) return;
-
-        const channelId = `direct_broadcasts_${user.id}`;
-        console.log(`📡 STUDENT: Initializing persistent channel [${channelId}]`);
-
-        const channel = supabase.channel(channelId)
-            .on('broadcast', { event: 'STUDENT_ACK' }, () => {
-                // Self-ack (safe to ignore)
-            })
-            .on('broadcast', { event: 'SYNC_ALERTS' }, ({ payload }) => {
-                console.log('🚀 ROCKET SYNC RECEIVED:', payload);
-                
-                // 1. Lifecycle Status Updates
-                if (payload?.type === 'session_status_update') {
-                    if (payload.status) {
-                        // 🚀 ROCKET FOR LIVE START:
-                        if (payload.status === 'live') {
-                            toast.success(t('smartTraining.missionLive'), {
-                                duration: 5000,
-                                icon: '🔥',
-                                style: { background: '#0b0e18', color: '#10b981', border: '1px solid #10b981' }
-                            });
-                        }
-                        
-                        // Internal state refresh
-                        if (activePlan) {
-                            setActivePlan((prev: any) => prev ? { ...prev, status: payload.status } : null);
-                        }
-                        fetchLatestPlan();
-                    }
-                }
-
-                // 2. Direct Target Updates
-                if (payload?.type === 'target_update' || payload?.refresh_plan) {
-                    console.log('🎯 ROCKET: Applying immediate target update:', payload);
-                    
-                    // Instant optimistic UI update from broadcast payload
-                    if (payload.target_jumps !== undefined) setTargetJumps(payload.target_jumps);
-                    if (payload.target_time !== undefined) {
-                        const total = Number(payload.target_time) * 60;
-                        setCountdownMins(Number(payload.target_time));
-                        setCountdownSecs(0);
-                        setTimerRemaining(total);
-                        timerRemainingRef.current = total;
-                    }
-
-                    // 🚀 ZERO-LATENCY STATE INJECTION: Update activePlan directly to trigger UI/Logic
-                    if (payload.status || payload.scheduled_start) {
-                        setActivePlan((prev: any) => {
-                            const base = prev || { id: 'temp_scheduled', status: 'idle' };
-                            return {
-                                ...base,
-                                status: payload.status || base.status,
-                                scheduled_start: payload.scheduled_start || base.scheduled_start,
-                                target_jumps: payload.target_jumps || base.target_jumps,
-                                target_time: payload.target_time || base.target_time
-                            };
-                        });
-                    }
-                    
-                    fetchLatestPlan();
-                }
-            })
-            .subscribe(async (status) => {
-                if (status === 'SUBSCRIBED') {
-                    console.log(`✅ STUDENT: Persistence active on [${channelId}]`);
-                    
-                    // Fire the handshake ONE time upon entry
-                    await channel.send({
-                        type: 'broadcast',
-                        event: 'STUDENT_ACK',
-                        payload: { userId: user.id, timestamp: new Date().toISOString() }
-                    });
-                    console.log('🤝 HANDSHAKE: BROADCASTED PRESENCE');
-                }
-                if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
-                    // 🛡️ Only warn if NOT unmounting intentionally
-                    if (!isUnmountingRef.current) {
-                        console.warn(`⚠️ STUDENT: Channel ${status}. Connection might be fragile.`);
-                    }
-                }
-            });
-
-        return () => {
-            isUnmountingRef.current = true; // 🏁 Lock warnings
-            console.log(`🔌 STUDENT: Cleaning up channel [${channelId}]`);
-            supabase.removeChannel(channel);
-        };
-    }, [user?.id]); // 🛡️ ONLY dependent on userId to prevent flickering
+    }, []);
 
 
     // 2. Handle Training Assignments
@@ -644,7 +457,8 @@ export default function JumpRopeTraining() {
         } else {
             if (isCurrentlyMoving || !isFullBody || isTooClose) {
                 stabilityStartRef.current = null;
-                const nextStatus = (isTooClose && isSessionActiveRef.current) ? 'TOO_CLOSE' : !isFullBody ? 'STEP_BACK' : 'MOVING';
+                const isGracePeriod = (Date.now() - mountTimeRef.current) < 800; // Saro5 speed
+                const nextStatus = (isTooClose && isSessionActiveRef.current && !isGracePeriod) ? 'TOO_CLOSE' : !isFullBody ? 'STEP_BACK' : 'MOVING';
                 if (setupStatusRef.current !== nextStatus) {
                     setSetupStatus(nextStatus);
                     setupStatusRef.current = nextStatus;
@@ -802,54 +616,40 @@ export default function JumpRopeTraining() {
 
 
 
-    const handleStart = async () => {
-        const total = (countdownMins * 60) + countdownSecs;
-        setTimerRemaining(total > 0 ? total : null);
-        timerRemainingRef.current = total > 0 ? total : null;
-        setIsTracking(true);
-        setIsSessionActive(true);
-        isSessionActiveRef.current = true;
-        setIsTimerActive(true);
-        isTimerActiveRef.current = true;
-
-        // Sync to Database so background polling doesn't reset status to idle
-        if (resolvedStudentId) {
-            updateSessionStatus(resolvedStudentId, 'live');
-        }
-
-        console.log("Timer started manually via button");
-        speak(t('smartTraining.readyStart'));
-        jumpCountRef.current = 0; setJumps(0); setRpm(0); setTotalSeconds(0);
-        workTimeRef.current = 0; restTimeRef.current = 0; lastActivityTimeRef.current = 0;
-        intensityHistoryRef.current = [];
-        setIntensityStatus('READY'); setCurrentRestSecs(0);
-    };
-
     return (
-        <div className="flex-1 flex flex-col relative w-full overflow-hidden font-sans antialiased">
-            {/* 1. Immersive Camera Base */}
-            <div className="absolute inset-0 z-10 flex flex-col items-center justify-center pointer-events-none">
-                <Webcam ref={webcamRef} className="w-full h-full object-cover opacity-80 contrast-[1.1]" mirrored={true} onUserMedia={handleVideoLoad} onUserMediaError={handleCameraError} />
-                <canvas ref={canvasRef} className="absolute inset-0 w-full h-full z-10 pointer-events-none opacity-50" width={640} height={480} />
+        <div className="fixed inset-0 z-[9999] flex flex-col bg-black overflow-hidden font-sans antialiased">
+            {/* 1. Immersive Camera Base - TRUE FULL SCREEN */}
+            <div className="absolute inset-0 z-0 bg-black">
+                <Webcam ref={webcamRef} className="w-full h-full object-cover" mirrored={true} onUserMedia={handleVideoLoad} onUserMediaError={handleCameraError} />
+                <canvas ref={canvasRef} className="absolute inset-0 w-full h-full z-10 pointer-events-none opacity-40" width={640} height={480} />
+                <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-black/80 pointer-events-none z-[5]" />
             </div>
 
-            {/* 2. Professional HUD Logic Header */}
-            <div className="relative z-[60] px-4 sm:px-8 pt-2 sm:pt-4 flex flex-col gap-2 sm:gap-4">
-                <PageHeader title={t('common.performanceTracker')} subtitle="AI PERFORMANCE MONITOR">
-                        <div className="flex items-center gap-4 sm:gap-6 justify-end lg:w-72">
-                            <button onClick={() => setVoiceEnabled(!voiceEnabled)} className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${voiceEnabled ? 'bg-primary/10 text-primary' : 'bg-white/5 text-white/40'}`}>
-                                {voiceEnabled ? <Volume2 size={16} /> : <VolumeX size={16} />}
-                            </button>
-                        </div>
-                    </PageHeader>
+            {/* 2. Floating Minimal Header */}
+            <div className="absolute top-4 left-4 right-4 z-[100] flex justify-between items-start pointer-events-none">
+                <div className="flex flex-col gap-1 pointer-events-auto">
+                    <div className="flex items-center gap-2 bg-black/20 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10 shadow-xl">
+                        <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+                        <span className="text-[10px] font-black text-white/90 uppercase tracking-widest">{t('common.performanceTracker')}</span>
+                    </div>
+                </div>
+
+                <div className="flex items-center gap-2 pointer-events-auto">
+                    <button onClick={() => setVoiceEnabled(!voiceEnabled)} className={`w-9 h-9 rounded-full flex items-center justify-center transition-all backdrop-blur-md border border-white/10 ${voiceEnabled ? 'bg-primary/20 text-primary' : 'bg-black/20 text-white/40'}`}>
+                        {voiceEnabled ? <Volume2 size={16} /> : <VolumeX size={16} />}
+                    </button>
+                    <button onClick={() => navigate(-1)} className="w-9 h-9 rounded-full bg-black/20 backdrop-blur-md border border-white/10 flex items-center justify-center text-white/60 hover:text-white transition-colors">
+                        <X size={16} />
+                    </button>
+                </div>
             </div>
 
             {/* 3. Primary HUD Counter Layer (Zoned for Mobile) */}
             {!showSummary && (
                 <div className="relative flex-1 flex flex-col justify-between pointer-events-none z-[50] pt-2 pb-0 sm:pt-12 sm:pb-2 px-4">
 
-                    {/* TOP ZONE */}
-                    <div className="flex justify-center min-h-[40px] pointer-events-auto">
+                    {/* CENTER ZONE - Minimal Overlay */}
+                    <div className="flex flex-col items-center justify-center flex-1 h-full pt-20">
                         {/* 🏆 ADMIN PERSONAL TARGET WIDGET (Top of page as requested) */}
                         {isAdmin && !isSessionActive && (
                             <div className="flex items-center gap-2 animate-in slide-in-from-top duration-700">
@@ -860,7 +660,7 @@ export default function JumpRopeTraining() {
                                         <input
                                             type="number"
                                             value={targetJumps || ''}
-                                            onChange={(e) => setTargetJumps(e.target.value ? parseInt(e.target.value) : null)}
+                                            onChange={(e) => setTargetJumps(e.target.value ? parseInt(e.target.value) : 0)}
                                             placeholder="∞"
                                             className="bg-transparent border-none text-[13px] font-black text-white focus:ring-0 p-0 w-12 placeholder:text-white/20 tabular-nums"
                                         />
@@ -883,39 +683,44 @@ export default function JumpRopeTraining() {
                                 </button>
                             </div>
                         )}
-
-                        {!isAdmin && !isRemoteLocked && targetJumps && targetJumps > 0 && (
-                            <div className="flex justify-center transition-all animate-in slide-in-from-top duration-500">
-                                <div className="flex items-center gap-3 px-4 py-1.5 rounded-full bg-black/60 backdrop-blur-xl border border-white/5 shadow-xl">
-                                    <div className="flex items-center gap-3">
-                                        <span className="text-[10px] font-black text-white tabular-nums">
-                                            {jumps} <span className="text-white/20 mx-0.5">/</span> <span className="text-blue-400">{targetJumps}</span>
-                                        </span>
-                                        <div className="w-16 sm:w-24 h-1.5 bg-white/10 rounded-full overflow-hidden">
-                                            <div
-                                                className="h-full bg-blue-400 rounded-full transition-all duration-700"
-                                                style={{ width: `${Math.min(100, (jumps / targetJumps) * 100)}%` }}
-                                            />
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
                     </div>
 
-                    {/* CENTER ZONE */}
-                    <div className="relative flex-col flex items-center justify-center pt-2">
-                        <div className="absolute inset-0 bg-blue-400/5 blur-[80px] rounded-full" />
-                        <span className="text-blue-400 text-[8px] font-black uppercase tracking-[0.8em] mb-0 relative z-10 opacity-30">{t('smartTraining.jumps')}</span>
-                        <span className="text-[7.5rem] sm:text-[180px] font-black leading-none tracking-tighter relative z-10 select-none text-white drop-shadow-2xl">
+
+
+                    {/* Primary Jump Counter (Upward) + Countdown Progress Bar (Small) */}
+                    <div className="relative flex flex-col items-center pt-8">
+                        <div className="absolute inset-0 bg-blue-400/5 blur-[120px] rounded-full scale-125" />
+                        
+                        <span className="text-blue-400/40 text-[9px] font-black uppercase tracking-[0.6em] mb-1 relative z-10">
+                            {t('smartTraining.jumps')}
+                        </span>
+
+                        <span className="text-[120px] sm:text-[180px] font-black leading-none tracking-tighter drop-shadow-2xl relative z-10 select-none text-white animate-in zoom-in duration-500">
                             {jumps}
                         </span>
 
-                        <div className="mt-1 flex items-center gap-2 relative z-10">
-                            <div className="px-3 py-1 rounded-full border border-white/5 bg-white/[0.03] backdrop-blur-3xl flex items-center gap-2">
-                                <Activity size={9} className="text-blue-400/50" />
-                                <span className="font-black text-[9px] tracking-[0.1em] text-white/80">{rpm} {t('smartTraining.rpm')}</span>
+                        {/* Decreasing Horizontal Bar (The "Shret" the user mentioned) */}
+                        {targetJumps > 0 && (
+                            <div className="mt-4 w-40 sm:w-64 h-1 bg-white/5 rounded-full overflow-hidden relative z-10 border border-white/5 backdrop-blur-sm">
+                                <div 
+                                    className="h-full bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.5)] transition-all duration-300"
+                                    style={{ width: `${Math.max(0, ((targetJumps - jumps) / targetJumps) * 100)}%` }}
+                                />
                             </div>
+                        )}
+                        
+                        <div className="mt-6 flex items-center gap-3 relative z-10">
+                            <div className="px-4 py-1 rounded-full border backdrop-blur-3xl flex items-center gap-2" style={{ background: 'rgba(255,255,255,0.02)', borderColor: 'rgba(255,255,255,0.05)' }}>
+                                <Activity size={10} className="text-blue-400/50" />
+                                <span className="font-black text-[10px] tracking-[0.1em] text-white/60">{rpm} RPM</span>
+                            </div>
+                            
+                            {targetJumps > 0 && (
+                                <div className="px-4 py-1 rounded-full border border-red-500/10 bg-red-500/[0.02] backdrop-blur-3xl flex items-center gap-2">
+                                    <span className="text-[8px] font-black uppercase tracking-[0.1em] text-red-500/50">Remaining</span>
+                                    <span className="text-[10px] font-black text-white">{Math.max(0, targetJumps - jumps)}</span>
+                                </div>
+                            )}
                         </div>
                     </div>
 
@@ -971,7 +776,12 @@ export default function JumpRopeTraining() {
                                     </div>
                                 )}
 
-                                {!isSessionActive ? (
+                                {isLoading ? (
+                                    <div className="w-full flex items-center justify-center gap-2 py-2 text-white/20">
+                                        <Loader2 size={14} className="animate-spin" />
+                                        <span className="text-[10px] font-black uppercase tracking-[0.4em]">{t('smartTraining.calibrating')}</span>
+                                    </div>
+                                ) : !isSessionActive ? (
                                     <div className="w-full flex flex-col gap-3">
                                         <button
                                             onClick={handleStart}
@@ -993,12 +803,17 @@ export default function JumpRopeTraining() {
                         </div>
                     </div>
 
-                    {/* Session Lock / Scheduled Overlay (Perfectly Centered) */}
-                    {((isRemoteLocked && !isAdmin) || activePlan?.status === 'scheduled') && (
+                    {/* 3.1. Session Lock / Scheduled Overlay (Perfectly Centered) */}
+                    {(
+                        // Condition A: It's scheduled (Always show instantly)
+                        (activePlan?.status === 'scheduled') ||
+                        // Condition B: It's locked (Show after tiny grace period if not active)
+                        (!sessionStorage.getItem('ai_session_active') && (Date.now() - mountTimeRef.current > 100) && (isRemoteLocked && !isAdmin))
+                    ) && (
                         <div className="absolute inset-0 z-[100] backdrop-blur-2xl flex flex-col items-center justify-center gap-8 text-center p-6 pointer-events-auto" style={{ background: 'rgba(10,10,20,0.55)' }}>
                             {activePlan?.status === 'scheduled' ? (
                                 /* Emerald Mission Control / Scheduled Overlay */
-                                <div className="w-full max-w-[380px] aspect-square flex flex-col items-center justify-center p-8 rounded-[2.5rem] border border-emerald-500/20 shadow-2xl animate-in zoom-in-95 duration-700 saturate-[1.2]" style={{ background: 'rgba(16,185,129,0.04)', backdropFilter: 'blur(40px)' }}>
+                                <div className="w-full max-w-[380px] aspect-square flex flex-col items-center justify-center p-8 rounded-[2.5rem] border border-emerald-500/20 shadow-2xl animate-in fade-in zoom-in-95 duration-150 saturate-[1.2]" style={{ background: 'rgba(16,185,129,0.04)', backdropFilter: 'blur(40px)' }}>
                                     <div className="relative">
                                         <div className="absolute -inset-6 bg-emerald-500/15 rounded-full blur-2xl animate-pulse" />
                                         <Timer size={56} className="text-emerald-400 drop-shadow-[0_0_20px_rgba(16,185,129,0.4)]" />
@@ -1023,11 +838,11 @@ export default function JumpRopeTraining() {
                                     <div className="grid grid-cols-2 gap-4 w-full pt-4 border-t border-white/5">
                                         <div className="flex flex-col gap-1">
                                             <span className="text-[7px] font-black text-white/20 uppercase tracking-[0.2em]">{t('smartTraining.totalJumps')}</span>
-                                            <span className="text-lg font-black text-white">{activePlan.target_jumps || '∞'}</span>
+                                            <span className="text-lg font-black text-white">{syncTargetJumps || activePlan?.target_jumps || '∞'}</span>
                                         </div>
                                         <div className="flex flex-col gap-1">
                                             <span className="text-[7px] font-black text-white/20 uppercase tracking-[0.2em]">{t('smartTraining.totalTime')}</span>
-                                            <span className="text-lg font-black text-white">{activePlan.target_time ? `${activePlan.target_time}m` : '∞'}</span>
+                                            <span className="text-lg font-black text-white">{syncTargetTime ? `${syncTargetTime}m` : (activePlan?.target_time ? `${activePlan.target_time}m` : '∞')}</span>
                                         </div>
                                     </div>
 
@@ -1203,8 +1018,8 @@ export default function JumpRopeTraining() {
             {/* 7. Admin Generator Modal */}
             {isAdmin && showPlanModal && (
                 <SmartPlanModal
-                    studentId={selectedStudentId}
-                    studentName={students?.find((s: any) => s.id === selectedStudentId)?.full_name || 'Athlete'}
+                    studentId={resolvedStudentId}
+                    studentName={students?.find((s: any) => s.id === resolvedStudentId)?.full_name || 'Athlete'}
                     isOpen={showPlanModal} onClose={() => setShowPlanModal(false)}
                 />
             )}

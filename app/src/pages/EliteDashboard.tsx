@@ -10,11 +10,12 @@ import MinimalCountdown from '../components/MinimalCountdown';
 import toast from 'react-hot-toast';
 import { playNotificationSound, resumeAudioContext } from '../utils/notifications';
 import { useTranslation } from 'react-i18next';
+import { NotificationGuard } from '../components/NotificationGuard';
 
 export default function EliteDashboard() {
     const { t, i18n } = useTranslation();
     const { currency } = useCurrency();
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(false);
 
     // 🔊 Audio Engine Pre-warm
     useEffect(() => {
@@ -46,6 +47,27 @@ export default function EliteDashboard() {
     const [totalAiJumps, setTotalAiJumps] = useState(0);
     const [aiSessionsCount, setAiSessionsCount] = useState(0);
     const [aiHistory, setAiHistory] = useState<any[]>([]);
+    const [userId, setUserId] = useState<string | null>(null);
+
+    // 🚀 SARO5 CACHE: Instant Data Restoration
+    useEffect(() => {
+        const cached = localStorage.getItem('ai_dashboard_cache');
+        if (cached) {
+            try {
+                const data = JSON.parse(cached);
+                setStudentName(data.studentName || '');
+                setAttendedSessions(data.attendedSessions || 0);
+                setPtSpent(data.ptSpent || 0);
+                setConsSpent(data.consSpent || 0);
+                setTrainingPlan(data.trainingPlan || []);
+                setPlanStatus(data.planStatus || null);
+                setScheduledStart(data.scheduledStart || null);
+                setTotalAiJumps(data.totalAiJumps || 0);
+                setAiSessionsCount(data.aiSessionsCount || 0);
+                setPtSubscription(data.ptSubscription || null);
+            } catch (e) { console.error('Cache Restore Failed', e); }
+        }
+    }, []);
 
 
     // 📻 Real-time Broadcast Sync (UI Focus)
@@ -105,6 +127,7 @@ export default function EliteDashboard() {
             try {
                 const { data: { user } } = await supabase.auth.getUser();
                 if (!user) return;
+                setUserId(user.id);
 
                 let { data: student } = await supabase
                     .from('students')
@@ -172,6 +195,19 @@ export default function EliteDashboard() {
                 setPlanStatus(planData?.status || null);
                 setScheduledStart(planData?.scheduled_start || null);
 
+                // 🚀 SARO5 CACHE: Save for next instant-load
+                localStorage.setItem('ai_dashboard_cache', JSON.stringify({
+                    studentName: student.full_name,
+                    attendedSessions: ptSessions?.length || 0,
+                    ptSpent: payments?.filter(p => p.type?.toLowerCase().includes('pt')).reduce((sum, p) => sum + (p.amount || 0), 0) || 0,
+                    consSpent: payments?.filter(p => p.type?.toLowerCase().includes('consultation')).reduce((sum, p) => sum + (p.amount || 0), 0) || 0,
+                    trainingPlan: extractedPlan,
+                    planStatus: planData?.status || null,
+                    scheduledStart: planData?.scheduled_start || null,
+                    totalAiJumps: aiSessions.reduce((acc: number, s: any) => acc + (s.jumps || 0), 0),
+                    aiSessionsCount: aiSessions.length,
+                    ptSubscription: activePt
+                }));
             } catch (err) {
                 console.error(err);
             } finally {
@@ -219,7 +255,7 @@ export default function EliteDashboard() {
         };
     }, []);
 
-    if (loading) return <div className="flex items-center justify-center min-h-[60vh]"><div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin"></div></div>;
+    // No more blocking guards - render immediate shell
 
     return (
         <div className="space-y-12 pb-20 relative px-4 sm:px-8">
@@ -238,7 +274,7 @@ export default function EliteDashboard() {
                         </span>
                         <h1 className="text-3xl md:text-5xl font-black text-white tracking-tighter uppercase leading-none italic">
                             <span className="premium-gradient-text drop-shadow-[0_15px_40px_rgba(255,255,255,0.3)]">
-                                {studentName.split(' ')[0]}
+                                {studentName.split(' ')[0] || 'Athlete'}
                             </span>
                         </h1>
                     </div>
@@ -512,6 +548,8 @@ export default function EliteDashboard() {
                     </div>
                 )}
             </div>
+            
+            <NotificationGuard userId={userId} />
         </div>
     );
 }

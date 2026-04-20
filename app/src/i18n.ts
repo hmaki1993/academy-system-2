@@ -736,6 +736,7 @@ i18n
                         confirmTime: 'Confirm Time',
                         trainerHub: 'Trainer Hub',
                         jumpsGoal: 'Jumps Goal',
+                        target: 'Target',
                         duration: 'Duration',
                         clickToResume: 'Click anywhere to Resume'
                     },
@@ -1619,6 +1620,7 @@ t: 'الجلسات',
                         confirmTime: 'تأكيد الوقت',
                         trainerHub: 'مركز المدرب',
                         jumpsGoal: 'هدف القفزات',
+                        target: 'الهدف',
                         duration: 'المدة',
                         clickToResume: 'اضغط في أي مكان للاستئناف'
                     },

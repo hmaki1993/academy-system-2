@@ -191,12 +191,14 @@ export function usePresence(config?: {
                                     last_seen: new Date().toISOString()
                                 });
 
-                                // Broadcast pulse for instant dashboard update
-                                channel.send({
-                                    type: 'broadcast',
-                                    event: 'pulse:join',
-                                    payload: profile
-                                });
+                                // Broadcast pulse for instant dashboard update only if channel is ready
+                                if (channel.state === 'joined') {
+                                    channel.send({
+                                        type: 'broadcast',
+                                        event: 'pulse:join',
+                                        payload: profile
+                                    });
+                                }
                             }
                         }
                     });

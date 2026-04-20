@@ -78,7 +78,6 @@ export default function DashboardLayout() {
     const [showResults, setShowResults] = useState(false);
     const notificationRef = useRef<HTMLDivElement>(null);
     const [isVerifiedStudent, setIsVerifiedStudent] = useState<boolean | null>(null);
-    const [dismissNotif, setDismissNotif] = useState(false);
     const searchRef = useRef<HTMLDivElement>(null);
 
     const isRtl = i18n.language === 'ar' || document.dir === 'rtl';
@@ -546,69 +545,9 @@ export default function DashboardLayout() {
         } catch (e) { }
     };
 
-    const handleForcePermission = async () => {
-        if (Capacitor.isNativePlatform()) {
-             let permStatus = await PushNotifications.requestPermissions();
-             if (permStatus.receive === 'granted' && userId) {
-                 await FCMManager.register(userId, true);
-                 window.location.reload();
-             } else {
-                 alert('يرجى تفعيل الإشعارات من إعدادات الهاتف.');
-             }
-             return;
-        }
-
-        if (!('Notification' in window)) return;
-        const permission = await Notification.requestPermission();
-        if (permission === 'granted' && userId) {
-            await FCMManager.register(userId, true); // Force clean registration
-            window.location.reload();
-        } else {
-            alert('لقد رفضت التنبيهات أو جهازك يحظرها افتراضياً. يجب تفعيلها من إعدادات الهاتف (التطبيقات -> Elite Academy -> الإشعارات).');
-        }
-    };
 
     return (
         <div className="fixed inset-0 w-full flex bg-background font-cairo overflow-hidden">
-            {/* 🚨 Minimal Notification Guard */}
-            {(!Capacitor.isNativePlatform()) && 'Notification' in window && Notification.permission !== 'granted' && !dismissNotif && (
-                <div className="fixed bottom-6 right-6 z-[9999] w-72 bg-white/[0.03] backdrop-blur-2xl border border-white/10 rounded-3xl p-5 shadow-2xl animate-in slide-in-from-bottom-5 fade-in duration-700">
-                    <button 
-                        onClick={() => setDismissNotif(true)}
-                        className="absolute top-3 right-3 w-6 h-6 flex items-center justify-center text-white/20 hover:text-white transition-colors"
-                    >
-                        <X className="w-4 h-4" />
-                    </button>
-                    
-                    <div className="flex flex-col gap-3">
-                        <div className="flex items-center gap-2">
-                            <div className="w-8 h-8 rounded-full bg-red-500/20 flex items-center justify-center text-red-500">
-                                <Bell className="w-4 h-4 animate-bounce" />
-                            </div>
-                            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white">Alert System Offline</span>
-                        </div>
-                        
-                        <p className="text-[11px] font-medium text-white/60 leading-relaxed">
-                            Push notifications are disabled. You won't receive real-time training anchors or coach alerts.
-                        </p>
-                        
-                        <button 
-                            onClick={handleForcePermission}
-                            className="w-full bg-primary py-2.5 rounded-xl text-white text-[10px] font-black uppercase tracking-widest hover:brightness-110 active:scale-95 transition-all"
-                        >
-                            Enable Alerts Now
-                        </button>
-
-                        {Notification.permission === 'denied' && (
-                            <div className="pt-2 border-t border-white/5 mt-1">
-                                <p className="text-[8px] font-bold text-white/30 uppercase tracking-tight">
-                                    Previously Denied: Go to Settings → Notifications → Elite Academy to unblock.
-                                </p>
-                            </div>
-                        )}
-                    </div>
-                </div>
-            )}
 
             {/* Cosmic Background Orbs */}
             <div className="orb-primary fixed -top-[25%] -left-[10%] w-[55%] h-[55%] rounded-full blur-[140px] pointer-events-none z-0 opacity-20" style={{ background: 'radial-gradient(circle, var(--color-primary) 0%, transparent 70%)' }}></div>

@@ -13,6 +13,7 @@ import { formatDistanceToNow, format } from 'date-fns';
 import { useSmartPlan, TrainingMetric, GeneratedPlan } from '../hooks/useSmartPlan';
 import { supabase } from '../lib/supabase';
 import { useTranslation } from 'react-i18next';
+import PageHeader from '../components/PageHeader';
 
 
 // --- Sub-Component: Floating Remote Control Hub ---
@@ -40,7 +41,7 @@ const FloatingRemoteHub = ({ athlete, onClose }: { athlete: any, onClose: () => 
     // GöÇGöÇGöÇ Bidirectional Handshake: Listen for Athlete Presence GöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇGöÇ
     useEffect(() => {
         if (!athlete?.userId) return;
-        const channel = supabase.channel(`direct_broadcasts_${athlete.userId}`)
+        const channel = supabase.channel(`athlete-live-ctrl-${athlete.userId}`)
             .on('broadcast', { event: 'STUDENT_ACK' }, () => {
                 setIsAthletePresent(true);
                 if (!hasToasted.current) {
@@ -1087,16 +1088,11 @@ export default function StrategyHub() {
             <div className="absolute top-0 right-0 w-[50%] h-[50%] bg-orange-500/[0.04] blur-[150px] rounded-full pointer-events-none" />
 
             <div className="relative z-10 max-w-7xl mx-auto w-full flex flex-col flex-1">
-                {/* Header */}
-                <div className="flex flex-col gap-0.5 pb-4 mb-4 -mt-4">
-                    <div className="flex items-center gap-3 flex-wrap">
-                        <h1 className="text-2xl font-black text-white uppercase tracking-tighter leading-none">
-                            <span className="premium-gradient-text">
-                                {t('allNavItems.strategyHub')}
-                            </span>
-                        </h1>
-                    </div>
-                </div>
+                {/* Standard Page Header */}
+                <PageHeader
+                    title={t('common.strategyHub', 'Strategy Hub')}
+                    subtitle={t('strategy.strategyBuilder', 'Strategy Builder')}
+                />
 
                 <div className="flex flex-col flex-1 space-y-10">
                     {/* Stats Row */}

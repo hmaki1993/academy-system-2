@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { toast } from 'react-hot-toast';
@@ -110,7 +109,6 @@ export function useSmartPlan() {
             const weeklyPlan = Array.from({ length: m.daysPerWeek }, (_, i) => {
                 // Progression: Day 1 is easier, last day is peak. Rounded to nearest 50.
                 const dayTotal = Math.round((baseJumps * (0.85 + (i * 0.1))) / 50) * 50;
-                
                 // Keep sets manageable (150-300 per set)
                 const repsPerSet = dayTotal > 2000 ? 250 : 150;
                 const daySets = Math.ceil(dayTotal / repsPerSet);
@@ -182,7 +180,7 @@ export function useSmartPlan() {
             }
 
             // 3. Real-time Broadcast (Immediate Dashboard/App Sync)
-            const channel = supabase.channel(`direct_broadcasts_${studentId}`);
+            const channel = supabase.channel(`athlete-live-ctrl-${studentIdRaw}`);
             await channel.subscribe(async (statusSub) => {
                 if (statusSub === 'SUBSCRIBED') {
                     await channel.send({
@@ -255,52 +253,66 @@ export function useSmartPlan() {
                 status: scheduledStart ? 'scheduled' : 'live'
             };
 
-            // 2. Atomic DB Update (Persistence with Upsert logic)
-            const { data: updateData, error: updateError } = await supabase
-                .from('training_plans')
-                .update(payload)
-                .eq('student_id', studentId)
-                .select('id');
-            
-            if (updateError) {
-                console.error("FIRE/ROCKET DB UPDATE ERROR:", updateError);
-            }
-
-            // If no row was updated, record doesn't exist - so we INSERT
-            if (!updateData || updateData.length === 0) {
-                console.log("No existing plan found for student during Rocket Send. Creating new entry...");
-                const { error: insertError } = await supabase
-                    .from('training_plans')
-                    .insert({ student_id: studentId, ...payload });
-                
-                if (insertError) {
-                    console.error("FIRE/ROCKET DB INSERT ERROR:", insertError);
-                    toast.error('لم نتمكن من تحديث القاعدة، جاري إرسال الإشعار فقط!');
-                }
-            }
-
-            // 🚀 MASTER BROADCAST: Instant signal to Student UI (Zero Latency)
-            const channelId = `direct_broadcasts_${studentIdRaw}`;
+            // 🚀 BULLET SYNC: Triple-Broadcast Protocol (Ensures delivery)
+            // 🚀 BULLET SYNC: Triple-Pulse on UNIFIED CHANNEL
+            const channelId = `user-notifications:${studentIdRaw}`;
             const bc = supabase.channel(channelId);
+            
             bc.subscribe(async (status) => {
                 if (status === 'SUBSCRIBED') {
-                    console.log(`📡 COACH: Initiating TARGET_UPDATE broadcast for [${studentIdRaw}]`);
-                    await bc.send({
-                        type: 'broadcast',
-                        event: 'SYNC_ALERTS',
-                        payload: { 
-                            type: 'target_update',
-                            status: payload.status,
-                            target_jumps: payload.target_jumps,
-                            target_time: payload.target_time,
-                            scheduled_start: payload.scheduled_start,
-                            refresh_plan: true,
-                            timestamp: new Date().toISOString()
-                        }
-                    });
-                    // Small delay then cleanup
-                    setTimeout(() => supabase.removeChannel(bc), 1500);
+                    console.log(`📡 COACH: Bullet Sync Pipe Hot [${channelId}]. Despatching TRIPLE pulse...`);
+                    
+                    const syncPayload = { 
+                        type: 'target_update',
+                        status: payload.status,
+                        target_jumps: payload.target_jumps,
+                        target_time: payload.target_time,
+                        scheduled_start: payload.scheduled_start,
+                        refresh_plan: true,
+                        timestamp: new Date().toISOString()
+                    };
+
+                    // Pulse 1: Instant
+                    console.log(`🚀 COACH: Pulse 1 despatcing to [${studentIdRaw}]`);
+                    await bc.send({ type: 'broadcast', event: 'SYNC_ALERTS', payload: syncPayload });
+                    
+                    // Pulse 2: 300ms 
+                    setTimeout(() => {
+                        console.log(`🚀 COACH: Pulse 2 despatcing...`);
+                        bc.send({ type: 'broadcast', event: 'SYNC_ALERTS', payload: syncPayload });
+                    }, 300);
+                    
+                    // Pulse 3: 800ms
+                    setTimeout(() => {
+                        console.log(`🚀 COACH: Pulse 3 despatcing...`);
+                        bc.send({ type: 'broadcast', event: 'SYNC_ALERTS', payload: syncPayload });
+                    }, 800);
+
+                    // Force DB Refresh signal for any legacy components
+                    await bc.send({ type: 'broadcast', event: 'mission-alert', payload: { ...syncPayload, type: 'REFRESH_REQUIRED' } });
+
+                    setTimeout(() => supabase.removeChannel(bc), 5000);
                 }
+            });
+
+            // 1. Resolve Identity and Persistence (Background)
+            resolveStudentId(studentIdRaw).then(studentId => {
+                supabase.from('training_plans')
+                    .update(payload)
+                    .eq('student_id', studentId)
+                    .select('id')
+                    .then(({ data: updateData, error: updateError }) => {
+                        if (updateError) console.error("FIRE/ROCKET DB UPDATE ERROR (BG):", updateError);
+                        
+                        if (!updateData || updateData.length === 0) {
+                            supabase.from('training_plans')
+                                .insert({ student_id: studentId, ...payload })
+                                .then(({ error: insertError }) => {
+                                    if (insertError) console.error("FIRE/ROCKET DB INSERT ERROR (BG):", insertError);
+                                });
+                        }
+                        queryClient.invalidateQueries({ queryKey: ['training_plans', studentId] });
+                    });
             });
 
             // 📱 BACKUP PUSH: FCM for Background Delivery
@@ -365,38 +377,42 @@ export function useSmartPlan() {
             }
 
 
-            // 🎯 ROCKET SPEED OPTIMIZATION:
-            // 2. Direct Broadcast FIRST (Instant Sync) - Fire before DB update for zero latency
-            const channel = supabase.channel(`direct_broadcasts_${studentIdRaw}`);
-            await channel.subscribe(async (statusSub) => {
+            // 🎯 BULLET SYNC: Triple-Broadcast Status Update
+            const channelId = `user-notifications:${studentIdRaw}`;
+            const bc = supabase.channel(channelId);
+            
+            bc.subscribe(async (statusSub) => {
                 if (statusSub === 'SUBSCRIBED') {
-                    console.log(`📡 COACH: Initiating STATUS_UPDATE (${finalStatus}) broadcast for [${studentIdRaw}]`);
-                    const resp = await channel.send({
-                        type: 'broadcast',
-                        event: 'SYNC_ALERTS',
-                        payload: { 
-                            type: 'session_status_update',
-                            status: finalStatus,
-                            scheduled_start: payload.scheduled_start || null,
-                            timestamp: new Date().toISOString()
-                        }
-                    });
-                    console.log(`📡 COACH: Broadcast result:`, resp);
-                    // Wait 3s then cleanup
-                    setTimeout(() => {
-                        console.log(`🔌 COACH: Cleaning up temporary channel for [${studentIdRaw}]`);
-                        supabase.removeChannel(channel);
-                    }, 3000);
+                    console.log(`📡 COACH: Status Pipe Hot. Despatching TRIPLE status pulse [${finalStatus}]...`);
+                    
+                    const statusPayload = { 
+                        type: 'session_status_update',
+                        status: finalStatus,
+                        scheduled_start: payload.scheduled_start || null,
+                        timestamp: new Date().toISOString()
+                    };
+
+                    // Triple Burst on UNIFIED CHANNEL
+                    await bc.send({ type: 'broadcast', event: 'SYNC_ALERTS', payload: statusPayload });
+                    setTimeout(() => bc.send({ type: 'broadcast', event: 'SYNC_ALERTS', payload: statusPayload }), 300);
+                    setTimeout(() => bc.send({ type: 'broadcast', event: 'SYNC_ALERTS', payload: statusPayload }), 800);
+
+                    // Fallback signal
+                    await bc.send({ type: 'broadcast', event: 'mission-alert', payload: { type: 'REFRESH_REQUIRED' } });
+
+                    setTimeout(() => supabase.removeChannel(bc), 5000);
                 }
             });
 
-            // 1. Database Update (Persistence) - Second priority
-            const { error } = await supabase
-                .from('training_plans')
-                .update(payload)
-                .eq('student_id', studentId);
-
-            if (error) throw error;
+            // 2. Database Update (Persistence) - Background priority
+            resolveStudentId(studentIdRaw).then(studentId => {
+                supabase.from('training_plans')
+                    .update(payload)
+                    .eq('student_id', studentId)
+                    .then(({ error }) => {
+                        if (error) console.error("Session Status Persistence Error:", error);
+                    });
+            });
             
             if (status === 'live') toast.success('Session Resumed');
             if (status === 'paused') toast.success('Session Paused');

@@ -12,7 +12,7 @@ import { playHoverSound } from '../utils/audio';
 import CoachDashboard from './CoachDashboard';
 import HeadCoachDashboard from './HeadCoachDashboard';
 import ReceptionDashboard from './ReceptionDashboard';
-const StudentDashboard = lazy(() => import('./EliteDashboard'));
+import StudentDashboard from './EliteDashboard';
 
 import LiveStudentsWidget from '../components/LiveStudentsWidget';
 import QuickAddStudentModal from '../components/QuickAddStudentModal';
@@ -20,6 +20,7 @@ import PremiumClock from '../components/PremiumClock';
 import MinimalCountdown from '../components/MinimalCountdown';
 
 import UpcomingAgendaWidget from '../components/UpcomingAgendaWidget';
+import { NotificationGuard } from '../components/NotificationGuard';
 
 export default function Dashboard() {
     const { t } = useTranslation();
@@ -37,16 +38,7 @@ export default function Dashboard() {
     const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
 
     // 🛡️ ELITE V21: SAFE RENDER GUARD (After hooks to follow React rules)
-    if (!context) {
-        console.warn('🛡️ Dashboard: Outlet context not yet available.');
-        return (
-            <div className="min-h-screen bg-[#050505] flex items-center justify-center">
-                <div className="w-12 h-12 border-2 border-primary/20 border-t-primary rounded-full animate-spin" />
-            </div>
-        );
-    }
-
-    const { role, fullName, userEmail, userId, isVerifiedStudent } = context;
+    const { role, fullName, userEmail, userId, isVerifiedStudent } = context || { role: 'student', fullName: 'Athlete', userEmail: '', userId: '', isVerifiedStudent: true };
 
     // 🛡️ MASTER NAME DERIVATION: Restoring missing identity labels for UI
     const displayFullName = (fullName || userProfile?.full_name || userEmail?.split('@')[0] || 'Admin').trim();
@@ -68,12 +60,7 @@ export default function Dashboard() {
     if (normalizedRole === 'admin') {
         // Render below
     } else if (isVerifiedStudent === null) {
-        return (
-            <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
-                <div className="w-12 h-12 border-2 border-primary/20 border-t-primary rounded-full animate-spin" />
-                <p className="text-[10px] font-black uppercase tracking-[0.3em] text-white/20">{t('dashboard.syncingIntelligence')}</p>
-            </div>
-        );
+        // Render nothing but don't block
     }
     
     // PRIORITY 1: Explicit Staff Roles
@@ -87,11 +74,7 @@ export default function Dashboard() {
     } else {
         // PRIORITY 3: Student
         if (isVerifiedStudent || normalizedRole === 'student' || normalizedRole === 'trainee') {
-            return (
-                <Suspense fallback={<div className="flex items-center justify-center min-h-[60vh]"><div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin"></div></div>}>
-                    <StudentDashboard />
-                </Suspense>
-            );
+            return <StudentDashboard />;
         }
     }
 
@@ -215,13 +198,14 @@ export default function Dashboard() {
                         <div className="flex items-center justify-between mb-6 pb-4 border-b border-white/[0.03]">
                             <div className="flex items-center gap-4">
                                 <Globe className="w-5 h-5 text-primary animate-pulse" />
+                                <Globe className="w-5 h-5 text-primary" />
                                 <div>
                                     <h3 className="text-lg font-black text-white uppercase tracking-[0.2em] leading-none mb-1.5">{t('dashboard.liveFloor')}</h3>
                                     <p className="text-[9px] font-bold text-white/20 uppercase tracking-[0.4em]">{t('dashboard.athleteIntelligence')}</p>
                                 </div>
                             </div>
                             <div className="flex items-center gap-2">
-                                <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
+                                <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
                                 <span className="text-[9px] font-black text-emerald-400 uppercase tracking-widest">{onlineStudents.length} {t('dashboard.online')}</span>
                             </div>
                         </div>
@@ -319,6 +303,8 @@ export default function Dashboard() {
                 onClose={() => setIsQuickAddOpen(false)}
                 onSuccess={() => { }}
             />
+
+            <NotificationGuard userId={userId} />
         </div>
     );
 }

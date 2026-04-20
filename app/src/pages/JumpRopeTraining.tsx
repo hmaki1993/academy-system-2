@@ -31,8 +31,10 @@ export default function JumpRopeTraining() {
     const [rpm, setRpm] = useState(0);
     const [finalRestSecs, setFinalRestSecs] = useState(0);
     const [currentRestSecs, setCurrentRestSecs] = useState(0);
-    const [isSessionActive, setIsSessionActive] = useState(false);
-    const isSessionActiveRef = useRef(false);
+    const [isSessionActive, setIsSessionActive] = useState(() => {
+        return sessionStorage.getItem('ai_session_active') === 'true';
+    });
+    const isSessionActiveRef = useRef(sessionStorage.getItem('ai_session_active') === 'true');
     
     // Countdown Timer State
     const [countdownMins, setCountdownMins] = useState(0);
@@ -98,6 +100,7 @@ export default function JumpRopeTraining() {
     const workTimeRef = useRef(0);
     const restTimeRef = useRef(0);
     const timerRemainingRef = useRef<number | null>(null);
+    const mountTimeRef = useRef(Date.now());
     const intensityHistoryRef = useRef<any[]>([]);
     const cooldownRef = useRef(false);
     const isTimerStartedRef = useRef(false);
@@ -228,7 +231,8 @@ export default function JumpRopeTraining() {
         } else {
             if (isCurrentlyMoving || !isFullBody || isTooClose) {
                 stabilityStartRef.current = null;
-                const nextStatus = (isTooClose && isSessionActiveRef.current) ? 'TOO_CLOSE' : !isFullBody ? 'STEP_BACK' : 'MOVING';
+                const isGracePeriod = (Date.now() - mountTimeRef.current) < 2500;
+                const nextStatus = (isTooClose && isSessionActiveRef.current && !isGracePeriod) ? 'TOO_CLOSE' : !isFullBody ? 'STEP_BACK' : 'MOVING';
                 
                 // Direct status update for Setup mode
                 if (setupStatusRef.current !== nextStatus) {
@@ -495,6 +499,7 @@ export default function JumpRopeTraining() {
     const handleFinish = useCallback(() => {
         setIsSessionActive(false);
         isSessionActiveRef.current = false;
+        sessionStorage.removeItem('ai_session_active');
         finalizeAndSaveSession(true);
     }, [finalizeAndSaveSession]);
 
@@ -510,6 +515,7 @@ export default function JumpRopeTraining() {
         setIsTracking(true); // Camera must be on
         setIsSessionActive(true);
         isSessionActiveRef.current = true;
+        sessionStorage.setItem('ai_session_active', 'true');
         setIsTimerActive(false); // WAIT FOR PHYSICAL JUMP TO START TIMER
         isTimerActiveRef.current = false;
         isTimerStartedRef.current = false; 
@@ -644,7 +650,12 @@ export default function JumpRopeTraining() {
 
                     {/* Bottom Action Area (Start/Finish) */}
                     <div className="absolute bottom-4 pb-safe inset-x-0 flex flex-col items-center gap-5 px-10 pointer-events-auto">
-                        {!isSessionActive ? (
+                        {isLoading ? (
+                            <div className="flex items-center gap-3 text-white/20">
+                                <Loader2 size={16} className="animate-spin" />
+                                <span className="text-[10px] font-black uppercase tracking-[0.3em]">Calibrating...</span>
+                            </div>
+                        ) : !isSessionActive ? (
                             <button 
                                 onClick={handleStart}
                                 className="group relative flex flex-col items-center gap-2 transition-all active:scale-95"
@@ -745,7 +756,7 @@ export default function JumpRopeTraining() {
                 </div>
             )}
             {/* 6. FULLSCREEN PROXIMITY OVERLAY (The Requested Blocker) */}
-            {setupStatus === 'TOO_CLOSE' && isSessionActive && (
+            {setupStatus === 'TOO_CLOSE' && isSessionActive && !isLoading && (
                 <div className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-[25px] flex flex-col items-center justify-center p-12 text-center animate-in fade-in duration-700">
                     <div className="w-24 h-24 rounded-full bg-red-500/20 border border-red-500/30 flex items-center justify-center mb-10 shadow-[0_0_50px_rgba(239,68,68,0.3)] animate-pulse">
                         <AlertTriangle size={48} className="text-red-500" />
